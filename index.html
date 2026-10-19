@@ -39,4 +39,31 @@ modalClose.onclick=()=>modal.classList.add('hidden');document.querySelector('.ba
 function resetAll(){Object.assign(state,{source:'',direction:'',entity:'',search:'',status:'',column:{}});['sourceFilter','directionFilter','entityFilter','payStatus','registryStatus'].forEach(id=>document.getElementById(id).value='');globalSearch.value='';registrySearch.value='';document.querySelectorAll('.column-filter').forEach(s=>s.value='');render()}
 sourceFilter.onchange=e=>{state.source=e.target.value;render()};directionFilter.onchange=e=>{state.direction=e.target.value;render()};entityFilter.onchange=e=>{state.entity=e.target.value;render()};payStatus.onchange=e=>{state.status=e.target.value;registryStatus.value=e.target.value;render()};registryStatus.onchange=e=>{state.status=e.target.value;payStatus.value=e.target.value;render()};globalSearch.oninput=e=>{state.search=e.target.value;registrySearch.value=e.target.value;render()};registrySearch.oninput=e=>{state.search=e.target.value;globalSearch.value=e.target.value;render()};document.querySelectorAll('.column-filter').forEach(s=>s.onchange=e=>{state.column[s.dataset.field]=e.target.value;render()});document.querySelectorAll('[data-quick]').forEach(x=>x.onclick=()=>{state.status=state.status===x.dataset.quick?'':x.dataset.quick;payStatus.value=state.status;registryStatus.value=state.status;render()});reset.onclick=resetAll;reset2.onclick=resetAll;render();loadApprovals();
 </script>
+<style>
+.vgo-section{margin-top:42px;border-top:1px solid #cfdae4;padding-top:30px}.vgo-head h2{font-size:23px;margin:5px 0}.vgo-note{color:#7890a7;font-size:10px}.vgo-cards{display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:12px;margin:12px 0}.vgo-card{background:#fff;border:1px solid #d9e5ef;border-radius:12px;padding:16px}.vgo-card label{display:block;color:#7890a7;font-size:8px;font-weight:800}.vgo-card strong{display:block;color:#6757b8;font-size:22px;margin-top:10px}.vgo-tools{display:flex;gap:8px;margin-bottom:8px}.vgo-tools input,.vgo-tools select{height:34px;border:1px solid #cfdfeb;border-radius:8px;background:#fff;padding:0 9px;color:#31536f;font-size:10px}.vgo-tools input{width:360px}.vgo-flow{font-weight:700;color:#173d60}@media(max-width:1050px){.vgo-cards{grid-template-columns:1fr 1fr}}@media(max-width:700px){.vgo-cards{grid-template-columns:1fr}.vgo-tools{display:block}.vgo-tools input,.vgo-tools select{width:100%;margin-bottom:6px}}
+</style>
+<script>
+/* BAZA_VGO_PATCHED */
+(function(){
+  if(window.__BAZA_VGO_PATCHED)return;
+  window.__BAZA_VGO_PATCHED=true;
+  const all=window.PAYMENTS.slice();
+  window.__BAZA_ALL_PAYMENTS=all;
+  const expenses=all.filter(r=>!r.isInternal&&!r.isNonExpense);
+  window.PAYMENTS.splice(0,window.PAYMENTS.length,...expenses);
+  const page=document.querySelector('.page');if(!page)return;
+  page.insertAdjacentHTML('beforeend',`<section class="vgo-section" id="vgo"><div class="vgo-head"><div><div class="eyebrow">ВГО · ВНУТРИГРУППОВЫЕ ДВИЖЕНИЯ</div><h2>ВГО / внутренние перечисления</h2><div class="vgo-note">Не входят в реальные расходы и не попадают в реестр согласования.</div></div></div><div class="vgo-cards"><div class="vgo-card"><label>ВСЕ ВГО / ВНУТРЕННИЕ</label><strong id="vgoTotal">—</strong></div><div class="vgo-card"><label>КОЛИЧЕСТВО ОПЕРАЦИЙ</label><strong id="vgoCount">—</strong></div><div class="vgo-card"><label>КРУПНЕЙШИЙ ПРОЕКТ</label><strong id="vgoTop">—</strong></div></div><div class="vgo-tools"><input id="vgoSearch" placeholder="Юрлицо, контрагент, проект…"><select id="vgoEntity"><option value="">Все юрлица</option></select><select id="vgoProject"><option value="">Все проекты</option></select></div><div class="table-card"><div class="table-wrap"><table><thead><tr><th>Откуда</th><th>Куда</th><th>Проект</th><th>Направление</th><th>Подстатья</th><th>Сумма</th></tr></thead><tbody id="vgoTable"></tbody></table></div></div></section>`);
+  const vgoRows=()=>window.__BAZA_ALL_PAYMENTS.filter(r=>r.isInternal&&!r.isNonExpense);
+  const fmt=n=>new Intl.NumberFormat('ru-RU',{maximumFractionDigits:0}).format(Math.round(Number(n)||0))+' ₽';
+  const esc2=s=>String(s??'—').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
+  const fill=(id,arr)=>arr.forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;document.getElementById(id).appendChild(o)});
+  fill('vgoEntity',[...new Set(vgoRows().map(r=>r.entity).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ru')));
+  fill('vgoProject',[...new Set(vgoRows().map(r=>r.project).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ru')));
+  function renderVgo(){const q=(document.getElementById('vgoSearch').value||'').toLowerCase(),en=document.getElementById('vgoEntity').value,pr=document.getElementById('vgoProject').value;const rs=vgoRows().filter(r=>(!en||r.entity===en)&&(!pr||r.project===pr)&&(!q||[r.entity,r.counterparty,r.project,r.direction,r.subcategory].join(' ').toLowerCase().includes(q))).sort((a,b)=>b.amount-a.amount);document.getElementById('vgoTotal').textContent=fmt(rs.reduce((s,r)=>s+r.amount,0));document.getElementById('vgoCount').textContent=rs.length;const p={};rs.forEach(r=>p[r.project]=(p[r.project]||0)+r.amount);const top=Object.entries(p).sort((a,b)=>b[1]-a[1])[0];document.getElementById('vgoTop').textContent=top?top[0]+' · '+fmt(top[1]):'—';document.getElementById('vgoTable').innerHTML=rs.map(r=>`<tr><td class="vgo-flow">${esc2(r.entity)}</td><td class="vgo-flow">${esc2(r.counterparty)}</td><td>${esc2(r.project)}</td><td>${esc2(r.direction)}</td><td>${esc2(r.subcategory)}</td><td class="num"><b>${fmt(r.amount)}</b></td></tr>`).join('')||'<tr><td colspan="6" style="padding:18px;color:#7890a7">Нет операций</td></tr>'}
+  document.getElementById('vgoSearch').oninput=renderVgo;document.getElementById('vgoEntity').onchange=renderVgo;document.getElementById('vgoProject').onchange=renderVgo;
+  const oldRender=window.render;if(typeof oldRender==='function'){window.render=function(){oldRender();renderVgo()};}
+  renderVgo();if(typeof window.render==='function')window.render();
+})();
+</script>
+
 </body></html>
