@@ -1,30 +1,127 @@
-const fmt=n=>new Intl.NumberFormat('ru-RU',{maximumFractionDigits:0}).format(n);
-const money=n=>fmt(n)+' ₽';
-const sourceAliases=s=>{let x=String(s??'').toLowerCase();if(x.includes('собств'))return'Собственные';if(x.includes('кредит')||x.includes('заем')||x.includes('заём'))return'Кредит';return String(s||'Не указано')};
-const uniq=f=>[...new Set(PAYMENTS.map(x=>String(x[f]??'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ru'));
-function fill(id,arr){let e=document.getElementById(id);arr.forEach(v=>{let o=document.createElement('option');o.value=v;o.textContent=v;e.appendChild(o)})}
-fill('sourceFilter',[...new Set(PAYMENTS.map(x=>sourceAliases(x.source)))].sort());fill('directionFilter',uniq('direction'));fill('entityFilter',uniq('entity'));
-const STATUS_KEY='payment-dashboard-status-v1';let PAYMENT_STATUS=JSON.parse(localStorage.getItem(STATUS_KEY)||'{}');
-const pid=(x,i)=>[x.date,x.entity,x.direction,x.purpose,x.amount,i].join('|');
-function setStatus(id,st){if(st)PAYMENT_STATUS[id]=st;else delete PAYMENT_STATUS[id];localStorage.setItem(STATUS_KEY,JSON.stringify(PAYMENT_STATUS));render()}
-function current(){let s=document.getElementById('sourceFilter').value,d=document.getElementById('directionFilter').value,e=document.getElementById('entityFilter').value,q=(document.getElementById('search')?.value||'').toLowerCase(),ps=document.getElementById('payStatus')?.value||'';
-return PAYMENTS.map((x,i)=>({x,id:pid(x,i)})).filter(({x,id})=>(!s||sourceAliases(x.source)==s)&&(!d||String(x.direction)==d)&&(!e||String(x.entity)==e)&&(!q||[x.purpose,x.entity,x.direction,x.source].join(' ').toLowerCase().includes(q))&&(!ps||(ps==='approved'&&PAYMENT_STATUS[id]==='approved')||(ps==='rejected'&&PAYMENT_STATUS[id]==='rejected')||(ps==='pending'&&!PAYMENT_STATUS[id])))}
-function agg(rows,f){let m={};rows.forEach(({x})=>{let k=String(x[f]||'Не указано');m[k]=(m[k]||0)+(+x.amount||0)});return Object.entries(m).sort((a,b)=>b[1]-a[1])}
-let dc,sc,ec;
-function chartData(rows){let d=agg(rows,'direction').slice(0,10),e=agg(rows,'entity').slice(0,10),o=rows.filter(({x})=>sourceAliases(x.source)==='Собственные').reduce((a,{x})=>a+(+x.amount||0),0),c=rows.filter(({x})=>sourceAliases(x.source)==='Кредит').reduce((a,{x})=>a+(+x.amount||0),0);return{d,e,o,c}}
-function render(){let rows=current(),total=rows.reduce((a,{x})=>a+(+x.amount||0),0),own=rows.filter(({x})=>sourceAliases(x.source)==='Собственные').reduce((a,{x})=>a+(+x.amount||0),0),credit=rows.filter(({x})=>sourceAliases(x.source)==='Кредит').reduce((a,{x})=>a+(+x.amount||0),0);
-document.getElementById('kpiTotal').textContent=money(total);document.getElementById('kpiOwn').textContent=money(own);document.getElementById('kpiCredit').textContent=money(credit);document.getElementById('kpiShare').textContent=total?(credit/total*100).toFixed(1).replace('.',',')+'%':'0%';document.getElementById('directionTotal').textContent=money(total);document.getElementById('sourceTotal').textContent=money(total);
-let all=current(),approved=all.filter(({id})=>PAYMENT_STATUS[id]==='approved').length,rejected=all.filter(({id})=>PAYMENT_STATUS[id]==='rejected').length,pending=all.length-approved-rejected;document.getElementById('pendingBadge').textContent=pending;document.getElementById('rowsCount').textContent=`${all.length} платежей · ✓ ${approved} · ✕ ${rejected} · ○ ${pending}`;
-const z=chartData(rows);[dc,sc,ec].forEach(c=>c&&c.destroy());
-dc=new Chart(document.getElementById('directionChart'),{type:'bar',data:{labels:z.d.map(x=>x[0]),datasets:[{data:z.d.map(x=>x[1]),borderRadius:5}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>money(c.raw)}}},scales:{x:{ticks:{callback:v=>fmt(v)}},y:{grid:{display:false}}}}});
-sc=new Chart(document.getElementById('sourceChart'),{type:'doughnut',data:{labels:['Собственные','Кредит'],datasets:[{data:[z.o,z.c]}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:c=>c.label+': '+money(c.raw)}}}}});
-ec=new Chart(document.getElementById('entityChart'),{type:'bar',data:{labels:z.e.map(x=>x[0]),datasets:[{data:z.e.map(x=>x[1]),borderRadius:5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>money(c.raw)}}},scales:{y:{ticks:{callback:v=>fmt(v)}},x:{grid:{display:false}}}}});
-document.getElementById('approvalSummary').innerHTML=`<div class="approval-box"><div class="ap approved"><b>${approved}</b><span>СОГЛАСОВАНО</span></div><div class="ap rejected"><b>${rejected}</b><span>НЕ СОГЛАСОВАНО</span></div><div class="ap pending"><b>${pending}</b><span>БЕЗ СТАТУСА</span></div></div>`;
-let table=document.getElementById('paymentTable');let sorted=[...rows].sort((a,b)=>(+b.x.amount||0)-(+a.x.amount||0));table.innerHTML=sorted.map(({x,id})=>{let st=PAYMENT_STATUS[id]||'';return`<tr><td>${esc(x.date)}</td><td>${esc(x.entity)}</td><td>${esc(x.direction)}</td><td class="${sourceAliases(x.source)==='Кредит'?'source-credit':'source-own'}">${esc(sourceAliases(x.source))}</td><td>${esc(x.purpose)}</td><td class="num">${money(+x.amount||0)}</td><td><div class="status"><button class="yes ${st==='approved'?'active':''}" onclick='setStatus(${JSON.stringify(id)},"approved")'>✓ Согласован</button><button class="no ${st==='rejected'?'active':''}" onclick='setStatus(${JSON.stringify(id)},"rejected")'>✕ Не согласован</button></div></td></tr>`}).join('')||'<tr><td colspan="7" class="empty">Нет данных</td></tr>';
-renderRank('directionList',z.d);renderRank('entityList',z.e)}
-function renderRank(id,data){let max=data[0]?.[1]||1;document.getElementById(id).innerHTML=data.map(([n,v])=>`<div class="rank"><div class="rank-name">${esc(n)}</div><div class="rank-bar"><i style="width:${Math.max(2,v/max*100)}%"></i></div><div class="rank-val">${money(v)}</div></div>`).join('')||'<div class="empty">Нет данных</div>'}
-function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
-document.querySelectorAll('.nav').forEach(b=>b.onclick=()=>{document.querySelectorAll('.nav').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.getElementById(b.dataset.tab).classList.add('active');document.getElementById('pageTitle').textContent=b.querySelector('span').textContent});
-['sourceFilter','directionFilter','entityFilter','search','payStatus'].forEach(id=>document.getElementById(id).addEventListener('input',render));
-document.getElementById('reset').onclick=()=>{['sourceFilter','directionFilter','entityFilter','payStatus'].forEach(id=>document.getElementById(id).value='');if(document.getElementById('search'))document.getElementById('search').value='';render()};
-render();
+const money = n => new Intl.NumberFormat('ru-RU',{maximumFractionDigits:0}).format(Math.round(n)) + ' ₽';
+const esc = s => String(s ?? '—').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
+const statusKey = id => 'payment-status-v4-' + id;
+const getStatus = id => localStorage.getItem(statusKey(id)) || 'pending';
+const setStatus = (id,status) => { localStorage.setItem(statusKey(id),status); };
+
+const state = {source:'',direction:'',entity:'',search:'',status:''};
+let filtered = [...PAYMENTS];
+let directionChart, sourceChart, entityChart, modalPayment = null;
+
+function unique(field){ return [...new Set(PAYMENTS.map(x=>x[field]).filter(Boolean))].sort((a,b)=>String(a).localeCompare(String(b),'ru')); }
+function fillSelect(id, vals){ const el=document.getElementById(id); vals.forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;el.appendChild(o)}); }
+fillSelect('sourceFilter',unique('source'));
+fillSelect('directionFilter',unique('direction'));
+fillSelect('entityFilter',unique('entity'));
+
+function matches(r){
+  if(state.source && r.source!==state.source) return false;
+  if(state.direction && r.direction!==state.direction) return false;
+  if(state.entity && r.entity!==state.entity) return false;
+  if(state.status && getStatus(r.id)!==state.status) return false;
+  if(state.search){
+    const hay=[r.counterparty,r.entity,r.direction,r.project,r.subcategory,r.source].join(' ').toLowerCase();
+    if(!hay.includes(state.search.toLowerCase())) return false;
+  }
+  return true;
+}
+function apply(){ filtered=PAYMENTS.filter(matches); renderAll(); }
+
+function renderKpis(){
+  const total=filtered.reduce((s,r)=>s+r.amount,0);
+  const own=filtered.filter(r=>r.source==='Собственные').reduce((s,r)=>s+r.amount,0);
+  const credit=filtered.filter(r=>r.source==='Кредит').reduce((s,r)=>s+r.amount,0);
+  document.getElementById('kpiTotal').textContent=money(total);
+  document.getElementById('kpiOwn').textContent=money(own);
+  document.getElementById('kpiCredit').textContent=money(credit);
+  document.getElementById('kpiShare').textContent=(total?((credit/total)*100).toFixed(1):'0.0')+'%';
+  document.getElementById('directionTotal').textContent=money(total);
+  document.getElementById('sourceTotal').textContent=money(total);
+}
+
+function aggregate(field){
+  const m={}; filtered.forEach(r=>m[r[field]]=(m[r[field]]||0)+r.amount);
+  return Object.entries(m).sort((a,b)=>b[1]-a[1]);
+}
+function makeChart(id,type,labels,values){
+  const el=document.getElementById(id);
+  const old={directionChart,sourceChart,entityChart}[id];
+  if(old) old.destroy();
+  const common={responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>money(c.raw)}}}};
+  const cfg=type==='doughnut'
+    ? {type,data:{labels,datasets:[{data:values}]},options:{...common,cutout:'66%'}}
+    : {type,data:{labels,datasets:[{data:values,borderRadius:5,maxBarThickness:28}]},options:{...common,indexAxis:id==='entityChart'?'y':'x',scales:{x:{grid:{display:false},ticks:{font:{size:10},callback:v=>money(v)}},y:{grid:{color:'#edf0f2'},ticks:{font:{size:10},callback:v=>String(v).slice(0,28)}}}}};
+  const chart=new Chart(el,cfg);
+  if(id==='directionChart')directionChart=chart;
+  if(id==='sourceChart')sourceChart=chart;
+  if(id==='entityChart')entityChart=chart;
+}
+function renderCharts(){
+  const d=aggregate('direction').slice(0,8); makeChart('directionChart','bar',d.map(x=>x[0]),d.map(x=>x[1]));
+  const s=aggregate('source'); makeChart('sourceChart','doughnut',s.map(x=>x[0]),s.map(x=>x[1]));
+  const e=aggregate('entity').slice(0,10); makeChart('entityChart','bar',e.map(x=>x[0]),e.map(x=>x[1]));
+}
+function statusLabel(s){return s==='approved'?'Согласован':s==='rejected'?'Не согласован':'Ожидает';}
+function renderTable(){
+  const body=document.getElementById('paymentTable');
+  body.innerHTML=filtered.map(r=>{
+    const s=getStatus(r.id);
+    return `<tr>
+      <td class="counterparty" data-open="${esc(r.id)}">${esc(r.counterparty)}</td>
+      <td>${esc(r.entity)}</td>
+      <td>${esc(r.direction)}</td>
+      <td>${esc(r.project)}</td>
+      <td class="muted">${esc(r.subcategory)}</td>
+      <td><span class="source-badge ${r.source==='Кредит'?'source-credit':'source-own'}">${esc(r.source)}</span></td>
+      <td class="num"><b>${money(r.amount)}</b></td>
+      <td><div class="status-btns">
+        <button class="${s==='approved'?'active approve':''}" data-status="approved" data-id="${esc(r.id)}">✓</button>
+        <button class="${s==='rejected'?'active reject':''}" data-status="rejected" data-id="${esc(r.id)}">✕</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+  document.getElementById('rowsCount').textContent=`${filtered.length} платежей`;
+  body.querySelectorAll('[data-status]').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();setStatus(b.dataset.id,b.dataset.status);apply()}));
+  body.querySelectorAll('[data-open]').forEach(c=>c.addEventListener('click',()=>openModal(PAYMENTS.find(x=>x.id===c.dataset.open))));
+}
+function renderLists(){
+  const render=(id,items)=>{const total=items.reduce((s,x)=>s+x[1],0), max=items[0]?.[1]||1;document.getElementById(id).innerHTML=items.slice(0,12).map(x=>`<div class="rank"><div><div class="rank-name">${esc(x[0])}</div><div class="bar"><i style="width:${(x[1]/max)*100}%"></i></div></div><div class="rank-value">${money(x[1])}</div></div>`).join('')};
+  render('directionList',aggregate('direction')); render('entityList',aggregate('entity'));
+}
+function renderApproval(){
+  const a=PAYMENTS.filter(r=>getStatus(r.id)==='approved').length;
+  const rej=PAYMENTS.filter(r=>getStatus(r.id)==='rejected').length;
+  const p=PAYMENTS.length-a-rej;
+  document.getElementById('approvedCount').textContent=a;
+  document.getElementById('rejectedCount').textContent=rej;
+  document.getElementById('pendingCount').textContent=p;
+}
+function renderAll(){renderKpis();renderCharts();renderTable();renderLists();renderApproval();}
+
+['sourceFilter','directionFilter','entityFilter'].forEach(id=>document.getElementById(id).addEventListener('change',e=>{state[id.replace('Filter','')]=e.target.value;apply()}));
+document.getElementById('globalSearch').addEventListener('input',e=>{state.search=e.target.value;apply()});
+document.getElementById('registrySearch').addEventListener('input',e=>{state.search=e.target.value;document.getElementById('globalSearch').value=e.target.value;apply()});
+document.getElementById('payStatus').addEventListener('change',e=>{state.status=e.target.value;apply()});
+document.getElementById('reset').addEventListener('click',()=>{Object.assign(state,{source:'',direction:'',entity:'',search:'',status:''});['sourceFilter','directionFilter','entityFilter','payStatus'].forEach(id=>document.getElementById(id).value='');document.getElementById('globalSearch').value='';document.getElementById('registrySearch').value='';apply()});
+
+function openModal(r){
+  if(!r)return;
+  modalPayment=r;
+  const s=getStatus(r.id);
+  document.getElementById('modalCounterparty').textContent=r.counterparty;
+  document.getElementById('modalAmount').textContent=money(r.amount);
+  const st=document.getElementById('modalStatus'); st.textContent=statusLabel(s);
+  st.style.background=s==='approved'?'#edf8f2':s==='rejected'?'#fff0ef':'#f1f3f5';
+  st.style.color=s==='approved'?'#17683f':s==='rejected'?'#a5261c':'#626a74';
+  document.getElementById('modalDetails').innerHTML=[
+    ['Юрлицо',r.entity],['Источник финансирования',r.source],['Направление',r.direction],
+    ['Проект',r.project],['Подстатья',r.subcategory],['ID платежа',r.id]
+  ].map(x=>`<div class="detail"><label>${esc(x[0])}</label><b>${esc(x[1])}</b></div>`).join('');
+  document.getElementById('modal').classList.remove('hidden');
+}
+document.getElementById('modalClose').onclick=()=>document.getElementById('modal').classList.add('hidden');
+document.querySelector('.modal-backdrop').onclick=()=>document.getElementById('modal').classList.add('hidden');
+document.getElementById('modalApprove').onclick=()=>{setStatus(modalPayment.id,'approved');openModal(modalPayment);apply()};
+document.getElementById('modalReject').onclick=()=>{setStatus(modalPayment.id,'rejected');openModal(modalPayment);apply()};
+
+renderAll();

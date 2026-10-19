@@ -1,67 +1,138 @@
 <!doctype html>
 <html lang="ru">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Платежный контроль · BAZA</title>
 <link rel="stylesheet" href="styles.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-<div class="app">
-<aside class="sidebar">
-  <div class="brand"><div class="logo">B</div><div><b>BAZA</b><span>ФИНАНСОВЫЙ КОНТРОЛЬ</span></div></div>
-  <div class="side-title">Платежный календарь</div>
-  <nav>
-    <button class="nav active" data-tab="overview">◉ <span>Обзор</span></button>
-    <button class="nav" data-tab="payments">▤ <span>Реестр платежей</span><em id="pendingBadge">0</em></button>
-    <button class="nav" data-tab="directions">◫ <span>Направления</span></button>
-    <button class="nav" data-tab="entities">▥ <span>Юрлица</span></button>
-  </nav>
-  <div class="side-bottom">
-    <div class="mini-label">ПЕРИОД</div><b>19–25 октября 2026</b>
-    <div class="mini-label mt">ИСТОЧНИК</div><b>Платежный календарь</b>
-  </div>
-</aside>
+<div class="page">
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">B</div>
+      <div><b>BAZA</b><span>ФИНАНСОВЫЙ КОНТРОЛЬ</span></div>
+    </div>
+    <div class="period">ПЛАТЕЖНЫЙ КАЛЕНДАРЬ · 19–25 ОКТЯБРЯ 2026</div>
+    <div class="top-actions"><a href="#overview">Обзор</a><a href="#registry">Реестр</a><a href="#analytics">Аналитика</a></div>
+  </header>
 
-<main class="main">
-<header class="header">
- <div><div class="crumb">ПЛАТЕЖНЫЙ КОНТРОЛЬ / 19–25.10.2026</div><h1 id="pageTitle">Обзор</h1></div>
- <div class="header-right"><span class="live">● DATASET</span><button class="ghost" id="reset">Сбросить фильтры</button></div>
-</header>
+  <main>
+    <section id="overview" class="hero">
+      <div>
+        <div class="eyebrow">ПЛАТЕЖНЫЙ КОНТРОЛЬ</div>
+        <h1>Куда уходят деньги</h1>
+        <p>Единая страница платежного календаря: финансирование, направления, юрлица и контроль согласования.</p>
+      </div>
+      <button id="reset" class="outline-btn">Сбросить фильтры</button>
+    </section>
 
-<section id="overview" class="tab active">
-  <div class="cards">
-    <div class="card"><span>ВСЕ ПЛАТЕЖИ</span><strong id="kpiTotal">—</strong><small>руб.</small></div>
-    <div class="card"><span>СОБСТВЕННЫЕ</span><strong id="kpiOwn">—</strong><small>руб.</small></div>
-    <div class="card"><span>КРЕДИТНЫЕ</span><strong id="kpiCredit">—</strong><small>руб.</small></div>
-    <div class="card dark"><span>ДОЛЯ КРЕДИТА</span><strong id="kpiShare">—</strong><small>от общего объема</small></div>
-  </div>
-  <div class="filters">
-    <select id="sourceFilter"><option value="">Все источники</option></select>
-    <select id="directionFilter"><option value="">Все направления</option></select>
-    <select id="entityFilter"><option value="">Все юрлица</option></select>
-  </div>
-  <div class="grid2">
-   <div class="panel"><div class="panel-title">Куда уходят деньги <span id="directionTotal"></span></div><div class="chart"><canvas id="directionChart"></canvas></div></div>
-   <div class="panel"><div class="panel-title">Финансирование <span id="sourceTotal"></span></div><div class="chart donut"><canvas id="sourceChart"></canvas></div></div>
-  </div>
-  <div class="grid2">
-   <div class="panel"><div class="panel-title">По юридическим лицам</div><div class="chart"><canvas id="entityChart"></canvas></div></div>
-   <div class="panel"><div class="panel-title">Контроль согласования</div><div id="approvalSummary" class="approval-summary"></div></div>
-  </div>
-</section>
+    <section class="cards">
+      <div class="metric"><span>ВСЕ ПЛАТЕЖИ</span><strong id="kpiTotal">—</strong><small>руб.</small></div>
+      <div class="metric"><span>СОБСТВЕННЫЕ</span><strong id="kpiOwn">—</strong><small>руб.</small></div>
+      <div class="metric"><span>КРЕДИТНЫЕ</span><strong id="kpiCredit">—</strong><small>руб.</small></div>
+      <div class="metric accent"><span>ДОЛЯ КРЕДИТА</span><strong id="kpiShare">—</strong><small>от объема платежей</small></div>
+    </section>
 
-<section id="payments" class="tab">
- <div class="section-head"><div><h2>Реестр платежей</h2><p>Согласование сохраняется в браузере</p></div><div class="registry-stats" id="rowsCount"></div></div>
- <div class="filters registry"><input id="search" placeholder="Поиск по назначению, юрлицу, направлению…"><select id="payStatus"><option value="">Все статусы</option><option value="approved">Согласован</option><option value="rejected">Не согласован</option><option value="pending">Не согласован / не установлен</option></select></div>
- <div class="panel table-panel"><div class="table-wrap"><table><thead><tr><th>Дата</th><th>Юрлицо</th><th>Направление</th><th>Источник</th><th>Назначение</th><th class="num">Сумма</th><th>Статус</th></tr></thead><tbody id="paymentTable"></tbody></table></div></div>
-</section>
+    <section class="filters">
+      <div class="filter"><label>Источник</label><select id="sourceFilter"><option value="">Все</option></select></div>
+      <div class="filter"><label>Направление</label><select id="directionFilter"><option value="">Все</option></select></div>
+      <div class="filter"><label>Юрлицо</label><select id="entityFilter"><option value="">Все</option></select></div>
+      <div class="filter grow"><label>Поиск</label><input id="globalSearch" placeholder="Контрагент, проект, подстатья, назначение…"></div>
+    </section>
 
-<section id="directions" class="tab"><div class="section-head"><div><h2>Направления</h2><p>Структура платежей по направлениям</p></div></div><div class="panel"><div id="directionList" class="rank-list"></div></div></section>
-<section id="entities" class="tab"><div class="section-head"><div><h2>Юридические лица</h2><p>Структура платежей по юрлицам</p></div></div><div class="panel"><div id="entityList" class="rank-list"></div></div></section>
+    <section id="analytics" class="analytics">
+      <div class="panel chart-panel">
+        <div class="panel-head"><div><h2>Структура расходов</h2><span id="directionTotal">—</span></div></div>
+        <div class="chart-box"><canvas id="directionChart"></canvas></div>
+      </div>
+      <div class="panel chart-panel">
+        <div class="panel-head"><div><h2>Финансирование</h2><span id="sourceTotal">—</span></div></div>
+        <div class="chart-box donut"><canvas id="sourceChart"></canvas></div>
+      </div>
+      <div class="panel chart-panel wide">
+        <div class="panel-head"><div><h2>По юридическим лицам</h2><span>руб.</span></div></div>
+        <div class="chart-box"><canvas id="entityChart"></canvas></div>
+      </div>
+    </section>
 
-<footer>BAZA · Платежный контроль · 19–25.10.2026</footer>
-</main>
+    <section class="control-strip">
+      <div><b>Контроль согласования</b><span>Статусы сохраняются в браузере</span></div>
+      <div class="status-counts">
+        <span class="s approved"><i></i> Согласовано <b id="approvedCount">0</b></span>
+        <span class="s rejected"><i></i> Не согласовано <b id="rejectedCount">0</b></span>
+        <span class="s pending"><i></i> Ожидает <b id="pendingCount">0</b></span>
+      </div>
+    </section>
+
+    <section id="registry" class="registry-section">
+      <div class="section-title">
+        <div><div class="eyebrow">ПЛАТЕЖНЫЙ КАЛЕНДАРЬ</div><h2>Реестр платежей</h2></div>
+        <div id="rowsCount" class="rows-count"></div>
+      </div>
+      <div class="registry-tools">
+        <input id="registrySearch" placeholder="Поиск по реестру…">
+        <select id="payStatus">
+          <option value="">Все статусы</option>
+          <option value="approved">Согласован</option>
+          <option value="rejected">Не согласован</option>
+          <option value="pending">Ожидает согласования</option>
+        </select>
+      </div>
+      <div class="panel table-panel">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Контрагент</th>
+                <th>Юрлицо</th>
+                <th>Направление</th>
+                <th>Проект</th>
+                <th>Подстатья</th>
+                <th>Источник</th>
+                <th class="num">Сумма</th>
+                <th>Согласование</th>
+              </tr>
+            </thead>
+            <tbody id="paymentTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section class="bottom-grid">
+      <div class="panel">
+        <div class="panel-head"><h2>Направления</h2></div>
+        <div id="directionList" class="rank-list"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h2>Юридические лица</h2></div>
+        <div id="entityList" class="rank-list"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer>BAZA · Платежный контроль · 19–25.10.2026</footer>
 </div>
-<script src="data.js"></script><script src="app.js"></script>
-</body></html>
+
+<div id="modal" class="modal hidden">
+  <div class="modal-backdrop"></div>
+  <div class="modal-card">
+    <button class="modal-close" id="modalClose">×</button>
+    <div class="eyebrow">КАРТОЧКА ПЛАТЕЖА</div>
+    <h2 id="modalCounterparty">—</h2>
+    <div id="modalAmount" class="modal-amount">—</div>
+    <div class="modal-status" id="modalStatus">Ожидает согласования</div>
+    <div class="detail-grid" id="modalDetails"></div>
+    <div class="modal-actions">
+      <button class="approve" id="modalApprove">✓ Согласовать</button>
+      <button class="reject" id="modalReject">✕ Не согласовать</button>
+    </div>
+  </div>
+</div>
+
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
