@@ -537,7 +537,11 @@ button,.pill,.tab,.nav-btn{transition:.15s ease}
   .status-actions .action-btn{min-width:78px;padding:0 6px}
   .status-actions .status-pill{max-width:96px}
 }
-</style>
+<style>
+/* Approved payments do not show redundant action buttons. */
+.status-actions-approved{justify-content:flex-start;}
+.status-actions-approved .status-pill{margin-right:0;}
+</style></style>
 
 </head>
 <body>
@@ -945,10 +949,10 @@ function renderTable(){
       <td><span class="source-badge ${r.source==='Кредит'?'source-credit':'source-own'}">${esc(r.source)}</span></td>
       <td class="num"><b>${money(r.amount)}</b></td>
       <td class="status-cell">
-        <div class="status-actions">
+        <div class="status-actions ${s==='approved' ? 'status-actions-approved' : ''}">
           ${statusPill(s)}
-          <button class="action-btn approve-action ${s==='approved'?'active':''}" data-status="approved" data-id="${esc(r.id)}" title="Согласовать платеж"><span class="action-icon">✓</span> Согласовать</button>
-          <button class="action-btn reject-action ${s==='rejected'?'active':''}" data-reject="${esc(r.id)}" title="Отклонить платеж"><span class="action-icon">✕</span> Отклонить</button>
+          ${s !== 'approved' ? `<button class="action-btn approve-action ${s==='approved'?'active':''}" data-status="approved" data-id="${esc(r.id)}" title="Согласовать платеж"><span class="action-icon">✓</span> Согласовать</button>` : ''}
+          ${s !== 'approved' ? `<button class="action-btn reject-action ${s==='rejected'?'active':''}" data-reject="${esc(r.id)}" title="Отклонить платеж"><span class="action-icon">✕</span> Отклонить</button>` : ''}
         </div>
       </td>
       <td class="comment-cell">
