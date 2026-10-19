@@ -16,7 +16,6 @@ jobs:
           p=Path('data.js')
           s=p.read_text(encoding='utf-8')
 
-          # Remove the previous filter shim and rebuild it from scratch.
           marker='/* BAZA_FILTER_SHIM */'
           if marker in s:
               s=s.split(marker,1)[0].rstrip()+"\n"
@@ -24,12 +23,11 @@ jobs:
           shim=r'''/* BAZA_FILTER_SHIM */
           (function(){
             function flowType(r){
-              const sub=String(r.subcategory||'').trim().toLowerCase();
+              // The subcategory/article is NOT used to determine cash-flow direction.
+              // In this registry `entity` is our legal entity / payer. Therefore a normal
+              // row is an expense. Explicit flags identify non-expense movements.
               if(r.isInternal) return 'internal';
               if(r.isNonExpense) return 'income';
-              if(sub.includes('поступления от продаж')) return 'income';
-              if(sub.includes('выгрузка кредитных средств')) return 'income';
-              if(sub.includes('возврат займа')) return 'income';
               return 'expense';
             }
             window.PAYMENTS = window.PAYMENTS.map(r=>Object.assign({},r,{flowType:flowType(r)}));
@@ -54,5 +52,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add data.js
-          git diff --cached --quiet || git commit -m "Fix expense vs income classification"
+          git diff --cached --quiet || git commit -m "Fix flow classification"
           git push
