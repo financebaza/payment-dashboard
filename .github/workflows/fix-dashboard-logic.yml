@@ -9,103 +9,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Separate real expenses and VGO
+      - name: Apply VGO redesign
         shell: bash
         run: |
-          if ! grep -q 'BAZA_VGO_PATCHED' index.html; then
-            cat > /tmp/vgo_tail.html <<'EOF2'
-          <style>
-          .vgo-section{margin-top:42px;border-top:1px solid #cfdae4;padding-top:30px}.vgo-head h2{font-size:23px;margin:5px 0}.vgo-note{color:#7890a7;font-size:10px}.vgo-cards{display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:12px;margin:12px 0}.vgo-card{background:#fff;border:1px solid #d9e5ef;border-radius:12px;padding:16px}.vgo-card label{display:block;color:#7890a7;font-size:8px;font-weight:800}.vgo-card strong{display:block;color:#6757b8;font-size:22px;margin-top:10px}.vgo-tools{display:flex;gap:8px;margin-bottom:8px}.vgo-tools input,.vgo-tools select{height:34px;border:1px solid #cfdfeb;border-radius:8px;background:#fff;padding:0 9px;color:#31536f;font-size:10px}.vgo-tools input{width:360px}.vgo-flow{font-weight:700;color:#173d60}@media(max-width:1050px){.vgo-cards{grid-template-columns:1fr 1fr}}@media(max-width:700px){.vgo-cards{grid-template-columns:1fr}.vgo-tools{display:block}.vgo-tools input,.vgo-tools select{width:100%;margin-bottom:6px}}
-          </style>
-          <script>
-          /* BAZA_VGO_PATCHED */
-          (function(){
-            if(window.__BAZA_VGO_PATCHED)return;
-            window.__BAZA_VGO_PATCHED=true;
-            const all=window.PAYMENTS.slice();
-            window.__BAZA_ALL_PAYMENTS=all;
-            const expenses=all.filter(r=>!r.isInternal&&!r.isNonExpense);
-            window.PAYMENTS.splice(0,window.PAYMENTS.length,...expenses);
-            const page=document.querySelector('.page');if(!page)return;
-            page.insertAdjacentHTML('beforeend',`<section class="vgo-section" id="vgo"><div class="vgo-head"><div><div class="eyebrow">ВГО · ВНУТРИГРУППОВЫЕ ДВИЖЕНИЯ</div><h2>ВГО / внутренние перечисления</h2><div class="vgo-note">Не входят в реальные расходы и не попадают в реестр согласования.</div></div></div><div class="vgo-cards"><div class="vgo-card"><label>ВСЕ ВГО / ВНУТРЕННИЕ</label><strong id="vgoTotal">—</strong></div><div class="vgo-card"><label>КОЛИЧЕСТВО ОПЕРАЦИЙ</label><strong id="vgoCount">—</strong></div><div class="vgo-card"><label>КРУПНЕЙШИЙ ПРОЕКТ</label><strong id="vgoTop">—</strong></div></div><div class="vgo-tools"><input id="vgoSearch" placeholder="Юрлицо, контрагент, проект…"><select id="vgoEntity"><option value="">Все юрлица</option></select><select id="vgoProject"><option value="">Все проекты</option></select></div><div class="table-card"><div class="table-wrap"><table><thead><tr><th>Откуда</th><th>Куда</th><th>Проект</th><th>Направление</th><th>Подстатья</th><th>Сумма</th></tr></thead><tbody id="vgoTable"></tbody></table></div></div></section>`);
-            const vgoRows=()=>window.__BAZA_ALL_PAYMENTS.filter(r=>r.isInternal&&!r.isNonExpense);
-            const fmt=n=>new Intl.NumberFormat('ru-RU',{maximumFractionDigits:0}).format(Math.round(Number(n)||0))+' ₽';
-            const esc2=s=>String(s??'—').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
-            const fill=(id,arr)=>arr.forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;document.getElementById(id).appendChild(o)});
-            fill('vgoEntity',[...new Set(vgoRows().map(r=>r.entity).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ru')));
-            fill('vgoProject',[...new Set(vgoRows().map(r=>r.project).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ru')));
-            function renderVgo(){const q=(document.getElementById('vgoSearch').value||'').toLowerCase(),en=document.getElementById('vgoEntity').value,pr=document.getElementById('vgoProject').value;const rs=vgoRows().filter(r=>(!en||r.entity===en)&&(!pr||r.project===pr)&&(!q||[r.entity,r.counterparty,r.project,r.direction,r.subcategory].join(' ').toLowerCase().includes(q))).sort((a,b)=>b.amount-a.amount);document.getElementById('vgoTotal').textContent=fmt(rs.reduce((s,r)=>s+r.amount,0));document.getElementById('vgoCount').textContent=rs.length;const p={};rs.forEach(r=>p[r.project]=(p[r.project]||0)+r.amount);const top=Object.entries(p).sort((a,b)=>b[1]-a[1])[0];document.getElementById('vgoTop').textContent=top?top[0]+' · '+fmt(top[1]):'—';document.getElementById('vgoTable').innerHTML=rs.map(r=>`<tr><td class="vgo-flow">${esc2(r.entity)}</td><td class="vgo-flow">${esc2(r.counterparty)}</td><td>${esc2(r.project)}</td><td>${esc2(r.direction)}</td><td>${esc2(r.subcategory)}</td><td class="num"><b>${fmt(r.amount)}</b></td></tr>`).join('')||'<tr><td colspan="6" style="padding:18px;color:#7890a7">Нет операций</td></tr>'}
-            document.getElementById('vgoSearch').oninput=renderVgo;document.getElementById('vgoEntity').onchange=renderVgo;document.getElementById('vgoProject').onchange=renderVgo;
-            const oldRender=window.render;if(typeof oldRender==='function'){window.render=function(){oldRender();renderVgo()};}
-            renderVgo();if(typeof window.render==='function')window.render();
-          })();
-          </script>
-          EOF2
-            awk 'BEGIN{while((getline line < "/tmp/vgo_tail.html")>0) p=p line ORS} /<\/body>/{print p} {print}' index.html > /tmp/index.html && mv /tmp/index.html index.html
+          if ! grep -q 'BAZA_VGO_V3' index.html; then
+            python3 -c "from pathlib import Path; p=Path('index.html'); s=p.read_text(encoding='utf-8'); css=Path('vgo-v3.css').read_text(encoding='utf-8'); js=Path('vgo-v3.js').read_text(encoding='utf-8'); block='\\n<style>\\n'+css+'\\n</style>\\n<script>\\n'+js+'\\n</script>\\n'; p.write_text(s.replace('</body>',block+'</body>'),encoding='utf-8')"
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add index.html
+            git commit -m "Redesign VGO flow and exclude non-VGO entities"
+            git push
           fi
-      - name: Enhance VGO registry and add flow scheme
-        shell: bash
-        run: |
-          if ! grep -q 'BAZA_VGO_V2' index.html; then
-            cat > /tmp/vgo_v2.html <<'EOF2'
-          <style>
-          .vgo-flow-board{margin:12px 0;background:#fff;border:1px solid #d9e5ef;border-radius:13px;padding:15px}.vgo-flow-head{display:flex;justify-content:space-between;align-items:end;margin-bottom:8px}.vgo-flow-head h3{margin:0;font-size:13px}.vgo-flow-head span{font-size:9px;color:#7890a7}.vgo-flow-svg{width:100%;height:300px;display:block}.vgo-node rect{fill:#f7fafc;stroke:#cbdbe8;stroke-width:1}.vgo-node text{fill:#173d60;font:700 11px Arial,sans-serif}.vgo-node .sum{fill:#7890a7;font:9px Arial,sans-serif}.vgo-edge{stroke:#9aabc0;stroke-width:1.5;fill:none}.vgo-edge-label{fill:#5f7890;font:700 9px Arial,sans-serif}.vgo-filter-row th{background:#fff;padding:4px 6px 7px}.vgo-filter-row select{width:100%;height:24px;border:1px solid #cfdfeb;border-radius:5px;background:#fff;color:#45637d;font-size:8px;padding:0 5px}.vgo-filter-row th:last-child select{display:none}.vgo-tools #vgoEntity,.vgo-tools #vgoProject{display:none}
-          @media(max-width:700px){.vgo-flow-svg{height:420px}.vgo-filter-row select{font-size:7px}}
-          </style>
-          <script>
-          /* BAZA_VGO_V2 */
-          (function(){
-            if(window.__BAZA_VGO_V2)return; window.__BAZA_VGO_V2=true;
-            const esc=s=>String(s??'—').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
-            const fmt=n=>new Intl.NumberFormat('ru-RU',{maximumFractionDigits:0}).format(Math.round(Number(n)||0))+' ₽';
-            const base=()=>window.__BAZA_ALL_PAYMENTS.filter(r=>r.isInternal&&!r.isNonExpense);
-            const section=document.getElementById('vgo'); if(!section)return;
-            const table=section.querySelector('table');
-            const thead=table.querySelector('thead');
-            const fields=['entity','counterparty','project','direction','subcategory'];
-            const fr=document.createElement('tr'); fr.className='vgo-filter-row';
-            fields.forEach(f=>{const th=document.createElement('th');const sel=document.createElement('select');sel.dataset.vgoFilter=f;sel.innerHTML='<option value="">Все</option>';[...new Set(base().map(r=>r[f]).filter(Boolean))].sort((a,b)=>String(a).localeCompare(String(b),'ru')).forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;sel.appendChild(o)});th.appendChild(sel);fr.appendChild(th)});
-            const blank=document.createElement('th');fr.appendChild(blank);thead.appendChild(fr);
-            const scheme=document.createElement('div'); scheme.className='vgo-flow-board'; scheme.innerHTML='<div class="vgo-flow-head"><h3>Схема внутригрупповых движений</h3><span id="vgoFlowNote">по текущим фильтрам</span></div><svg class="vgo-flow-svg" id="vgoFlowSvg" viewBox="0 0 1100 300" preserveAspectRatio="xMidYMid meet"></svg>';
-            section.insertBefore(scheme,section.querySelector('.table-card'));
-            const state={q:'',filters:{}};
-            const rows=()=>base().filter(r=>fields.every(f=>!state.filters[f]||r[f]===state.filters[f])&&(!state.q||[r.entity,r.counterparty,r.project,r.direction,r.subcategory].join(' ').toLowerCase().includes(state.q)));
-            function renderTable(rs){
-              document.getElementById('vgoTotal').textContent=fmt(rs.reduce((s,r)=>s+r.amount,0));
-              document.getElementById('vgoCount').textContent=rs.length;
-              const p={};rs.forEach(r=>p[r.project]=(p[r.project]||0)+r.amount);const top=Object.entries(p).sort((a,b)=>b[1]-a[1])[0];document.getElementById('vgoTop').textContent=top?top[0]+' · '+fmt(top[1]):'—';
-              document.getElementById('vgoTable').innerHTML=rs.slice().sort((a,b)=>b.amount-a.amount).map(r=>`<tr><td class="vgo-flow">${esc(r.entity)}</td><td class="vgo-flow">${esc(r.counterparty)}</td><td>${esc(r.project)}</td><td>${esc(r.direction)}</td><td>${esc(r.subcategory)}</td><td class="num"><b>${fmt(r.amount)}</b></td></tr>`).join('')||'<tr><td colspan="6" style="padding:18px;color:#7890a7">Нет операций</td></tr>';
-            }
-            function renderScheme(rs){
-              const svg=document.getElementById('vgoFlowSvg');
-              const pairs={}; rs.forEach(r=>{const k=r.entity+'|||'+r.counterparty;pairs[k]=(pairs[k]||0)+Number(r.amount||0)});
-              const edges=Object.entries(pairs).map(([k,v])=>{const [a,b]=k.split('|||');return {a,b,v}}).sort((x,y)=>y.v-x.v).slice(0,18);
-              const left=[...new Set(edges.map(e=>e.a))], right=[...new Set(edges.map(e=>e.b))];
-              const W=1100,H=Math.max(220,Math.min(420,Math.max(left.length,right.length)*62+30));svg.setAttribute('viewBox',`0 0 ${W} ${H}`);svg.setAttribute('height',H);
-              const yMap=(arr)=>{const step=(H-50)/Math.max(arr.length,1);const m={};arr.forEach((n,i)=>m[n]=25+i*step+step/2);return m};
-              const yl=yMap(left),yr=yMap(right);
-              const short=s=>String(s).length>29?String(s).slice(0,28)+'…':String(s);
-              const totals={};edges.forEach(e=>{totals[e.a]=(totals[e.a]||0)+e.v;totals[e.b]=(totals[e.b]||0)+e.v});
-              const node=(x,y,name,total)=>`<g class="vgo-node"><rect x="${x}" y="${y-18}" width="230" height="36" rx="8"></rect><text x="${x+10}" y="${y-3}">${esc(short(name))}</text><text class="sum" x="${x+10}" y="${y+11}">${fmt(total)}</text></g>`;
-              let out='<defs><marker id="vgoArrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 z" fill="#9aabc0"></path></marker></defs>';
-              edges.forEach(e=>{const y1=yl[e.a],y2=yr[e.b];out+=`<path class="vgo-edge" d="M 260 ${y1} C 430 ${y1}, 670 ${y2}, 840 ${y2}" marker-end="url(#vgoArrow)"></path><text class="vgo-edge-label" x="550" y="${(y1+y2)/2-4}" text-anchor="middle">${fmt(e.v)}</text>`});
-              left.forEach(n=>out+=node(10,yl[n],n,totals[n])); right.forEach(n=>out+=node(860,yr[n],n,totals[n]));
-              svg.innerHTML=out; document.getElementById('vgoFlowNote').textContent=edges.length?`${edges.length} связей · по текущим фильтрам`:'нет связей по текущим фильтрам';
-            }
-            function render(){const rs=rows();renderTable(rs);renderScheme(rs)}
-            document.getElementById('vgoSearch').oninput=e=>{state.q=e.target.value.toLowerCase();render()};
-            section.querySelectorAll('[data-vgo-filter]').forEach(sel=>sel.onchange=e=>{state.filters[e.target.dataset.vgoFilter]=e.target.value;render()});
-            render();
-          })();
-          </script>
-          EOF2
-            awk 'BEGIN{while((getline line < "/tmp/vgo_v2.html")>0) p=p line ORS} /<\/body>/{print p} {print}' index.html > /tmp/index.html && mv /tmp/index.html index.html
-          fi
-      - name: Commit generated dashboard
-        shell: bash
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add index.html
-          git diff --cached --quiet || git commit -m "Improve VGO filters and flow scheme"
-          git push
