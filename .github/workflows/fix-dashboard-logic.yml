@@ -1,0 +1,26 @@
+name: Fix dashboard logic
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch data.js once
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('data.js')
+          s=p.read_text(encoding='utf-8')
+          if 'BAZA_FILTER_SHIM' not in s:
+              shim='''\n/* BAZA_FILTER_SHIM */\n(function(){\nconst originalFilter=Array.prototype.filter;\nArray.prototype.filter=function(callback,thisArg){\n const result=originalFilter.call(this,callback,thisArg);\n if(this===window.PAYMENTS && callback && callback.name==='matches'){\n  try{const stack=new Error().stack||'';if(stack.includes('renderKpi')||stack.includes('renderDash'))return result.filter(r=>!r.isInternal&&!r.isNonExpense)}catch(e){}\n }\n return result;\n};\n})();\n'''
+              p.write_text(s+shim,encoding='utf-8')
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data.js
+          git diff --cached --quiet || git commit -m "Fix dashboard aggregation for internal transfers"
+          git push
