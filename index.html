@@ -464,6 +464,52 @@ button,.pill,.tab,.nav-btn{transition:.15s ease}
 .sync-note{font-size:10px;color:#8a919b;margin-top:5px}
 @media(max-width:700px){.approver-wrap{display:block}.approver-wrap input{width:100%;margin-top:5px}}
 
+
+/* v10 — approval UX polish */
+.status-cell{min-width:285px}
+.status-actions{gap:7px;flex-wrap:nowrap}
+.status-actions .action-btn{
+  height:32px;min-width:112px;padding:0 11px;border-radius:8px;
+  border:1px solid #d7e0e8;background:#fff;cursor:pointer;
+  font-size:10px;font-weight:700;letter-spacing:.01em;
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  transition:all .15s ease;box-shadow:0 1px 1px rgba(20,35,55,.03)
+}
+.status-actions .action-btn:hover{transform:translateY(-1px);box-shadow:0 3px 10px rgba(20,35,55,.08)}
+.status-actions .action-btn.approve-action{color:#17754a;border-color:#a8d8bd;background:#f3fbf6}
+.status-actions .action-btn.approve-action:hover,.status-actions .action-btn.active.approve-action{background:#dff5e8;border-color:#76c59b;color:#12663e}
+.status-actions .action-btn.reject-action{color:#b21d26;border-color:#f0b5b8;background:#fff7f7}
+.status-actions .action-btn.reject-action:hover,.status-actions .action-btn.active.reject-action{background:#ffe8e9;border-color:#e58b91;color:#a71922}
+.status-actions .action-btn .action-icon{font-size:13px;line-height:1}
+.comment-cell{min-width:205px}
+.comment-cell .comment-text{max-width:175px}
+.comment-save{display:inline-flex;align-items:center;justify-content:center;height:28px;padding:0 9px!important;margin-left:6px!important;font-size:10px!important;font-weight:650}
+.comment-save:hover{border-color:#a9c7df!important;background:#f3f8fc!important}
+.approval-meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:9px}
+.approval-meta span{font-size:10px;color:#6e7a87;background:#f5f8fb;border:1px solid #e3eaf1;border-radius:7px;padding:5px 8px}
+.modal-approval-box{background:linear-gradient(180deg,#fbfdff,#f7fafc);border-color:#dce6ef}
+.modal-actions .approve,.modal-actions .reject{
+  min-height:36px;padding:0 13px;font-size:11px
+}
+.reject-modal{position:fixed;inset:0;z-index:80;display:grid;place-items:center;padding:20px}
+.reject-modal.hidden{display:none}
+.reject-modal .backdrop{position:absolute;inset:0;background:rgba(15,23,42,.34);backdrop-filter:blur(3px)}
+.reject-dialog{position:relative;width:min(520px,100%);background:#fff;border:1px solid #dfe7ee;border-radius:16px;box-shadow:0 24px 70px rgba(15,35,60,.22);padding:22px}
+.reject-dialog h3{margin:0;font-size:18px;color:#172b45}
+.reject-dialog .reject-payment{margin-top:5px;font-size:11px;color:#7b8794}
+.reject-dialog label{display:block;margin:18px 0 7px;font-size:10px;text-transform:uppercase;letter-spacing:.09em;color:#7c8997;font-weight:700}
+.reject-dialog textarea{width:100%;min-height:115px;resize:vertical;border:1px solid #cfdbe6;border-radius:10px;padding:10px 11px;font:inherit;font-size:12px;color:#1f2937;outline:none}
+.reject-dialog textarea:focus{border-color:#80b5df;box-shadow:0 0 0 3px rgba(72,145,204,.12)}
+.reject-error{display:none;color:#b21d26;background:#fff0f1;border:1px solid #f0c1c4;border-radius:8px;padding:7px 9px;font-size:10px;margin-top:8px}
+.reject-dialog-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
+.reject-dialog-actions button{height:36px;border-radius:9px;padding:0 14px;border:1px solid #d7e0e8;background:#fff;cursor:pointer;font-weight:650;font-size:11px}
+.reject-dialog-actions .confirm-reject{background:#b21d26;border-color:#b21d26;color:#fff}
+.reject-dialog-actions .confirm-reject:hover{background:#981b23}
+@media(max-width:900px){
+  .status-cell{min-width:250px}
+  .status-actions .action-btn{min-width:100px}
+}
+
 </style>
 
 </head>
@@ -594,7 +640,7 @@ button,.pill,.tab,.nav-btn{transition:.15s ease}
     </section>
   </main>
 
-  <footer>BAZA · Платежный контроль · 19–25.10.2026 · v9 · Supabase</footer>
+  <footer>BAZA · Платежный контроль · 19–25.10.2026 · v10 · Supabase</footer>
 </div>
 
 <div id="modal" class="modal hidden">
@@ -612,6 +658,23 @@ button,.pill,.tab,.nav-btn{transition:.15s ease}
     <div class="modal-actions">
       <button class="approve" id="modalApprove">✓ Согласовать</button>
       <button class="reject" id="modalReject">✕ Не согласовать</button>
+    </div>
+  </div>
+</div>
+
+
+<div id="rejectModal" class="reject-modal hidden">
+  <div class="backdrop" id="rejectBackdrop"></div>
+  <div class="reject-dialog" role="dialog" aria-modal="true" aria-labelledby="rejectTitle">
+    <button class="modal-close" id="rejectClose" aria-label="Закрыть">×</button>
+    <h3 id="rejectTitle">Не согласовать платеж</h3>
+    <div class="reject-payment" id="rejectPaymentInfo">—</div>
+    <label for="rejectReason">Причина отказа <span style="color:#b21d26">*</span></label>
+    <textarea id="rejectReason" placeholder="Например: нет договора, неверная сумма, нет подтверждающего документа, не предусмотрено бюджетом…"></textarea>
+    <div class="reject-error" id="rejectError">Укажите причину отказа.</div>
+    <div class="reject-dialog-actions">
+      <button id="rejectCancel">Отмена</button>
+      <button class="confirm-reject" id="rejectConfirm">✕ Отклонить платеж</button>
     </div>
   </div>
 </div>
@@ -857,20 +920,23 @@ function renderTable(){
       <td class="status-cell">
         <div class="status-actions">
           ${statusPill(s)}
-          <button class="${s==='approved'?'active approve':''}" data-status="approved" data-id="${esc(r.id)}" title="Согласовать">✓</button>
-          <button class="${s==='rejected'?'active reject':''}" data-status="rejected" data-id="${esc(r.id)}" title="Не согласовать">✕</button>
+          <button class="action-btn approve-action ${s==='approved'?'active':''}" data-status="approved" data-id="${esc(r.id)}" title="Согласовать платеж"><span class="action-icon">✓</span> Согласовать</button>
+          <button class="action-btn reject-action ${s==='rejected'?'active':''}" data-reject="${esc(r.id)}" title="Отклонить платеж"><span class="action-icon">✕</span> Отклонить</button>
         </div>
       </td>
       <td class="comment-cell">
         <span class="comment-text" title="${esc(c)}">${c?esc(c):'—'}</span>
-        <button class="comment-save" data-comment-edit="${esc(r.id)}">${c?'Изменить':'Комментарий'}</button>
+        <button class="comment-save" data-comment-edit="${esc(r.id)}">${c?'Изменить':'Добавить'}</button>
       </td>
     </tr>`;
   }).join('');
   const rc=document.getElementById('rowsCount'); if(rc) rc.textContent=`${filtered.length} платежей`;
   const rm=document.getElementById('registryMeta'); if(rm) rm.innerHTML=`Показаны <strong>${filtered.length}</strong> из <strong>${PAYMENTS.length}</strong> платежей`;
   body.querySelectorAll('[data-status]').forEach(b=>b.addEventListener('click',async e=>{
-    e.stopPropagation(); await setStatus(b.dataset.id,b.dataset.status);
+    e.stopPropagation(); await setStatus(b.dataset.id,'approved');
+  }));
+  body.querySelectorAll('[data-reject]').forEach(b=>b.addEventListener('click',e=>{
+    e.stopPropagation(); openRejectDialog(b.dataset.reject);
   }));
   body.querySelectorAll('[data-comment-edit]').forEach(b=>b.addEventListener('click',e=>{
     e.stopPropagation();
@@ -914,6 +980,43 @@ document.querySelectorAll('.status-counts .s').forEach(el=>el.addEventListener('
 document.getElementById('reset').addEventListener('click',()=>{Object.assign(state,{source:'',direction:'',entity:'',search:'',status:''});['sourceFilter','directionFilter','entityFilter','payStatus'].forEach(id=>document.getElementById(id).value='');document.getElementById('globalSearch').value='';document.getElementById('registrySearch').value='';apply()});
 
 
+
+let rejectPaymentId = null;
+
+function openRejectDialog(id){
+  const r=PAYMENTS.find(x=>x.id===id);
+  if(!r) return;
+  rejectPaymentId=id;
+  document.getElementById('rejectPaymentInfo').textContent =
+    `${r.counterparty} · ${money(r.amount)} · ${r.entity}`;
+  document.getElementById('rejectReason').value=getComment(id) || '';
+  document.getElementById('rejectError').style.display='none';
+  document.getElementById('rejectModal').classList.remove('hidden');
+  setTimeout(()=>document.getElementById('rejectReason').focus(),30);
+}
+function closeRejectDialog(){
+  rejectPaymentId=null;
+  document.getElementById('rejectModal').classList.add('hidden');
+}
+document.getElementById('rejectClose').onclick=closeRejectDialog;
+document.getElementById('rejectCancel').onclick=closeRejectDialog;
+document.getElementById('rejectBackdrop').onclick=closeRejectDialog;
+document.getElementById('rejectConfirm').onclick=async()=>{
+  const reason=document.getElementById('rejectReason').value.trim();
+  if(!reason){
+    document.getElementById('rejectError').style.display='block';
+    document.getElementById('rejectReason').focus();
+    return;
+  }
+  if(!rejectPaymentId) return;
+  const id=rejectPaymentId;
+  const ok=await saveApproval(id,'rejected',reason);
+  if(ok){
+    closeRejectDialog();
+    document.getElementById('modal').classList.add('hidden');
+  }
+};
+
 function openModal(r){
   if(!r)return;
   modalPayment=r;
@@ -927,10 +1030,13 @@ function openModal(r){
   st.style.marginBottom='18px';
 
   const changed=getStatusTime(r.id);
+  const approval = getApproval(r.id);
+  const decisionLabel = s==='rejected' ? 'Отклонил' : s==='approved' ? 'Согласовал' : 'Согласующий';
   document.getElementById('modalDetails').innerHTML=[
     ['Юрлицо',r.entity],['Источник финансирования',r.source],
     ['Направление',r.direction],['Проект',r.project],
-    ['Подстатья',r.subcategory],['ID платежа',r.id],['Согласовал',getApproval(r.id).approved_by || '—']
+    ['Подстатья',r.subcategory],['ID платежа',r.id],[decisionLabel,approval.approved_by || '—'],
+    ['Дата решения',changed || '—']
   ].map(x=>`<div class="detail"><label>${esc(x[0])}</label><b>${esc(x[1])}</b></div>`).join('');
   document.getElementById('modalDetails').innerHTML += `<div class="detail comment-detail">
     <label>Комментарий к согласованию</label>
@@ -944,22 +1050,24 @@ function openModal(r){
   box.className='modal-approval-box';
   box.innerHTML=`<div class="modal-approval-head"><b>Контроль согласования</b>${statusPill(s)}</div>
     <div class="modal-time">${changed ? 'Последнее изменение: '+esc(changed) : 'Статус ещё не изменялся'}</div>
-    <div class="modal-actions" style="display:flex;gap:8px;margin-top:12px">
+    <div class="approval-meta">
+      <span>${s==='rejected' ? 'Причина отказа' : 'Комментарий'}: ${esc(getComment(r.id) || 'не указан')}</span>
+    </div>
+    <div class="modal-actions" style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
       <button class="approve" id="modalApprove">✓ Согласовать</button>
-      <button class="reject" id="modalReject">✕ Не согласовать</button>
+      <button class="reject" id="modalReject">✕ Отклонить</button>
       <button id="modalSaveComment">Сохранить комментарий</button>
     </div>`;
+
   document.getElementById('modalDetails').after(box);
   document.getElementById('modalApprove').onclick=async()=>{if(await setStatus(r.id,'approved')) openModal(r);};
-  document.getElementById('modalReject').onclick=async()=>{if(await setStatus(r.id,'rejected')) openModal(r);};
+  document.getElementById('modalReject').onclick=()=>openRejectDialog(r.id);
   document.getElementById('modalSaveComment').onclick=async()=>{if(await setComment(r.id,document.getElementById('modalComment').value.trim())) openModal(r);};
 
   document.getElementById('modal').classList.remove('hidden');
 }
 document.getElementById('modalClose').onclick=()=>document.getElementById('modal').classList.add('hidden');
 document.querySelector('.modal-backdrop').onclick=()=>document.getElementById('modal').classList.add('hidden');
-document.getElementById('modalApprove').onclick=async()=>{if(modalPayment && await setStatus(modalPayment.id,'approved')) openModal(modalPayment);};
-document.getElementById('modalReject').onclick=async()=>{if(modalPayment && await setStatus(modalPayment.id,'rejected')) openModal(modalPayment);};
 
 const approverEl=document.getElementById('approverName');
 if(approverEl){
