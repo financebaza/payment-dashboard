@@ -9,81 +9,42 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Normalize payment flow classification and dashboard
+      - name: Separate real expenses and VGO
+        shell: bash
         run: |
-          python - <<'PY'
-          from pathlib import Path
-
-          p=Path('data.js')
-          s=p.read_text(encoding='utf-8')
-          marker='/* BAZA_FILTER_SHIM */'
-          if marker in s:
-              s=s.split(marker,1)[0].rstrip()+"\n"
-          shim=r'''/* BAZA_FILTER_SHIM */
+          if ! grep -q 'BAZA_VGO_PATCHED' index.html; then
+            cat > /tmp/vgo_tail.html <<'EOF'
+          <style>
+          .vgo-section{margin-top:42px;border-top:1px solid #cfdae4;padding-top:30px}.vgo-head h2{font-size:23px;margin:5px 0}.vgo-note{color:#7890a7;font-size:10px}.vgo-cards{display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:12px;margin:12px 0}.vgo-card{background:#fff;border:1px solid #d9e5ef;border-radius:12px;padding:16px}.vgo-card label{display:block;color:#7890a7;font-size:8px;font-weight:800}.vgo-card strong{display:block;color:#6757b8;font-size:22px;margin-top:10px}.vgo-tools{display:flex;gap:8px;margin-bottom:8px}.vgo-tools input,.vgo-tools select{height:34px;border:1px solid #cfdfeb;border-radius:8px;background:#fff;padding:0 9px;color:#31536f;font-size:10px}.vgo-tools input{width:360px}.vgo-flow{font-weight:700;color:#173d60}@media(max-width:1050px){.vgo-cards{grid-template-columns:1fr 1fr}}@media(max-width:700px){.vgo-cards{grid-template-columns:1fr}.vgo-tools{display:block}.vgo-tools input,.vgo-tools select{width:100%;margin-bottom:6px}}
+          </style>
+          <script>
+          /* BAZA_VGO_PATCHED */
           (function(){
-            function flowType(r){
-              if(r.isInternal) return 'internal';
-              if(r.isNonExpense) return 'income';
-              return 'expense';
-            }
-            window.PAYMENTS = window.PAYMENTS.map(r=>Object.assign({},r,{flowType:flowType(r)}));
-          })();
-          '''
-          p.write_text(s+shim,encoding='utf-8')
-
-          p=Path('index.html')
-          s=p.read_text(encoding='utf-8')
-          imarker='<!-- BAZA_VGO_SECTION -->'
-          jmarker='/* BAZA_VGO_JS */'
-          if imarker not in s:
-              css=r'''
-          .vgo-section{margin-top:42px;border-top:1px solid #cfdae4;padding-top:30px}.vgo-head{display:flex;justify-content:space-between;align-items:end;margin-bottom:12px}.vgo-head h2{font-size:23px;margin:5px 0}.vgo-note{color:#7890a7;font-size:10px}.vgo-cards{display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:12px;margin:12px 0}.vgo-card{background:#fff;border:1px solid #d9e5ef;border-radius:12px;padding:16px}.vgo-card label{display:block;color:#7890a7;font-size:8px;font-weight:800;letter-spacing:.1em}.vgo-card strong{display:block;color:#6757b8;font-size:22px;margin-top:10px}.vgo-tools{display:flex;gap:8px;margin-bottom:8px}.vgo-tools input,.vgo-tools select{height:34px;border:1px solid #cfdfeb;border-radius:8px;background:#fff;padding:0 9px;color:#31536f;font-size:10px}.vgo-tools input{width:360px}.vgo-table th{position:sticky;top:0}.vgo-flow{font-weight:700;color:#173d60}@media(max-width:1050px){.vgo-cards{grid-template-columns:1fr 1fr}}@media(max-width:700px){.vgo-cards{grid-template-columns:1fr}.vgo-tools{display:block}.vgo-tools input,.vgo-tools select{width:100%;margin-bottom:6px}}
-          '''
-              s=s.replace('</style>',css+'\n</style>',1)
-              section=r'''
-          <!-- BAZA_VGO_SECTION -->
-          <section class="vgo-section" id="vgo"><div class="vgo-head"><div><div class="eyebrow">ВГО · ВНУТРИГРУППОВЫЕ ДВИЖЕНИЯ</div><h2>ВГО / внутренние перечисления</h2><div class="vgo-note">Не входят в реальные расходы и не попадают в реестр согласования.</div></div></div><div class="vgo-cards"><div class="vgo-card"><label>ВСЕ ВГО / ВНУТРЕННИЕ</label><strong id="vgoTotal">—</strong></div><div class="vgo-card"><label>КОЛИЧЕСТВО ОПЕРАЦИЙ</label><strong id="vgoCount">—</strong></div><div class="vgo-card"><label>КРУПНЕЙШИЙ ПРОЕКТ</label><strong id="vgoTop">—</strong></div></div><div class="vgo-tools"><input id="vgoSearch" placeholder="Юрлицо, контрагент, проект…"><select id="vgoEntity"><option value="">Все юрлица</option></select><select id="vgoProject"><option value="">Все проекты</option></select></div><div class="table-card"><div class="table-wrap"><table class="vgo-table"><thead><tr><th>Откуда</th><th>Куда</th><th>Проект</th><th>Направление</th><th>Подстатья</th><th>Сумма</th></tr></thead><tbody id="vgoTable"></tbody></table></div></div></section>
-          '''
-              s=s.replace('</section>\n</div>\n<div id="modal"','</section>\n'+section+'</div>\n<div id="modal"',1)
-
-          if 'function matches(r){' in s and 'if(r.isInternal||r.isNonExpense)return false' not in s:
-              s=s.replace('function matches(r){','function matches(r){if(r.isInternal||r.isNonExpense)return false;',1)
-          s=s.replace('rowsCount.textContent=`Показаны ${rs.length} из ${PAY.length} платежей`','rowsCount.textContent=`Показаны ${rs.length} из ${PAY.filter(r=>!r.isInternal&&!r.isNonExpense).length} реальных платежей`')
-          s=s.replace('PAY.forEach(r=>counts[getStatus(r.id)]++)','PAY.filter(r=>!r.isInternal&&!r.isNonExpense).forEach(r=>counts[getStatus(r.id)]++)')
-
-          if jmarker not in s:
-              js=r'''
-          /* BAZA_VGO_JS */
-          function renderVgo(){
-            const q=(document.getElementById('vgoSearch')?.value||'').toLowerCase();
-            const en=document.getElementById('vgoEntity')?.value||'';
-            const pr=document.getElementById('vgoProject')?.value||'';
-            const all=PAY.filter(r=>r.isInternal&&!r.isNonExpense);
-            const rs=all.filter(r=>(!en||r.entity===en)&&(!pr||r.project===pr)&&(!q||[r.entity,r.counterparty,r.project,r.direction,r.subcategory].join(' ').toLowerCase().includes(q))).sort((a,b)=>b.amount-a.amount);
-            const total=rs.reduce((s,r)=>s+Number(r.amount||0),0);
+            if(window.__BAZA_VGO_PATCHED)return;
+            window.__BAZA_VGO_PATCHED=true;
+            const all=window.PAYMENTS.slice();
+            window.__BAZA_ALL_PAYMENTS=all;
+            const expenses=all.filter(r=>!r.isInternal&&!r.isNonExpense);
+            window.PAYMENTS.splice(0,window.PAYMENTS.length,...expenses);
+            const page=document.querySelector('.page');if(!page)return;
+            page.insertAdjacentHTML('beforeend',`<section class="vgo-section" id="vgo"><div class="vgo-head"><div><div class="eyebrow">ВГО · ВНУТРИГРУППОВЫЕ ДВИЖЕНИЯ</div><h2>ВГО / внутренние перечисления</h2><div class="vgo-note">Не входят в реальные расходы и не попадают в реестр согласования.</div></div></div><div class="vgo-cards"><div class="vgo-card"><label>ВСЕ ВГО / ВНУТРЕННИЕ</label><strong id="vgoTotal">—</strong></div><div class="vgo-card"><label>КОЛИЧЕСТВО ОПЕРАЦИЙ</label><strong id="vgoCount">—</strong></div><div class="vgo-card"><label>КРУПНЕЙШИЙ ПРОЕКТ</label><strong id="vgoTop">—</strong></div></div><div class="vgo-tools"><input id="vgoSearch" placeholder="Юрлицо, контрагент, проект…"><select id="vgoEntity"><option value="">Все юрлица</option></select><select id="vgoProject"><option value="">Все проекты</option></select></div><div class="table-card"><div class="table-wrap"><table><thead><tr><th>Откуда</th><th>Куда</th><th>Проект</th><th>Направление</th><th>Подстатья</th><th>Сумма</th></tr></thead><tbody id="vgoTable"></tbody></table></div></div></section>`);
+            const vgoRows=()=>window.__BAZA_ALL_PAYMENTS.filter(r=>r.isInternal&&!r.isNonExpense);
             const fmt=n=>new Intl.NumberFormat('ru-RU',{maximumFractionDigits:0}).format(Math.round(Number(n)||0))+' ₽';
-            const a=id=>document.getElementById(id);
-            if(!a('vgoTotal'))return;
-            a('vgoTotal').textContent=fmt(total); a('vgoCount').textContent=rs.length;
-            const projects={};rs.forEach(r=>projects[r.project]=(projects[r.project]||0)+Number(r.amount||0));
-            const top=Object.entries(projects).sort((x,y)=>y[1]-x[1])[0]; a('vgoTop').textContent=top?`${top[0]} · ${fmt(top[1])}`:'—';
-            a('vgoTable').innerHTML=rs.map(r=>`<tr><td class="vgo-flow">${esc(r.entity)}</td><td class="vgo-flow">${esc(r.counterparty)}</td><td>${esc(r.project)}</td><td>${esc(r.direction)}</td><td>${esc(r.subcategory)}</td><td class="num"><b>${fmt(r.amount)}</b></td></tr>`).join('')||'<tr><td colspan="6" style="padding:18px;color:#7890a7">Нет операций</td></tr>';
-          }
-          (function(){
-            const vs=PAY.filter(r=>r.isInternal&&!r.isNonExpense);
-            const en=[...new Set(vs.map(r=>r.entity).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ru'));
-            const pr=[...new Set(vs.map(r=>r.project).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ru'));
-            const fe=(id,arr)=>{const el=document.getElementById(id);if(!el)return;arr.forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;el.appendChild(o)})};fe('vgoEntity',en);fe('vgoProject',pr);
-            document.getElementById('vgoSearch')?.addEventListener('input',renderVgo);document.getElementById('vgoEntity')?.addEventListener('change',renderVgo);document.getElementById('vgoProject')?.addEventListener('change',renderVgo);
-            const oldRender=render; window.render=function(){oldRender();renderVgo()}; setTimeout(renderVgo,0);
+            const esc2=s=>String(s??'—').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
+            const fill=(id,arr)=>arr.forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;document.getElementById(id).appendChild(o)});
+            fill('vgoEntity',[...new Set(vgoRows().map(r=>r.entity).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ru')));
+            fill('vgoProject',[...new Set(vgoRows().map(r=>r.project).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ru')));
+            function renderVgo(){const q=(document.getElementById('vgoSearch').value||'').toLowerCase(),en=document.getElementById('vgoEntity').value,pr=document.getElementById('vgoProject').value;const rs=vgoRows().filter(r=>(!en||r.entity===en)&&(!pr||r.project===pr)&&(!q||[r.entity,r.counterparty,r.project,r.direction,r.subcategory].join(' ').toLowerCase().includes(q))).sort((a,b)=>b.amount-a.amount);document.getElementById('vgoTotal').textContent=fmt(rs.reduce((s,r)=>s+r.amount,0));document.getElementById('vgoCount').textContent=rs.length;const p={};rs.forEach(r=>p[r.project]=(p[r.project]||0)+r.amount);const top=Object.entries(p).sort((a,b)=>b[1]-a[1])[0];document.getElementById('vgoTop').textContent=top?top[0]+' · '+fmt(top[1]):'—';document.getElementById('vgoTable').innerHTML=rs.map(r=>`<tr><td class="vgo-flow">${esc2(r.entity)}</td><td class="vgo-flow">${esc2(r.counterparty)}</td><td>${esc2(r.project)}</td><td>${esc2(r.direction)}</td><td>${esc2(r.subcategory)}</td><td class="num"><b>${fmt(r.amount)}</b></td></tr>`).join('')||'<tr><td colspan="6" style="padding:18px;color:#7890a7">Нет операций</td></tr>'}
+            document.getElementById('vgoSearch').oninput=renderVgo;document.getElementById('vgoEntity').onchange=renderVgo;document.getElementById('vgoProject').onchange=renderVgo;
+            const oldRender=window.render;if(typeof oldRender==='function'){window.render=function(){oldRender();renderVgo()};}
+            renderVgo();if(typeof window.render==='function')window.render();
           })();
-          '''
-              s=s.replace('</script>\n</body>',js+'\n</script>\n</body>',1)
-          p.write_text(s,encoding='utf-8')
-
+          </script>
+          EOF
+            awk 'BEGIN{while((getline line < "/tmp/vgo_tail.html")>0) p=p line ORS} /<\/body>/{print p} {print}' index.html > /tmp/index.html && mv /tmp/index.html index.html
+          fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data.js index.html
-          git diff --cached --quiet || git commit -m "Separate expenses and VGO"
+          git add index.html
+          git diff --cached --quiet || git commit -m "Separate real expenses and VGO"
           git push
-          PY
