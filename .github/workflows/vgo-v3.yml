@@ -13,16 +13,7 @@ jobs:
         shell: bash
         run: |
           if ! grep -q 'BAZA_VGO_V3' index.html; then
-            python3 - <<'PY'
-            from pathlib import Path
-            p=Path('index.html')
-            s=p.read_text(encoding='utf-8')
-            css=Path('vgo-v3.css').read_text(encoding='utf-8')
-            js=Path('vgo-v3.js').read_text(encoding='utf-8')
-            block='\n<style>\n'+css+'\n</style>\n<script>\n'+js+'\n</script>\n'
-            s=s.replace('</body>',block+'</body>')
-            p.write_text(s,encoding='utf-8')
-            PY
+            python3 -c "from pathlib import Path; p=Path('index.html'); s=p.read_text(encoding='utf-8'); css=Path('vgo-v3.css').read_text(encoding='utf-8'); js=Path('vgo-v3.js').read_text(encoding='utf-8'); block='\\n<style>\\n'+css+'\\n</style>\\n<script>\\n'+js+'\\n</script>\\n'; p.write_text(s.replace('</body>',block+'</body>'),encoding='utf-8')"
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git add index.html
