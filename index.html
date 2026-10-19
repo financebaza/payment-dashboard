@@ -541,6 +541,14 @@ button,.pill,.tab,.nav-btn{transition:.15s ease}
 /* Approved payments do not show redundant action buttons. */
 .status-actions-approved{justify-content:flex-start;}
 .status-actions-approved .status-pill{margin-right:0;}
+.status-actions .cancel-approval-action{
+  flex:0 0 auto;height:28px;padding:0 7px;border-radius:7px;
+  border:1px solid #d7e0e8;background:#fff;color:#68717c;cursor:pointer;
+  font-size:9px;font-weight:650;display:inline-flex;align-items:center;justify-content:center;gap:3px;
+}
+.status-actions .cancel-approval-action:hover{background:#f5f7f9;border-color:#bfc9d3;color:#3f4b57;}
+.modal-actions .cancel-approval{border-color:#cfd7df;background:#fff;color:#596572;}
+.modal-actions .cancel-approval:hover{background:#f5f7f9;}
 </style></style>
 
 </head>
@@ -770,20 +778,22 @@ async function loadApprovals(){
   }
 }
 
-async function saveApproval(id, status, comment){
+async function saveApproval(id, status, comment, approvedByOverride=null){
   const approverInput = document.getElementById('approverName');
-  const approver = (approverInput?.value || localApprover() || '').trim();
-  if(!approver){
+  const approver = approvedByOverride !== null
+    ? approvedByOverride
+    : (approverInput?.value || localApprover() || '').trim();
+  if(approvedByOverride === null && !approver){
     alert('Укажите имя согласующего.');
     approverInput?.focus();
     return false;
   }
-  setLocalApprover(approver);
+  if(approver) setLocalApprover(approver);
   const payload = {
     payment_id: String(id),
     status: status,
     comment: comment || '',
-    approved_by: approver,
+    approved_by: approver || '',
     updated_at: new Date().toISOString()
   };
   try{
@@ -809,6 +819,10 @@ async function saveApproval(id, status, comment){
 }
 async function setStatus(id,status){
   const current = getApproval(id);
+  // При отмене согласования возвращаем платеж в ожидание и очищаем текущего согласовавшего.
+  if(status==='pending'){
+    return saveApproval(id, 'pending', current.comment || '', '');
+  }
   return saveApproval(id, status, current.comment || '');
 }
 async function setComment(id,comment){
@@ -951,6 +965,7 @@ function renderTable(){
       <td class="status-cell">
         <div class="status-actions ${s==='approved' ? 'status-actions-approved' : ''}">
           ${statusPill(s)}
+          ${s === 'approved' ? `<button class="cancel-approval-action" data-cancel-approval="${esc(r.id)}" title="Вернуть платеж в ожидание согласования">↶ Отменить</button>` : ''}
           ${s !== 'approved' ? `<button class="action-btn approve-action ${s==='approved'?'active':''}" data-status="approved" data-id="${esc(r.id)}" title="Согласовать платеж"><span class="action-icon">✓</span> Согласовать</button>` : ''}
           ${s !== 'approved' ? `<button class="action-btn reject-action ${s==='rejected'?'active':''}" data-reject="${esc(r.id)}" title="Отклонить платеж"><span class="action-icon">✕</span> Отклонить</button>` : ''}
         </div>
@@ -975,6 +990,14 @@ function renderTable(){
   }));
   body.querySelectorAll('[data-reject]').forEach(b=>b.addEventListener('click',e=>{
     e.stopPropagation(); openRejectDialog(b.dataset.reject);
+  }));
+  body.querySelectorAll('[data-cancel-approval]').forEach(b=>b.addEventListener('click',async e=>{
+    e.stopPropagation();
+    const id=b.dataset.cancelApproval;
+    const r=PAYMENTS.find(x=>x.id===id);
+    if(!r) return;
+    const ok=confirm(`Отменить согласование платежа?\n\n${r.counterparty} · ${money(r.amount)}\n\nСтатус вернётся в «Ожидает согласования».`);
+    if(ok) await setStatus(id,'pending');
   }));
   body.querySelectorAll('[data-comment-edit]').forEach(b=>b.addEventListener('click',e=>{
     e.stopPropagation();
@@ -1092,14 +1115,23 @@ function openModal(r){
       <span>${s==='rejected' ? 'Причина отказа' : 'Комментарий'}: ${esc(getComment(r.id) || 'не указан')}</span>
     </div>
     <div class="modal-actions" style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
-      <button class="approve" id="modalApprove">✓ Согласовать</button>
-      <button class="reject" id="modalReject">✕ Отклонить</button>
+      ${s==='approved'
+        ? `<button class="cancel-approval" id="modalCancelApproval">↶ Отменить согласование</button>`
+        : `<button class="approve" id="modalApprove">✓ Согласовать</button>
+           <button class="reject" id="modalReject">✕ Отклонить</button>`}
       <button id="modalSaveComment">Сохранить комментарий</button>
     </div>`;
 
   document.getElementById('modalDetails').after(box);
-  document.getElementById('modalApprove').onclick=async()=>{if(await setStatus(r.id,'approved')) openModal(r);};
-  document.getElementById('modalReject').onclick=()=>openRejectDialog(r.id);
+  const modalApprove=document.getElementById('modalApprove');
+  const modalReject=document.getElementById('modalReject');
+  const modalCancel=document.getElementById('modalCancelApproval');
+  if(modalApprove) modalApprove.onclick=async()=>{if(await setStatus(r.id,'approved')) openModal(r);};
+  if(modalReject) modalReject.onclick=()=>openRejectDialog(r.id);
+  if(modalCancel) modalCancel.onclick=async()=>{
+    const ok=confirm(`Отменить согласование платежа?\n\n${r.counterparty} · ${money(r.amount)}\n\nСтатус вернётся в «Ожидает согласования».`);
+    if(ok && await setStatus(r.id,'pending')) openModal(r);
+  };
   document.getElementById('modalSaveComment').onclick=async()=>{if(await setComment(r.id,document.getElementById('modalComment').value.trim())) openModal(r);};
 
   document.getElementById('modal').classList.remove('hidden');
