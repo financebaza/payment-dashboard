@@ -40,6 +40,351 @@ footer{text-align:center;color:#9aa0a8;font-size:10px;padding:28px 0 5px}
 .donut-sub{font-size:10px;fill:#7b828d}
 @media(max-width:900px){.svg-chart{min-height:240px}}
 
+
+/* v6 — payment control UX */
+.registry-section{margin-top:30px}
+.registry-tools{align-items:end}
+.registry-tools .registry-status-wrap{display:flex;flex-direction:column;gap:5px}
+.registry-tools label{font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:#8a919b}
+.registry-meta{display:flex;align-items:center;justify-content:space-between;margin:0 0 10px;color:#7d858f;font-size:11px}
+.registry-meta strong{color:#20242a}
+.status-pill{display:inline-flex;align-items:center;gap:6px;padding:5px 9px;border-radius:999px;font-size:10px;font-weight:650;white-space:nowrap}
+.status-pill i{width:6px;height:6px;border-radius:50%;display:inline-block}
+.status-pill.pending{background:#fff7e6;color:#8a6500}.status-pill.pending i{background:#d9a441}
+.status-pill.approved{background:#edf8f2;color:#17683f}.status-pill.approved i{background:#3aa574}
+.status-pill.rejected{background:#fff0ef;color:#a5261c}.status-pill.rejected i{background:#d55}
+.status-actions{display:flex;gap:5px;align-items:center}
+.status-actions button{border:1px solid #dfe3e8;background:#fff;border-radius:7px;padding:5px 7px;font-size:10px;cursor:pointer;color:#68717c}
+.status-actions button:hover{background:#f6f7f8}
+.status-actions button.active.approve{background:#edf8f2;border-color:#9bd0b6;color:#17683f}
+.status-actions button.active.reject{background:#fff0ef;border-color:#e6aaa5;color:#a5261c}
+.status-cell{min-width:170px}
+tbody tr{cursor:pointer}
+tbody tr:hover{background:#f8fafb}
+.modal-card{max-height:calc(100vh - 40px);overflow:auto}
+.modal-top{display:flex;justify-content:space-between;align-items:flex-start;gap:20px}
+.modal-top-left{min-width:0}
+.modal-meta{font-size:11px;color:#89919b;margin-top:3px}
+.modal-approval-box{margin-top:18px;border:1px solid var(--line);border-radius:12px;padding:14px;background:#fafbfc}
+.modal-approval-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:10px}
+.modal-approval-head b{font-size:12px}
+.modal-time{font-size:10px;color:#8d949d;margin-top:7px}
+.modal-actions button{border-radius:8px;border:1px solid #dfe3e8;background:#fff;font-weight:650;cursor:pointer}
+.modal-actions .approve{border-color:#9bd0b6;background:#edf8f2;color:#17683f}
+.modal-actions .reject{border-color:#e6aaa5;background:#fff0ef;color:#a5261c}
+.control-strip{position:sticky;bottom:12px;z-index:5;box-shadow:0 8px 28px rgba(20,25,35,.07)}
+.control-strip .status-counts .s{cursor:pointer}
+@media(max-width:700px){
+  .registry-meta{display:block}.registry-meta span{display:block;margin-top:5px}
+  .status-cell{min-width:150px}
+  .modal-top{display:block}
+}
+
+
+/* ===== BAZA v7 visual system ===== */
+:root{
+  --bg:#f3f7fb;
+  --panel:#ffffff;
+  --text:#06294b;
+  --muted:#7890aa;
+  --line:#dce8f3;
+  --accent:#06294b;
+  --navy:#06294b;
+  --red:#ed1c24;
+  --blue-soft:#eef6ff;
+  --green:#6e9d00;
+  --orange:#d99a18;
+}
+body{
+  background:
+    radial-gradient(circle at 50% -10%,#ffffff 0,#f3f7fb 45%,#edf3f9 100%);
+  color:var(--text);
+  font-family:Arial,Helvetica,sans-serif;
+}
+.page{max-width:1400px;padding:0 28px 60px}
+.topbar{
+  height:82px;
+  gap:28px;
+  border-bottom:1px solid #dfe8f1;
+  background:rgba(255,255,255,.92);
+  box-shadow:0 1px 0 rgba(6,41,75,.03);
+}
+.brand{position:relative;display:block;min-width:185px;height:54px;padding-top:1px}
+.brand-word{
+  color:var(--red);
+  font-weight:900;
+  font-size:27px;
+  line-height:.9;
+  letter-spacing:-.06em;
+}
+.brand-sub{
+  color:var(--red);
+  font-weight:800;
+  font-size:9px;
+  line-height:1;
+  letter-spacing:.01em;
+  margin-top:3px;
+}
+.period{
+  color:#7890aa;
+  font-size:11px;
+  font-weight:700;
+  letter-spacing:.06em;
+}
+.top-actions{gap:8px;align-items:center}
+.top-actions .nav-pill{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-width:98px;
+  height:42px;
+  padding:0 18px;
+  border:1.5px solid var(--red);
+  border-radius:24px;
+  color:var(--red);
+  background:#fff;
+  font-size:13px;
+  font-weight:700;
+  text-decoration:none;
+}
+.top-actions .nav-pill.active{
+  background:var(--navy);
+  color:#fff;
+  border-color:var(--navy);
+}
+.top-actions .nav-pill:hover{transform:translateY(-1px)}
+
+.hero{
+  padding:46px 0 25px;
+  align-items:center;
+}
+.eyebrow{
+  color:#7390ac;
+  font-size:10px;
+  letter-spacing:.16em;
+  font-weight:800;
+}
+.hero h1{
+  color:var(--navy);
+  font-size:40px;
+  letter-spacing:-.035em;
+  margin:8px 0 7px;
+}
+.hero p{color:#7890aa;font-size:13px}
+.outline-btn{
+  border:1px solid #c8d9e8;
+  background:#fff;
+  border-radius:10px;
+  color:#526f8d;
+  font-weight:600;
+  padding:10px 16px;
+}
+.outline-btn:hover{border-color:#9ebbd4;background:#f9fcff}
+
+.cards{gap:14px}
+.metric{
+  border:1px solid #dce8f3;
+  border-radius:15px;
+  padding:21px 20px;
+  min-height:118px;
+  box-shadow:0 7px 24px rgba(25,67,104,.05);
+}
+.metric span{color:#7890aa;font-size:9px;letter-spacing:.13em}
+.metric strong{color:var(--navy);font-size:27px}
+.metric small{color:#9aabba}
+.metric.accent{
+  background:var(--navy);
+  border-color:var(--navy);
+  box-shadow:0 10px 30px rgba(6,41,75,.15)
+}
+.metric.accent span{color:#b8cada}
+.metric.accent strong{color:#fff}
+.metric.accent small{color:#b8cada}
+
+.filters{
+  margin:18px 0 20px;
+  padding:18px;
+  background:#fff;
+  border:1px solid #dce8f3;
+  border-radius:16px;
+  box-shadow:0 7px 24px rgba(25,67,104,.04);
+  gap:12px;
+}
+.filter label{
+  color:#6f8aa4;
+  font-size:9px;
+  font-weight:800;
+}
+.filter select,.filter input,.registry-tools input,.registry-tools select{
+  height:42px;
+  border:1px solid #cfe0ee;
+  background:#fff;
+  border-radius:9px;
+  color:#173b5d;
+  font-size:12px;
+}
+.filter select:focus,.filter input:focus,.registry-tools input:focus,.registry-tools select:focus{
+  border-color:#7ea8ca;
+  box-shadow:0 0 0 3px #edf6fd;
+}
+
+.analytics{gap:16px}
+.panel{
+  border:1px solid #dce8f3;
+  border-radius:17px;
+  box-shadow:0 8px 26px rgba(25,67,104,.045);
+}
+.chart-panel{padding:20px}
+.panel-head h2{
+  color:var(--navy);
+  font-size:15px;
+  font-weight:800;
+}
+.panel-head span{color:#8aa0b5}
+.chart-box{height:295px}
+.chart-box.donut{height:295px}
+.gridline{stroke:#edf3f8}
+.barfill{fill:var(--navy)}
+.chart-label{fill:#6e859d;font-size:10px}
+.chart-value{fill:var(--navy);font-size:10px;font-weight:700}
+.donut-bg{stroke:#eaf1f7}
+.donut-seg:nth-child(1){stroke:var(--navy)}
+.donut-center{fill:var(--navy)}
+.donut-sub{fill:#7d95ab}
+
+.control-strip{
+  margin:16px 0 8px;
+  padding:15px 18px;
+  border:1px solid #dce8f3;
+  border-radius:14px;
+  background:#fff;
+  box-shadow:0 6px 20px rgba(25,67,104,.04);
+}
+.control-strip b{color:var(--navy)}
+.control-strip span{color:#7f96ac}
+
+.registry-section{
+  margin-top:28px;
+  padding-top:0;
+}
+.section-title h2{
+  color:var(--navy);
+  font-size:27px;
+  letter-spacing:-.02em;
+}
+.rows-count{color:#7f96ac}
+.registry-tools{
+  padding:15px;
+  background:#fff;
+  border:1px solid #dce8f3;
+  border-radius:14px 14px 0 0;
+  margin-bottom:0;
+}
+.registry-tools input{max-width:none;flex:1}
+.registry-tools select{width:220px}
+.registry-tools label{color:#6f8aa4}
+.registry-meta{
+  background:#fff;
+  border-left:1px solid #dce8f3;
+  border-right:1px solid #dce8f3;
+  margin:0;
+  padding:0 15px 12px;
+  color:#8298ad;
+}
+.registry-meta strong{color:var(--navy)}
+.table-panel{
+  border-radius:0 0 16px 16px;
+  box-shadow:0 8px 26px rgba(25,67,104,.05)
+}
+.table-wrap{max-height:700px}
+table{font-size:11px}
+th{
+  background:#f8fbfe;
+  color:#7890aa;
+  border-bottom:1px solid #dce8f3;
+  padding:13px 11px;
+}
+td{
+  padding:13px 11px;
+  border-bottom:1px solid #edf2f7;
+  color:#173b5d;
+}
+tbody tr:hover{background:#f7fbff}
+.counterparty{color:var(--navy)}
+.source-own{background:#eef6ff;color:#315d82}
+.source-credit{background:#fff0f1;color:#d71d28}
+.status-pill.pending{background:#fff8e7;color:#996b08}
+.status-pill.approved{background:#eff8df;color:#5b7d00}
+.status-pill.rejected{background:#fff0f1;color:#b4232a}
+.status-actions button{background:#fff;border-color:#cfdeea}
+.status-actions button.active.approve{background:#eff8df;border-color:#b9d97b;color:#5b7d00}
+.status-actions button.active.reject{background:#fff0f1;border-color:#f0b5b9;color:#b4232a}
+
+.bottom-grid{
+  gap:16px;
+  margin-top:18px;
+}
+.bottom-grid .panel{padding:20px}
+.rank-list .rank-item{
+  border-bottom:1px solid #edf2f7 !important;
+}
+.rank-list .rank-name{color:#315d82}
+.rank-list .rank-value{color:var(--navy)}
+
+.modal-backdrop{background:rgba(6,41,75,.42);backdrop-filter:blur(3px)}
+.modal-card{
+  width:min(650px,calc(100vw - 28px));
+  border:1px solid #dce8f3;
+  border-radius:20px;
+  box-shadow:0 28px 80px rgba(6,41,75,.24);
+  padding:26px;
+}
+.modal-card h2{color:var(--navy);font-size:25px}
+.modal-amount{color:var(--navy);font-size:32px}
+.detail{border-color:#e6eef5}
+.detail label{color:#7890aa}
+.detail b{color:#173b5d}
+.modal-actions .approve{background:#eff8df;border-color:#b9d97b;color:#5b7d00}
+.modal-actions .reject{background:#fff0f1;border-color:#f0b5b9;color:#b4232a}
+
+footer{
+  color:#8aa0b5;
+  border-top:1px solid #dce8f3;
+  margin-top:28px;
+  padding-top:18px;
+}
+
+/* Make the reference-like blue information strip possible */
+.analytics + .control-strip{position:sticky;bottom:12px;z-index:10}
+
+/* responsive */
+@media(max-width:900px){
+  .topbar{height:auto;min-height:76px;padding:10px 0}
+  .top-actions .nav-pill{min-width:82px;height:38px;padding:0 12px}
+  .period{display:none}
+}
+@media(max-width:600px){
+  .page{padding:0 14px 30px}
+  .brand{min-width:140px}
+  .brand-word{font-size:23px}
+  .top-actions .nav-pill{min-width:auto;padding:0 10px;font-size:11px}
+  .hero h1{font-size:32px}
+  .filters{padding:14px}
+  .registry-tools{padding:12px}
+}
+
+
+.insight-strip{
+  margin:0 0 16px;
+  padding:12px 16px;
+  border-radius:12px;
+  background:#eaf4ff;
+  color:#3f6688;
+  border:1px solid #d5e8f7;
+  font-size:12px;
+}
+.insight-strip b,.insight-strip strong{color:var(--navy)}
+
 </style>
 
 </head>
@@ -47,11 +392,15 @@ footer{text-align:center;color:#9aa0a8;font-size:10px;padding:28px 0 5px}
 <div class="page">
   <header class="topbar">
     <div class="brand">
-      <div class="logo">B</div>
-      <div><b>BAZA</b><span>ФИНАНСОВЫЙ КОНТРОЛЬ</span></div>
+      <div class="brand-word">BAZA</div>
+      <div class="brand-sub">ФИНАНСОВЫЙ КОНТРОЛЬ</div>
     </div>
     <div class="period">ПЛАТЕЖНЫЙ КАЛЕНДАРЬ · 19–25 ОКТЯБРЯ 2026</div>
-    <div class="top-actions"><a href="#overview">Обзор</a><a href="#registry">Реестр</a><a href="#analytics">Аналитика</a></div>
+    <nav class="top-actions" aria-label="Навигация">
+      <a class="nav-pill active" href="#overview">Сводка</a>
+      <a class="nav-pill" href="#analytics">Структура</a>
+      <a class="nav-pill" href="#registry">Платежи</a>
+    </nav>
   </header>
 
   <main>
@@ -75,8 +424,12 @@ footer{text-align:center;color:#9aa0a8;font-size:10px;padding:28px 0 5px}
       <div class="filter"><label>Источник</label><select id="sourceFilter"><option value="">Все</option></select></div>
       <div class="filter"><label>Направление</label><select id="directionFilter"><option value="">Все</option></select></div>
       <div class="filter"><label>Юрлицо</label><select id="entityFilter"><option value="">Все</option></select></div>
-      <div class="filter grow"><label>Поиск</label><input id="globalSearch" placeholder="Контрагент, проект, подстатья, назначение…"></div>
+      <div class="filter grow"><label>Поиск</label><input id="globalSearch" placeholder="Контрагент, проект, подстатья, юрлицо…"></div>
     </section>
+
+    <div class="insight-strip" id="insightStrip">
+      <b>Платежи недели</b> · собственные <strong id="insightOwn">—</strong> · кредит <strong id="insightCredit">—</strong> · всего <strong id="insightTotal">—</strong>
+    </div>
 
     <section id="analytics" class="analytics">
       <div class="panel chart-panel">
@@ -108,13 +461,20 @@ footer{text-align:center;color:#9aa0a8;font-size:10px;padding:28px 0 5px}
         <div id="rowsCount" class="rows-count"></div>
       </div>
       <div class="registry-tools">
-        <input id="registrySearch" placeholder="Поиск по реестру…">
-        <select id="payStatus">
-          <option value="">Все статусы</option>
-          <option value="approved">Согласован</option>
-          <option value="rejected">Не согласован</option>
-          <option value="pending">Ожидает согласования</option>
-        </select>
+        <input id="registrySearch" placeholder="Контрагент, юрлицо, направление, проект, подстатья…">
+        <div class="registry-status-wrap">
+          <label>Статус согласования</label>
+          <select id="payStatus">
+            <option value="">Все статусы</option>
+            <option value="approved">Согласован</option>
+            <option value="rejected">Не согласован</option>
+            <option value="pending">Ожидает согласования</option>
+          </select>
+        </div>
+      </div>
+      <div class="registry-meta">
+        <span id="registryMeta">Показаны <strong>0</strong> платежей</span>
+        <span>Нажмите на строку, чтобы открыть карточку платежа</span>
       </div>
       <div class="panel table-panel">
         <div class="table-wrap">
@@ -128,7 +488,7 @@ footer{text-align:center;color:#9aa0a8;font-size:10px;padding:28px 0 5px}
                 <th>Подстатья</th>
                 <th>Источник</th>
                 <th class="num">Сумма</th>
-                <th>Согласование</th>
+                <th class="status-cell">Статус / действие</th>
               </tr>
             </thead>
             <tbody id="paymentTable"></tbody>
@@ -149,7 +509,7 @@ footer{text-align:center;color:#9aa0a8;font-size:10px;padding:28px 0 5px}
     </section>
   </main>
 
-  <footer>BAZA · Платежный контроль · 19–25.10.2026</footer>
+  <footer>BAZA · Платежный контроль · 19–25.10.2026 · v7</footer>
 </div>
 
 <div id="modal" class="modal hidden">
@@ -157,7 +517,10 @@ footer{text-align:center;color:#9aa0a8;font-size:10px;padding:28px 0 5px}
   <div class="modal-card">
     <button class="modal-close" id="modalClose">×</button>
     <div class="eyebrow">КАРТОЧКА ПЛАТЕЖА</div>
-    <h2 id="modalCounterparty">—</h2>
+    <div class="modal-top-left">
+      <h2 id="modalCounterparty">—</h2>
+      <div class="modal-meta">Платеж из реестра · нажмите ниже, чтобы изменить статус</div>
+    </div>
     <div id="modalAmount" class="modal-amount">—</div>
     <div class="modal-status" id="modalStatus">Ожидает согласования</div>
     <div class="detail-grid" id="modalDetails"></div>
@@ -173,8 +536,13 @@ window.PAYMENTS = [{"entity": "ИП Басс А.А.", "source": "Собстве�
 const money = n => new Intl.NumberFormat('ru-RU',{maximumFractionDigits:0}).format(Math.round(n)) + ' ₽';
 const esc = s => String(s ?? '—').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
 const statusKey = id => 'payment-status-v4-' + id;
+const statusTimeKey = id => 'payment-status-time-v4-' + id;
 const getStatus = id => localStorage.getItem(statusKey(id)) || 'pending';
-const setStatus = (id,status) => { localStorage.setItem(statusKey(id),status); };
+const getStatusTime = id => localStorage.getItem(statusTimeKey(id)) || '';
+const setStatus = (id,status) => {
+  localStorage.setItem(statusKey(id),status);
+  localStorage.setItem(statusTimeKey(id),new Date().toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}));
+};
 
 const state = {source:'',direction:'',entity:'',search:'',status:''};
 let filtered = [...PAYMENTS];
@@ -206,6 +574,9 @@ function renderKpis(){
   const own=rows.filter(r=>r.source==='Собственные').reduce((s,r)=>s+r.amount,0);
   const credit=rows.filter(r=>r.source==='Кредит').reduce((s,r)=>s+r.amount,0);
   document.getElementById('kpiTotal').textContent=money(total);
+  document.getElementById('insightTotal').textContent=money(total);
+  document.getElementById('insightOwn').textContent=money(own);
+  document.getElementById('insightCredit').textContent=money(credit);
   document.getElementById('kpiOwn').textContent=money(own);
   document.getElementById('kpiCredit').textContent=money(credit);
   document.getElementById('kpiShare').textContent=(total?((credit/total)*100).toFixed(1):'0.0')+'%';
@@ -284,28 +655,41 @@ function renderCharts(){
   renderDonut('sourceChart',aggregate('source',rows));
   renderBar('entityChart',aggregate('entity',rows).slice(0,10),true);
 }
-function statusLabel(s){return s==='approved'?'Согласован':s==='rejected'?'Не согласован':'Ожидает';}
+
+function statusLabel(s){return s==='approved'?'Согласован':s==='rejected'?'Не согласован':'Ожидает согласования';}
+function statusClass(s){return s==='approved'?'approved':s==='rejected'?'rejected':'pending';}
+function statusPill(s){
+  return `<span class="status-pill ${statusClass(s)}"><i></i>${statusLabel(s)}</span>`;
+}
 function renderTable(){
   const body=document.getElementById('paymentTable');
   body.innerHTML=filtered.map(r=>{
     const s=getStatus(r.id);
-    return `<tr>
-      <td class="counterparty" data-open="${esc(r.id)}">${esc(r.counterparty)}</td>
+    return `<tr data-open="${esc(r.id)}">
+      <td class="counterparty">${esc(r.counterparty)}</td>
       <td>${esc(r.entity)}</td>
       <td>${esc(r.direction)}</td>
       <td>${esc(r.project)}</td>
       <td class="muted">${esc(r.subcategory)}</td>
       <td><span class="source-badge ${r.source==='Кредит'?'source-credit':'source-own'}">${esc(r.source)}</span></td>
       <td class="num"><b>${money(r.amount)}</b></td>
-      <td><div class="status-btns">
-        <button class="${s==='approved'?'active approve':''}" data-status="approved" data-id="${esc(r.id)}">✓</button>
-        <button class="${s==='rejected'?'active reject':''}" data-status="rejected" data-id="${esc(r.id)}">✕</button>
-      </div></td>
+      <td class="status-cell">
+        <div class="status-actions">
+          ${statusPill(s)}
+          <button class="${s==='approved'?'active approve':''}" data-status="approved" data-id="${esc(r.id)}" title="Согласовать">✓</button>
+          <button class="${s==='rejected'?'active reject':''}" data-status="rejected" data-id="${esc(r.id)}" title="Не согласовать">✕</button>
+        </div>
+      </td>
     </tr>`;
   }).join('');
   document.getElementById('rowsCount').textContent=`${filtered.length} платежей`;
-  body.querySelectorAll('[data-status]').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();setStatus(b.dataset.id,b.dataset.status);apply()}));
-  body.querySelectorAll('[data-open]').forEach(c=>c.addEventListener('click',()=>openModal(PAYMENTS.find(x=>x.id===c.dataset.open))));
+  document.getElementById('registryMeta').innerHTML=`Показаны <strong>${filtered.length}</strong> из <strong>${PAYMENTS.length}</strong> платежей`;
+  body.querySelectorAll('[data-status]').forEach(b=>b.addEventListener('click',e=>{
+    e.stopPropagation(); setStatus(b.dataset.id,b.dataset.status); apply();
+  }));
+  body.querySelectorAll('tr[data-open]').forEach(row=>{
+    row.addEventListener('click',()=>openModal(PAYMENTS.find(x=>x.id===row.dataset.open)));
+  });
 }
 function renderLists(){
   const render=(id,items)=>{const total=items.reduce((s,x)=>s+x[1],0), max=items[0]?.[1]||1;document.getElementById(id).innerHTML=items.slice(0,12).map(x=>`<div class="rank"><div><div class="rank-name">${esc(x[0])}</div><div class="bar"><i style="width:${(x[1]/max)*100}%"></i></div></div><div class="rank-value">${money(x[1])}</div></div>`).join('')};
@@ -325,7 +709,14 @@ function renderAll(){renderKpis();renderCharts();renderTable();renderLists();ren
 document.getElementById('globalSearch').addEventListener('input',e=>{state.search=e.target.value;apply()});
 document.getElementById('registrySearch').addEventListener('input',e=>{state.search=e.target.value;document.getElementById('globalSearch').value=e.target.value;apply()});
 document.getElementById('payStatus').addEventListener('change',e=>{state.status=e.target.value;apply()});
+document.querySelectorAll('.status-counts .s').forEach(el=>el.addEventListener('click',()=>{
+  const label=el.classList.contains('approved')?'approved':el.classList.contains('rejected')?'rejected':'pending';
+  state.status=state.status===label?'':label;
+  document.getElementById('payStatus').value=state.status;
+  apply();
+}));
 document.getElementById('reset').addEventListener('click',()=>{Object.assign(state,{source:'',direction:'',entity:'',search:'',status:''});['sourceFilter','directionFilter','entityFilter','payStatus'].forEach(id=>document.getElementById(id).value='');document.getElementById('globalSearch').value='';document.getElementById('registrySearch').value='';apply()});
+
 
 function openModal(r){
   if(!r)return;
@@ -333,13 +724,28 @@ function openModal(r){
   const s=getStatus(r.id);
   document.getElementById('modalCounterparty').textContent=r.counterparty;
   document.getElementById('modalAmount').textContent=money(r.amount);
-  const st=document.getElementById('modalStatus'); st.textContent=statusLabel(s);
-  st.style.background=s==='approved'?'#edf8f2':s==='rejected'?'#fff0ef':'#f1f3f5';
-  st.style.color=s==='approved'?'#17683f':s==='rejected'?'#a5261c':'#626a74';
+  const st=document.getElementById('modalStatus');
+  st.innerHTML=statusPill(s);
+  st.style.background='transparent';
+  st.style.padding='0';
+  st.style.marginBottom='18px';
+
+  const changed=getStatusTime(r.id);
   document.getElementById('modalDetails').innerHTML=[
-    ['Юрлицо',r.entity],['Источник финансирования',r.source],['Направление',r.direction],
-    ['Проект',r.project],['Подстатья',r.subcategory],['ID платежа',r.id]
+    ['Юрлицо',r.entity],['Источник финансирования',r.source],
+    ['Направление',r.direction],['Проект',r.project],
+    ['Подстатья',r.subcategory],['ID платежа',r.id]
   ].map(x=>`<div class="detail"><label>${esc(x[0])}</label><b>${esc(x[1])}</b></div>`).join('');
+
+  const oldBox=document.getElementById('modalApprovalBox');
+  if(oldBox) oldBox.remove();
+  const box=document.createElement('div');
+  box.id='modalApprovalBox';
+  box.className='modal-approval-box';
+  box.innerHTML=`<div class="modal-approval-head"><b>Контроль согласования</b>${statusPill(s)}</div>
+    <div class="modal-time">${changed ? 'Последнее изменение: '+esc(changed) : 'Статус ещё не изменялся'}</div>`;
+  document.getElementById('modalDetails').after(box);
+
   document.getElementById('modal').classList.remove('hidden');
 }
 document.getElementById('modalClose').onclick=()=>document.getElementById('modal').classList.add('hidden');
