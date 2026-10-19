@@ -2,12 +2,11 @@ window.PAYMENTS = [{"entity":"ИП Басс А.А.","source":"Собственн
 /* BAZA_FILTER_SHIM */
 (function(){
   function flowType(r){
-    const sub=String(r.subcategory||'').trim().toLowerCase();
+    // The subcategory/article is NOT used to determine cash-flow direction.
+    // In this registry `entity` is our legal entity / payer. Therefore a normal
+    // row is an expense. Explicit flags identify non-expense movements.
     if(r.isInternal) return 'internal';
     if(r.isNonExpense) return 'income';
-    if(sub.includes('поступления от продаж')) return 'income';
-    if(sub.includes('выгрузка кредитных средств')) return 'income';
-    if(sub.includes('возврат займа')) return 'income';
     return 'expense';
   }
   window.PAYMENTS = window.PAYMENTS.map(r=>Object.assign({},r,{flowType:flowType(r)}));
