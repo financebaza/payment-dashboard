@@ -465,26 +465,47 @@ button,.pill,.tab,.nav-btn{transition:.15s ease}
 @media(max-width:700px){.approver-wrap{display:block}.approver-wrap input{width:100%;margin-top:5px}}
 
 
-/* v10 — approval UX polish */
-.status-cell{min-width:285px}
-.status-actions{gap:7px;flex-wrap:nowrap}
+/* v11 — compact approval registry, no horizontal scroll */
+.table-panel{overflow:hidden}
+.table-wrap{width:100%;overflow-x:hidden}
+.registry-card table{width:100%;table-layout:fixed}
+.registry-card table th,.registry-card table td{padding-left:8px!important;padding-right:8px!important}
+.registry-card table th:nth-child(1),.registry-card table td:nth-child(1){width:15%}
+.registry-card table th:nth-child(2),.registry-card table td:nth-child(2){width:11%}
+.registry-card table th:nth-child(3),.registry-card table td:nth-child(3){width:10%}
+.registry-card table th:nth-child(4),.registry-card table td:nth-child(4){width:10%}
+.registry-card table th:nth-child(5),.registry-card table td:nth-child(5){width:11%}
+.registry-card table th:nth-child(6),.registry-card table td:nth-child(6){width:8%}
+.registry-card table th:nth-child(7),.registry-card table td:nth-child(7){width:8%}
+.registry-card table th:nth-child(8),.registry-card table td:nth-child(8){width:19%}
+.registry-card table th:nth-child(9),.registry-card table td:nth-child(9){width:8%}
+.registry-card table td{overflow:hidden;text-overflow:ellipsis}
+.status-cell{min-width:0!important}
+.status-actions{display:flex;align-items:center;gap:5px;flex-wrap:nowrap;min-width:0}
+.status-actions .status-pill{flex:0 1 auto;max-width:108px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .status-actions .action-btn{
-  height:32px;min-width:112px;padding:0 11px;border-radius:8px;
+  flex:0 0 auto;height:28px;min-width:88px;padding:0 8px;border-radius:7px;
   border:1px solid #d7e0e8;background:#fff;cursor:pointer;
-  font-size:10px;font-weight:700;letter-spacing:.01em;
-  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  font-size:9px;font-weight:700;letter-spacing:.005em;
+  display:inline-flex;align-items:center;justify-content:center;gap:4px;
   transition:all .15s ease;box-shadow:0 1px 1px rgba(20,35,55,.03)
 }
-.status-actions .action-btn:hover{transform:translateY(-1px);box-shadow:0 3px 10px rgba(20,35,55,.08)}
+.status-actions .action-btn:hover{transform:translateY(-1px);box-shadow:0 3px 8px rgba(20,35,55,.08)}
 .status-actions .action-btn.approve-action{color:#17754a;border-color:#a8d8bd;background:#f3fbf6}
 .status-actions .action-btn.approve-action:hover,.status-actions .action-btn.active.approve-action{background:#dff5e8;border-color:#76c59b;color:#12663e}
 .status-actions .action-btn.reject-action{color:#b21d26;border-color:#f0b5b8;background:#fff7f7}
 .status-actions .action-btn.reject-action:hover,.status-actions .action-btn.active.reject-action{background:#ffe8e9;border-color:#e58b91;color:#a71922}
-.status-actions .action-btn .action-icon{font-size:13px;line-height:1}
-.comment-cell{min-width:205px}
-.comment-cell .comment-text{max-width:175px}
-.comment-save{display:inline-flex;align-items:center;justify-content:center;height:28px;padding:0 9px!important;margin-left:6px!important;font-size:10px!important;font-weight:650}
-.comment-save:hover{border-color:#a9c7df!important;background:#f3f8fc!important}
+.status-actions .action-btn .action-icon{font-size:11px;line-height:1}
+.comment-cell{min-width:0!important;max-width:none!important}
+.comment-cell .comment-inline{display:flex;align-items:center;gap:5px;min-width:0}
+.comment-cell .comment-text{display:block;max-width:none;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#68717c}
+.comment-edit-link{
+  flex:0 0 auto;border:0;background:transparent;color:#4f8fce;
+  padding:2px 3px;font-size:9px;font-weight:650;cursor:pointer
+}
+.comment-edit-link:hover{text-decoration:underline}
+.comment-save{display:inline-flex;align-items:center;justify-content:center;height:26px;padding:0 8px!important;margin-left:0!important;font-size:9px!important;font-weight:650}
+.comment-edit{width:100%;min-width:0;min-height:48px;box-sizing:border-box}
 .approval-meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:9px}
 .approval-meta span{font-size:10px;color:#6e7a87;background:#f5f8fb;border:1px solid #e3eaf1;border-radius:7px;padding:5px 8px}
 .modal-approval-box{background:linear-gradient(180deg,#fbfdff,#f7fafc);border-color:#dce6ef}
@@ -510,6 +531,12 @@ button,.pill,.tab,.nav-btn{transition:.15s ease}
   .status-actions .action-btn{min-width:100px}
 }
 
+@media(max-width:1050px){
+  .registry-card table{table-layout:auto;min-width:0}
+  .registry-card table th,.registry-card table td{font-size:9px!important}
+  .status-actions .action-btn{min-width:78px;padding:0 6px}
+  .status-actions .status-pill{max-width:96px}
+}
 </style>
 
 </head>
@@ -640,7 +667,7 @@ button,.pill,.tab,.nav-btn{transition:.15s ease}
     </section>
   </main>
 
-  <footer>BAZA · Платежный контроль · 19–25.10.2026 · v10 · Supabase</footer>
+  <footer>BAZA · Платежный контроль · 19–25.10.2026 · v11 · Supabase</footer>
 </div>
 
 <div id="modal" class="modal hidden">
@@ -925,8 +952,15 @@ function renderTable(){
         </div>
       </td>
       <td class="comment-cell">
-        <span class="comment-text" title="${esc(c)}">${c?esc(c):'—'}</span>
-        <button class="comment-save" data-comment-edit="${esc(r.id)}">${c?'Изменить':'Добавить'}</button>
+        ${c
+          ? `<div class="comment-inline">
+               <span class="comment-text" title="${esc(c)}">${esc(c)}</span>
+               <button class="comment-edit-link" data-comment-edit="${esc(r.id)}">Изменить</button>
+             </div>`
+          : `<div class="comment-inline">
+               <span class="comment-text" title="Комментарий не указан">—</span>
+               <button class="comment-edit-link" data-comment-edit="${esc(r.id)}">Добавить</button>
+             </div>`}
       </td>
     </tr>`;
   }).join('');
