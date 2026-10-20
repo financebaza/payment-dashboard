@@ -602,4 +602,119 @@ function refillColumnFilters(){
   finishRecovery();
 })();
 </script>
+
+<style>
+/* BAZA_DRILLDOWN_V1 */
+.dd-backdrop{position:fixed;inset:0;z-index:9000;background:rgba(6,29,51,.62);display:none;align-items:center;justify-content:center;padding:18px}
+.dd-backdrop.visible{display:flex}
+.dd-panel{width:min(1100px,100%);max-height:91vh;display:flex;flex-direction:column;border-radius:16px;background:#fff;box-shadow:0 24px 75px #05172b55;overflow:hidden;color:#123b5a}
+.dd-head{display:flex;justify-content:space-between;align-items:start;gap:12px;padding:20px 23px;border-bottom:1px solid #e0eaf2}
+.dd-head h2{margin:4px 0;font-size:20px}.dd-head small{font-size:11px;color:#7891a6}
+.dd-close{border:1px solid #d3e0e9;background:#f4f8fb;border-radius:9px;padding:8px 12px;font-size:18px;cursor:pointer}
+.dd-summary{display:flex;flex-wrap:wrap;gap:24px;padding:14px 23px;background:#f6faff;font-size:12px}
+.dd-summary b{display:block;font-size:22px;color:#143f69}
+.dd-toolbar{padding:12px 23px;display:flex;align-items:center;gap:12px}
+.dd-toolbar input{min-width:0;flex:1;border:1px solid #d0e0eb;border-radius:8px;padding:10px;font-size:12px}
+.dd-toolbar span{font-size:11px;color:#6f8aa2}
+.dd-scroll{overflow:auto;padding:0 23px 20px}
+.dd-table{border-collapse:collapse;width:100%;font-size:11px}
+.dd-table th{text-align:left;position:sticky;top:0;background:#eaf2f8;color:#617e96;font-size:10px;z-index:1}
+.dd-table td,.dd-table th{padding:11px 9px;border-bottom:1px solid #e6edf3;white-space:nowrap}
+.dd-table td.dd-wrap{max-width:260px;overflow:hidden;text-overflow:ellipsis}
+.dd-table td.dd-num{text-align:right;font-weight:800}
+.dd-table button{border:0;background:transparent;text-align:left;color:#176aa3;font:inherit;font-weight:700;cursor:pointer}
+.dd-table button:hover{text-decoration:underline}
+.dd-back{border:0;background:#e9f3fb;color:#1b5b8b;border-radius:8px;padding:8px 12px;cursor:pointer}
+.metric.total,.metric:has(#kpiShare),#sourceDonut,.dashboard-clickable,.vgo-flow-group,.vgo-card{cursor:pointer}
+.metric.total:hover,.metric:has(#kpiShare):hover{outline:2px solid #a3c5df}
+@media(max-width:650px){.dd-head{padding:14px}.dd-toolbar,.dd-summary{padding:10px 14px}.dd-scroll{padding:0 10px 14px}.dd-head h2{font-size:16px}}
+</style>
+<div id="drillBackdrop" class="dd-backdrop" role="presentation">
+ <div class="dd-panel" role="dialog" aria-modal="true" aria-labelledby="drillTitle">
+  <div class="dd-head"><div><small>ДЕТАЛИЗАЦИЯ ПОКАЗАТЕЛЯ</small><h2 id="drillTitle">Платежи</h2><small id="drillScope"></small></div><button id="drillClose" class="dd-close" type="button" aria-label="Закрыть детализацию">×</button></div>
+  <div class="dd-summary"><div>Сумма<b id="drillAmount">—</b></div><div>Операций<b id="drillCount">—</b></div></div>
+  <div class="dd-toolbar"><input id="drillSearch" type="search" placeholder="Поиск по контрагенту, юрлицу, проекту, статье…" aria-label="Поиск в детализации"><span id="drillShown"></span></div>
+  <div class="dd-scroll"><table class="dd-table"><thead><tr><th>Контрагент</th><th>Юрлицо</th><th>Проект</th><th>Направление</th><th>Источник</th><th>Сумма</th><th>Статус</th></tr></thead><tbody id="drillRows"></tbody></table></div>
+ </div>
+</div>
+<script>
+/* BAZA_DRILLDOWN_V1 */
+(function(){
+ 'use strict';
+ const backdrop=document.getElementById('drillBackdrop');
+ const search=document.getElementById('drillSearch');
+ let selection=[],title='',origin=null;
+ const moneyLocal=n=>new Intl.NumberFormat('ru-RU',{maximumFractionDigits:0}).format(Number(n)||0)+' ₽';
+ const html=s=>String(s??'—').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
+ const excluded=r=>r.isNonExpense||r.isInternal||/(?:^|[^\p{L}\p{N}])[мm]73(?=$|[^\p{L}\p{N}])|пл[еэ]йэстейт|playestate/iu.test(String(r.entity||'')+' '+String(r.counterparty||''));
+ const expense=()=>PAY.filter(r=>matches(r)&&!excluded(r));
+ function show(label,list,source){
+   title=label;selection=list.slice();origin=source||null;search.value='';
+   document.getElementById('drillTitle').textContent=label;
+   document.getElementById('drillScope').textContent='Состав показателя по текущим фильтрам · суммы без двойного счёта';
+   backdrop.classList.add('visible');document.body.style.overflow='hidden';draw();search.focus();
+ }
+ function draw(){
+   const q=search.value.trim().toLocaleLowerCase('ru-RU');
+   const rs=selection.filter(r=>!q||[r.counterparty,r.entity,r.project,r.direction,r.source,r.subcategory,r.id].join(' ').toLocaleLowerCase('ru-RU').includes(q));
+   document.getElementById('drillAmount').textContent=moneyLocal(rs.reduce((a,r)=>a+Number(r.amount||0),0));
+   document.getElementById('drillCount').textContent=rs.length;
+   document.getElementById('drillShown').textContent=q?'Отобрано '+rs.length+' из '+selection.length:'';
+   document.getElementById('drillRows').innerHTML=rs.slice().sort((a,b)=>Number(b.amount||0)-Number(a.amount||0)).map(r=>{
+     const st=getStatus(r.id),label=st==='approved'?'Согласован':st==='rejected'?'Не согласован':'Ожидает';
+     const clickable=PAY.some(p=>p.id===r.id);
+     return '<tr><td class="dd-wrap" title="'+html(r.counterparty)+'">'+(clickable?'<button type="button" data-dd-id="'+html(r.id)+'">'+html(r.counterparty)+'</button>':html(r.counterparty))+
+       '</td><td class="dd-wrap" title="'+html(r.entity)+'">'+html(r.entity)+'</td><td>'+html(r.project)+'</td><td>'+html(r.direction)+'</td><td>'+html(r.source)+'</td><td class="dd-num">'+moneyLocal(r.amount)+'</td><td>'+html(label)+'</td></tr>';
+   }).join('')||'<tr><td colspan="7">Платежи не найдены</td></tr>';
+ }
+ function close(){backdrop.classList.remove('visible');document.body.style.overflow='';if(origin?.focus)origin.focus();}
+ function select(field,value,label){
+   if(field==='status')show(label,rows().filter(r=>getStatus(r.id)===value));
+   else if(field==='project')show(label,expense().filter(r=>classifyProject(r.project)===value));
+   else show(label,expense().filter(r=>String(r[field]??'')===value));
+ }
+ document.addEventListener('click',e=>{
+   if(!document.body.classList.contains('auth-ready'))return;
+   const metric=e.target.closest('.metric');
+   if(metric&&metric.closest('.cards')){
+     e.preventDefault();e.stopImmediatePropagation();
+     if(metric.querySelector('#kpiTotal')||metric.querySelector('#kpiShare'))show(metric.querySelector('label')?.textContent||'Все расходы',expense(),metric);
+     else if(metric.dataset.dashField)select(metric.dataset.dashField,metric.dataset.dashValue,metric.querySelector('label')?.textContent||metric.dataset.dashValue);
+     return;
+   }
+   const target=e.target.closest('#directionRank [data-dash-field],#projectRank [data-dash-field],#entityRank [data-dash-field],#statusBoard [data-dash-field],#sourceLegend [data-dash-field]');
+   if(target){
+     e.preventDefault();e.stopImmediatePropagation();
+     select(target.dataset.dashField,target.dataset.dashValue,target.querySelector('.rank-name,.project-item-name')?.textContent||target.dataset.dashValue);
+     return;
+   }
+   if(e.target.closest('#sourceDonut')){
+     const node=document.getElementById('sourceDonut'),rect=node.getBoundingClientRect(),x=e.clientX-rect.left-rect.width/2,y=e.clientY-rect.top-rect.height/2;
+     if(Math.hypot(x,y)<rect.width*.17)return;
+     const deg=(Math.atan2(y,x)*180/Math.PI+450)%360,src=deg<(window.__BAZA_SOURCE_PCT||0)*3.6?'Кредит':'Собственные';
+     e.preventDefault();e.stopImmediatePropagation();select('source',src,src==='Кредит'?'Кредитные средства':'Собственные средства');
+     return;
+   }
+   const quick=e.target.closest('[data-quick]');
+   if(quick){e.preventDefault();e.stopImmediatePropagation();select('status',quick.dataset.quick,quick.textContent.trim());return;}
+   const group=e.target.closest('#vgoClearBoard .vgo-flow-group');
+   if(group){
+     const source=group.querySelector('.vgo-flow-source span')?.textContent;
+     if(!source)return;
+     const list=(window.__BAZA_ALL_PAYMENTS||[]).filter(r=>r.isInternal&&!r.isNonExpense&&r.entity===source&&!/(?:^|[^\p{L}\p{N}])[мm]73(?=$|[^\p{L}\p{N}])|пл[еэ]йэстейт|playestate/iu.test(String(r.entity||'')+' '+String(r.counterparty||''))&&matches(r));
+     show('ВГО: '+source,list,group);return;
+   }
+ },true);
+ backdrop.addEventListener('click',e=>{if(e.target===backdrop)close();});
+ document.getElementById('drillClose').addEventListener('click',close);
+ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&backdrop.classList.contains('visible')){e.stopPropagation();close();}});
+ search.addEventListener('input',draw);
+ document.getElementById('drillRows').addEventListener('click',e=>{
+   const btn=e.target.closest('[data-dd-id]');if(!btn)return;
+   const payment=PAY.find(r=>String(r.id)===btn.dataset.ddId);
+   if(payment){close();openModal(payment);}
+ });
+})();
+</script>
+
 </body></html>
