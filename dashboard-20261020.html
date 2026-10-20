@@ -60,7 +60,7 @@ button.project-item.dashboard-clickable.selected{background:#e3f0fc;border-color
   <div class="board-title">
     <div>
       <h3>Расходы по проектам</h3>
-      <span>Каждый проект — отдельная строка · совместные проекты не распределяются произвольно</span>
+      <span>Показываются только указанные проекты с расходами · совместные платежи — «Несколько проектов» · Инфраструктура и М73 не включены</span>
     </div>
     <span id="projectSummary">—</span>
   </div>
@@ -95,7 +95,21 @@ async function saveApproval(id,status,comment=getComment(id)){
   }catch(e){alert(e.message||'Ошибка сохранения. Попробуйте ещё раз.');}
 }
 const UNASSIGNED_PROJECT='__BAZA_UNASSIGNED_PROJECT__';
-function matches(r){if(state.source&&r.source!==state.source||state.direction&&r.direction!==state.direction||state.entity&&r.entity!==state.entity||state.status&&getStatus(r.id)!==state.status)return false;if(state.search&&![r.counterparty,r.entity,r.direction,r.project,r.subcategory,r.source].join(' ').toLowerCase().includes(state.search.toLowerCase()))return false;for(const[f,v]of Object.entries(state.column)){if(!v)continue;if(f==='project'&&v===UNASSIGNED_PROJECT){if(String(r.project??'').trim())return false;continue;}if((f==='project'?String(r.project??'').trim():String(r[f]??''))!==v)return false;}return true}window.__BAZA_MATCH_PAYMENTS=matches;function rows(){return PAY.filter(matches)}function agg(rs,f){const m={};rs.forEach(r=>m[r[f]]=(m[r[f]]||0)+Number(r.amount||0));return Object.entries(m).sort((a,b)=>b[1]-a[1])}
+const PROJECT_CATEGORIES=['ДМД','ДМД-2','ПКП','ДНК','Алиса','Алиса 2','Алиса 3','Бестселлер','Бренд BAZA','Инвест'];
+const MULTI_PROJECT_KEY='__BAZA_MULTI_PROJECT__';
+function classifyProject(raw){
+  const name=String(raw??'').trim();
+  if(!name)return null;
+  if(name.split(/[,;]/).map(p=>p.trim()).filter(Boolean).length>1)return MULTI_PROJECT_KEY;
+  return PROJECT_CATEGORIES.find(p=>p.toLocaleLowerCase('ru-RU')===name.toLocaleLowerCase('ru-RU'))||null;
+}
+const PROJECT_DISPLAY_NAME=key=>key===MULTI_PROJECT_KEY?'Несколько проектов':key===UNASSIGNED_PROJECT?'Без проекта':key;
+
+function matches(r){if(state.source&&r.source!==state.source||state.direction&&r.direction!==state.direction||state.entity&&r.entity!==state.entity||state.status&&getStatus(r.id)!==state.status)return false;if(state.search&&![r.counterparty,r.entity,r.direction,r.project,r.subcategory,r.source].join(' ').toLowerCase().includes(state.search.toLowerCase()))return false;for(const[f,v]of Object.entries(state.column)){if(!v)continue;if(f==='project'){
+  if(v===UNASSIGNED_PROJECT){if(String(r.project??'').trim())return false;continue;}
+  if(v===MULTI_PROJECT_KEY||PROJECT_CATEGORIES.includes(v)){if(classifyProject(r.project)!==v)return false;continue;}
+}
+if((f==='project'?String(r.project??'').trim():String(r[f]??''))!==v)return false;}return true}window.__BAZA_MATCH_PAYMENTS=matches;function rows(){return PAY.filter(matches)}function agg(rs,f){const m={};rs.forEach(r=>m[r[f]]=(m[r[f]]||0)+Number(r.amount||0));return Object.entries(m).sort((a,b)=>b[1]-a[1])}
 function expenseRows(){return PAY.filter(r=>matches(r)&&!r.isNonExpense&&!r.isInternal&&!/(?:^|[^\p{L}\p{N}])[мm]73(?=$|[^\p{L}\p{N}])|пл[еэ]йэстейт|playestate/iu.test(String(r.entity||''))&&!/(?:^|[^\p{L}\p{N}])[мm]73(?=$|[^\p{L}\p{N}])|пл[еэ]йэстейт|playestate/iu.test(String(r.counterparty||'')));}
 function renderKpi(){const rs=expenseRows(),t=rs.reduce((s,r)=>s+r.amount,0),o=rs.filter(r=>r.source==='Собственные').reduce((s,r)=>s+r.amount,0),c=rs.filter(r=>r.source==='Кредит').reduce((s,r)=>s+r.amount,0);kpiTotal.textContent=money(t);kpiOwn.textContent=money(o);kpiCredit.textContent=money(c);kpiShare.textContent=(t?c/t*100:0).toFixed(1)+'%';dashboardTotal.textContent=money(t)}
 function renderRank(id,items,field,red=false){
@@ -111,8 +125,8 @@ function renderRank(id,items,field,red=false){
 function renderProjectRank(rs){
   const totals=new Map();
   for(const r of rs){
-    const raw=String(r.project??'').trim();
-    const key=raw||UNASSIGNED_PROJECT;
+    const key=classifyProject(r.project);
+    if(!key)continue;
     const entry=totals.get(key)||{sum:0,count:0};
     entry.sum+=Number(r.amount||0);
     entry.count++;
@@ -120,14 +134,16 @@ function renderProjectRank(rs){
   }
   const projects=[...totals].map(([value,data])=>({
     value,
-    name:value===UNASSIGNED_PROJECT?'Без проекта':value,
+    name:PROJECT_DISPLAY_NAME(value),
     amount:data.sum,
     count:data.count
   })).sort((a,b)=>b.amount-a.amount||a.name.localeCompare(b.name,'ru'));
-  const total=rs.reduce((acc,r)=>acc+Number(r.amount||0),0);
+  const total=projects.reduce((acc,p)=>acc+p.amount,0);
   const max=projects[0]?.amount||1;
   document.getElementById('projectSummary').textContent=
-    projects.length+' '+(projects.length===1?'проект':(projects.length%10>=2&&projects.length%10<=4&&(projects.length%100<12||projects.length%100>14)?'проекта':'проектов'))+' · '+money(total);
+    projects.length+' '+(projects.length%10===1&&projects.length%100!==11?'категория':
+    (projects.length%10>=2&&projects.length%10<=4&&(projects.length%100<12||projects.length%100>14)?'категории':'категорий'))+
+    ' · '+money(total);
   const formatPct=new Intl.NumberFormat('ru-RU',{maximumFractionDigits:1});
   document.getElementById('projectRank').innerHTML=projects.map(p=>{
     const selected=state.column.project===p.value;
@@ -138,8 +154,9 @@ function renderProjectRank(rs){
       '<span class="project-item-head"><span class="project-item-name">'+esc(p.name)+
       '</span><span class="project-item-sum">'+money(p.amount)+'</span></span>'+
       '<span class="project-item-track"><i style="width:'+Math.max(0,Math.min(100,p.amount/max*100))+'%"></i></span>'+
-      '<span class="project-item-footer"><span>'+formatPct.format(pct)+'% от расходов</span><span>'+p.count+' '+(p.count===1?'платёж':(p.count%10>=2&&p.count%10<=4&&(p.count%100<12||p.count%100>14)?'платежа':'платежей'))+'</span></span></button>';
-  }).join('')||'<span style="color:var(--muted);font-size:11px">Нет расходов по выбранным фильтрам</span>';
+      '<span class="project-item-footer"><span>'+formatPct.format(pct)+'% от расходов по указанным категориям</span><span>'+p.count+' '+(p.count%10===1&&p.count%100!==11?'платёж':
+      (p.count%10>=2&&p.count%10<=4&&(p.count%100<12||p.count%100>14)?'платежа':'платежей'))+'</span></span></button>';
+  }).join('')||'<span style="color:var(--muted);font-size:11px">Нет расходов по указанным проектам при текущих фильтрах</span>';
 }
 function renderDash(){
   const rs=expenseRows(),sources=agg(rs,'source'),dirs=agg(rs,'direction'),ents=agg(rs,'entity');
@@ -197,7 +214,7 @@ function renderActiveFilters(){
   if(state.status)chosen.push(['status',state.status]);
   document.getElementById('activeFilters').innerHTML=chosen.length?
     '<span class="active-filters-label">Выбрано:</span>'+
-    chosen.map(([field,val])=>'<button type="button" class="active-filter-chip" data-clear-field="'+esc(field)+'" title="Снять фильтр">'+esc(DASHBOARD_LABELS[field]||field)+': '+esc(field==='status'?(STATUS_LABELS[val]||val):field==='project'&&val===UNASSIGNED_PROJECT?'Без проекта':val)+' ×</button>').join('')+
+    chosen.map(([field,val])=>'<button type="button" class="active-filter-chip" data-clear-field="'+esc(field)+'" title="Снять фильтр">'+esc(DASHBOARD_LABELS[field]||field)+': '+esc(field==='status'?(STATUS_LABELS[val]||val):field==='project'?PROJECT_DISPLAY_NAME(val):val)+' ×</button>').join('')+
     '<button type="button" class="active-filters-clear" data-clear-all>Очистить всё</button>':'';
 }
 function applyDashboardFilter(field,value){
@@ -469,9 +486,11 @@ function refillColumnFilters(){
       const previous=sel.value;
       const values=[...new Set(PAY.map(r=>String(r[field]??'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ru'));
       const hasUnassigned=field==='project'&&PAY.some(r=>!String(r.project??'').trim());
-      const available=hasUnassigned?[...values,UNASSIGNED_PROJECT]:values;
+      const hasMulti=field==='project'&&PAY.some(r=>classifyProject(r.project)===MULTI_PROJECT_KEY);
+      const available=[...values];
       const opts=[new Option('Все',''),...values.map(v=>new Option(v,v))];
-      if(hasUnassigned)opts.push(new Option('Без проекта',UNASSIGNED_PROJECT));
+      if(hasMulti){opts.push(new Option('Несколько проектов',MULTI_PROJECT_KEY));available.push(MULTI_PROJECT_KEY);}
+      if(hasUnassigned){opts.push(new Option('Без проекта',UNASSIGNED_PROJECT));available.push(UNASSIGNED_PROJECT);}
       sel.replaceChildren(...opts);
       sel.value=available.includes(previous)?previous:'';
       if(previous && !available.includes(previous))delete state.column[field];
