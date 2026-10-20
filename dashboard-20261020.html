@@ -29,6 +29,25 @@ button.legend-row.dashboard-clickable span{text-align:left}
 .count.selected{background:#e3f0fc;outline:1px solid #90b9de;border-radius:6px;padding:5px}
 @media(max-width:700px){button.rank-row.dashboard-clickable{grid-template-columns:100px minmax(50px,1fr) 85px;gap:6px}}
 [hidden]{display:none!important}.role-viewer .approve,.role-viewer .reject,.role-viewer .comment-add,.role-viewer .modal-actions{display:none!important}
+
+/* BAZA_PROJECT_BREAKDOWN_V1 */
+.project-board{margin-top:12px}
+.project-board .board-title{align-items:center;gap:20px}
+.project-board .board-title h3{margin:0 0 3px}
+.project-board .board-title span{color:var(--muted);font-size:10px;line-height:1.5}
+#projectSummary{text-align:right;white-space:nowrap;font-size:10px;color:var(--muted)}
+.project-rank{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 14px}
+button.project-item.dashboard-clickable{width:100%;min-width:0;display:block;padding:12px 14px;background:#f8fbfe;border:1px solid #e1ebf4;border-radius:9px;text-align:left}
+button.project-item.dashboard-clickable:hover{background:#edf5fc;border-color:#aecae0}
+button.project-item.dashboard-clickable.selected{background:#e3f0fc;border-color:#7caed5}
+.project-item-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;min-width:0}
+.project-item-name{font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.project-item-sum{font-size:12px;font-weight:800;white-space:nowrap}
+.project-item-track{display:block;margin:9px 0 6px;height:7px;background:#e5edf4;border-radius:7px;overflow:hidden}
+.project-item-track i{display:block;height:100%;background:var(--navy);border-radius:7px}
+.project-item-footer{display:flex;align-items:center;justify-content:space-between;gap:8px;color:var(--muted);font-size:9px}
+.project-item-footer span:last-child{white-space:nowrap}
+@media(max-width:900px){.project-rank{grid-template-columns:1fr}.project-board .board-title{align-items:flex-start;flex-direction:column;gap:5px}#projectSummary{text-align:left}}
 </style>
 </head>
 <body>
@@ -37,7 +56,17 @@ button.legend-row.dashboard-clickable span{text-align:left}
 <section class="hero" id="dashboard"><div><div class="eyebrow">EXECUTIVE VIEW</div><h1>Платежный контроль</h1><p>Куда уходят деньги, за счёт какого источника и какие платежи требуют решения.</p></div><button class="reset" id="reset">Сбросить фильтры</button></section>
 <section class="cards"><div class="metric total"><label>ВСЕ ПЛАТЕЖИ</label><strong id="kpiTotal">—</strong><small>по выбранным фильтрам</small></div><div class="metric own" data-dash-field="source" data-dash-value="Собственные" role="button" tabindex="0" aria-label="Фильтр: собственные средства"><label>СОБСТВЕННЫЕ</label><strong id="kpiOwn">—</strong><small>красный — собственные средства</small></div><div class="metric credit" data-dash-field="source" data-dash-value="Кредит" role="button" tabindex="0" aria-label="Фильтр: кредитные средства"><label>КРЕДИТНЫЕ</label><strong id="kpiCredit">—</strong><small>синий — кредитные средства</small></div><div class="metric"><label>ДОЛЯ КРЕДИТА</label><strong id="kpiShare">—</strong><small>от общей суммы платежей</small></div></section>
 
-<section class="section"><div class="section-head"><h2>Структура платежей</h2><span id="dashboardTotal">—</span></div><div id="activeFilters" class="active-filters" aria-live="polite"></div><div class="kpi-board"><div class="board"><div class="board-title"><h3>Расходы по направлениям</h3><span>ТОП-8</span></div><div id="directionRank" class="rank-wrap"></div></div><div class="board"><div class="board-title"><h3>Источники финансирования</h3><span>структура</span></div><div class="source-board"><div id="sourceDonut" class="donut"></div><div id="sourceLegend" class="legend"></div></div></div><div class="board"><div class="board-title"><h3>Статусы</h3><span>по количеству</span></div><div id="statusBoard" class="rank-wrap"></div></div></div><div class="board entity-board"><div class="board-title"><h3>Расходы по юридическим лицам</h3><span>рейтинг · по сумме платежей</span></div><div id="entityRank" class="entity-list"></div></div></section>
+<section class="section"><div class="section-head"><h2>Структура платежей</h2><span id="dashboardTotal">—</span></div><div id="activeFilters" class="active-filters" aria-live="polite"></div><div class="kpi-board"><div class="board"><div class="board-title"><h3>Расходы по направлениям</h3><span>ТОП-8</span></div><div id="directionRank" class="rank-wrap"></div></div><div class="board"><div class="board-title"><h3>Источники финансирования</h3><span>структура</span></div><div class="source-board"><div id="sourceDonut" class="donut"></div><div id="sourceLegend" class="legend"></div></div></div><div class="board"><div class="board-title"><h3>Статусы</h3><span>по количеству</span></div><div id="statusBoard" class="rank-wrap"></div></div></div><div class="board project-board">
+  <div class="board-title">
+    <div>
+      <h3>Расходы по проектам</h3>
+      <span>Каждый проект — отдельная строка · совместные проекты не распределяются произвольно</span>
+    </div>
+    <span id="projectSummary">—</span>
+  </div>
+  <div id="projectRank" class="project-rank"></div>
+</div>
+<div class="board entity-board"><div class="board-title"><h3>Расходы по юридическим лицам</h3><span>рейтинг · по сумме платежей</span></div><div id="entityRank" class="entity-list"></div></div></section>
 <section class="status-strip"><div><b>Согласование</b><small>нажмите на статус для фильтрации реестра</small></div><div class="counts"><span class="count approved" data-quick="approved"><i></i>Согласовано <b id="approvedCount">0</b></span><span class="count rejected" data-quick="rejected"><i></i>Не согласовано <b id="rejectedCount">0</b></span><span class="count pending" data-quick="pending"><i></i>Ожидает <b id="pendingCount">0</b></span></div></section>
 <section class="registry" id="registry"><div class="registry-head"><div><div class="eyebrow">РЕЕСТР</div><h2>Платежи</h2></div><span id="rowsCount">—</span></div><div class="table-card"><div class="table-wrap"><table><thead><tr><th>Контрагент<select class="column-filter" data-field="counterparty"><option value="">Все</option></select></th><th>Юрлицо<select class="column-filter" data-field="entity"><option value="">Все</option></select></th><th>Направление<select class="column-filter" data-field="direction"><option value="">Все</option></select></th><th>Проект<select class="column-filter" data-field="project"><option value="">Все</option></select></th><th>Подстатья<select class="column-filter" data-field="subcategory"><option value="">Все</option></select></th><th>Источник<select class="column-filter" data-field="source"><option value="">Все</option></select></th><th>Сумма</th><th>Статус / действие<select class="column-filter" data-field="status"><option value="">Все</option><option value="pending">Ожидает</option><option value="approved">Согласован</option><option value="rejected">Не согласован</option></select></th><th>Комментарий</th></tr></thead><tbody id="paymentTable"></tbody></table></div></div></section>
 </div>
@@ -65,8 +94,9 @@ async function saveApproval(id,status,comment=getComment(id)){
     if(modalPayment)openModal(modalPayment);
   }catch(e){alert(e.message||'Ошибка сохранения. Попробуйте ещё раз.');}
 }
-function matches(r){if(state.source&&r.source!==state.source||state.direction&&r.direction!==state.direction||state.entity&&r.entity!==state.entity||state.status&&getStatus(r.id)!==state.status)return false;if(state.search&&![r.counterparty,r.entity,r.direction,r.project,r.subcategory,r.source].join(' ').toLowerCase().includes(state.search.toLowerCase()))return false;for(const[f,v]of Object.entries(state.column))if(v&&String(r[f]??'')!==v)return false;return true}window.__BAZA_MATCH_PAYMENTS=matches;function rows(){return PAY.filter(matches)}function agg(rs,f){const m={};rs.forEach(r=>m[r[f]]=(m[r[f]]||0)+Number(r.amount||0));return Object.entries(m).sort((a,b)=>b[1]-a[1])}
-function expenseRows(){return PAY.filter(r=>matches(r)&&!r.isNonExpense&&!r.isInternal&&!/\bм73\b|плейэстейт/i.test(String(r.entity||''))&&!/\bм73\b|плейэстейт/i.test(String(r.counterparty||'')));}
+const UNASSIGNED_PROJECT='__BAZA_UNASSIGNED_PROJECT__';
+function matches(r){if(state.source&&r.source!==state.source||state.direction&&r.direction!==state.direction||state.entity&&r.entity!==state.entity||state.status&&getStatus(r.id)!==state.status)return false;if(state.search&&![r.counterparty,r.entity,r.direction,r.project,r.subcategory,r.source].join(' ').toLowerCase().includes(state.search.toLowerCase()))return false;for(const[f,v]of Object.entries(state.column)){if(!v)continue;if(f==='project'&&v===UNASSIGNED_PROJECT){if(String(r.project??'').trim())return false;continue;}if((f==='project'?String(r.project??'').trim():String(r[f]??''))!==v)return false;}return true}window.__BAZA_MATCH_PAYMENTS=matches;function rows(){return PAY.filter(matches)}function agg(rs,f){const m={};rs.forEach(r=>m[r[f]]=(m[r[f]]||0)+Number(r.amount||0));return Object.entries(m).sort((a,b)=>b[1]-a[1])}
+function expenseRows(){return PAY.filter(r=>matches(r)&&!r.isNonExpense&&!r.isInternal&&!/(?:^|[^\p{L}\p{N}])[мm]73(?=$|[^\p{L}\p{N}])|пл[еэ]йэстейт|playestate/iu.test(String(r.entity||''))&&!/(?:^|[^\p{L}\p{N}])[мm]73(?=$|[^\p{L}\p{N}])|пл[еэ]йэстейт|playestate/iu.test(String(r.counterparty||'')));}
 function renderKpi(){const rs=expenseRows(),t=rs.reduce((s,r)=>s+r.amount,0),o=rs.filter(r=>r.source==='Собственные').reduce((s,r)=>s+r.amount,0),c=rs.filter(r=>r.source==='Кредит').reduce((s,r)=>s+r.amount,0);kpiTotal.textContent=money(t);kpiOwn.textContent=money(o);kpiCredit.textContent=money(c);kpiShare.textContent=(t?c/t*100:0).toFixed(1)+'%';dashboardTotal.textContent=money(t)}
 function renderRank(id,items,field,red=false){
   const max=items[0]?.[1]||1;
@@ -77,6 +107,39 @@ function renderRank(id,items,field,red=false){
       '<span class="track"><i style="width:'+(x[1]/max*100)+'%;'+(red?'background:var(--red)':'')+'"></i></span>'+
       '<span class="rank-value">'+money(x[1])+'</span></button>';
   }).join('')||'<span style="color:var(--muted)">Нет данных</span>';
+}
+function renderProjectRank(rs){
+  const totals=new Map();
+  for(const r of rs){
+    const raw=String(r.project??'').trim();
+    const key=raw||UNASSIGNED_PROJECT;
+    const entry=totals.get(key)||{sum:0,count:0};
+    entry.sum+=Number(r.amount||0);
+    entry.count++;
+    totals.set(key,entry);
+  }
+  const projects=[...totals].map(([value,data])=>({
+    value,
+    name:value===UNASSIGNED_PROJECT?'Без проекта':value,
+    amount:data.sum,
+    count:data.count
+  })).sort((a,b)=>b.amount-a.amount||a.name.localeCompare(b.name,'ru'));
+  const total=rs.reduce((acc,r)=>acc+Number(r.amount||0),0);
+  const max=projects[0]?.amount||1;
+  document.getElementById('projectSummary').textContent=
+    projects.length+' '+(projects.length===1?'проект':(projects.length%10>=2&&projects.length%10<=4&&(projects.length%100<12||projects.length%100>14)?'проекта':'проектов'))+' · '+money(total);
+  const formatPct=new Intl.NumberFormat('ru-RU',{maximumFractionDigits:1});
+  document.getElementById('projectRank').innerHTML=projects.map(p=>{
+    const selected=state.column.project===p.value;
+    const pct=total?p.amount/total*100:0;
+    return '<button type="button" class="project-item dashboard-clickable'+(selected?' selected':'')+
+      '" data-dash-field="project" data-dash-value="'+esc(p.value)+'" aria-pressed="'+selected+
+      '" title="'+esc(p.name)+': '+money(p.amount)+'. Нажмите, чтобы '+(selected?'снять фильтр.':'отфильтровать платежи.')+'">'+
+      '<span class="project-item-head"><span class="project-item-name">'+esc(p.name)+
+      '</span><span class="project-item-sum">'+money(p.amount)+'</span></span>'+
+      '<span class="project-item-track"><i style="width:'+Math.max(0,Math.min(100,p.amount/max*100))+'%"></i></span>'+
+      '<span class="project-item-footer"><span>'+formatPct.format(pct)+'% от расходов</span><span>'+p.count+' '+(p.count===1?'платёж':(p.count%10>=2&&p.count%10<=4&&(p.count%100<12||p.count%100>14)?'платежа':'платежей'))+'</span></span></button>';
+  }).join('')||'<span style="color:var(--muted);font-size:11px">Нет расходов по выбранным фильтрам</span>';
 }
 function renderDash(){
   const rs=expenseRows(),sources=agg(rs,'source'),dirs=agg(rs,'direction'),ents=agg(rs,'entity');
@@ -98,6 +161,7 @@ function renderDash(){
       '<i class="dot '+item[3]+'"></i><span>'+item[0]+'</span><b>'+money(item[2])+'</b></button>';
   }).join('');
   renderRank('directionRank',dirs,'direction');
+  renderProjectRank(rs);
   renderRank('entityRank',ents,'entity',true);
   const counts={approved:0,rejected:0,pending:0};
   rows().forEach(r=>{const st=getStatus(r.id);if(Object.prototype.hasOwnProperty.call(counts,st))counts[st]++});
@@ -133,7 +197,7 @@ function renderActiveFilters(){
   if(state.status)chosen.push(['status',state.status]);
   document.getElementById('activeFilters').innerHTML=chosen.length?
     '<span class="active-filters-label">Выбрано:</span>'+
-    chosen.map(([field,val])=>'<button type="button" class="active-filter-chip" data-clear-field="'+esc(field)+'" title="Снять фильтр">'+esc(DASHBOARD_LABELS[field]||field)+': '+esc(field==='status'?(STATUS_LABELS[val]||val):val)+' ×</button>').join('')+
+    chosen.map(([field,val])=>'<button type="button" class="active-filter-chip" data-clear-field="'+esc(field)+'" title="Снять фильтр">'+esc(DASHBOARD_LABELS[field]||field)+': '+esc(field==='status'?(STATUS_LABELS[val]||val):field==='project'&&val===UNASSIGNED_PROJECT?'Без проекта':val)+' ×</button>').join('')+
     '<button type="button" class="active-filters-clear" data-clear-all>Очистить всё</button>':'';
 }
 function applyDashboardFilter(field,value){
@@ -295,7 +359,7 @@ render();
 (function(){
  if(window.__BAZA_VGO_V3)return; window.__BAZA_VGO_V3=true;
  const all=window.__BAZA_ALL_PAYMENTS||[];
- const isExcluded=r=>/\bм73\b|плейэстейт/i.test(String(r.entity||''))||/\bм73\b|плейэстейт/i.test(String(r.counterparty||''));
+ const isExcluded=r=>/(?:^|[^\p{L}\p{N}])[мm]73(?=$|[^\p{L}\p{N}])|пл[еэ]йэстейт|playestate/iu.test(String(r.entity||''))||/(?:^|[^\p{L}\p{N}])[мm]73(?=$|[^\p{L}\p{N}])|пл[еэ]йэстейт|playestate/iu.test(String(r.counterparty||''));
  const base=()=>(window.__BAZA_ALL_PAYMENTS||[]).filter(r=>r.isInternal&&!r.isNonExpense&&!isExcluded(r)&&(!window.__BAZA_MATCH_PAYMENTS||window.__BAZA_MATCH_PAYMENTS(r)));
  const section=document.getElementById('vgo'); if(!section)return;
  const esc=s=>String(s??'—').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
@@ -404,9 +468,13 @@ function refillColumnFilters(){
       if(field==='status')return;
       const previous=sel.value;
       const values=[...new Set(PAY.map(r=>String(r[field]??'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ru'));
-      sel.replaceChildren(new Option('Все',''),...values.map(v=>new Option(v,v)));
-      sel.value=values.includes(previous)?previous:'';
-      if(previous && !values.includes(previous))delete state.column[field];
+      const hasUnassigned=field==='project'&&PAY.some(r=>!String(r.project??'').trim());
+      const available=hasUnassigned?[...values,UNASSIGNED_PROJECT]:values;
+      const opts=[new Option('Все',''),...values.map(v=>new Option(v,v))];
+      if(hasUnassigned)opts.push(new Option('Без проекта',UNASSIGNED_PROJECT));
+      sel.replaceChildren(...opts);
+      sel.value=available.includes(previous)?previous:'';
+      if(previous && !available.includes(previous))delete state.column[field];
     });
   }
   const APPROVALS_ENDPOINT=SUPABASE_URL+'/rest/v1/payment_approvals';
