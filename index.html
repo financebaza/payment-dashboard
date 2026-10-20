@@ -28,11 +28,12 @@ button.legend-row.dashboard-clickable span{text-align:left}
 .active-filters-clear{border:0;background:transparent;color:#2d6c9b;font-size:10px;font-family:inherit;cursor:pointer;text-decoration:underline}
 .count.selected{background:#e3f0fc;outline:1px solid #90b9de;border-radius:6px;padding:5px}
 @media(max-width:700px){button.rank-row.dashboard-clickable{grid-template-columns:100px minmax(50px,1fr) 85px;gap:6px}}
+[hidden]{display:none!important}.role-viewer .approve,.role-viewer .reject,.role-viewer .comment-add,.role-viewer .modal-actions{display:none!important}
 </style>
 </head>
 <body>
 <div class="page">
-<header class="topbar"><div class="brand"><b>BAZA</b><small>ПЛАТЕЖНЫЙ КОНТРОЛЬ</small></div><div class="period">19–25 ОКТЯБРЯ 2026 · ФИНАНСОВЫЙ КОНТРОЛЬ</div><nav class="nav"><a href="#dashboard">Дашборд</a><a href="#registry">Платежный календарь</a></nav></header>
+<header class="topbar"><div class="brand"><b>BAZA</b><small>ПЛАТЕЖНЫЙ КОНТРОЛЬ</small></div><div class="period">19–25 ОКТЯБРЯ 2026 · ФИНАНСОВЫЙ КОНТРОЛЬ</div><nav class="nav"><a href="#dashboard">Дашборд</a><a href="#registry">Платежный календарь</a><a id="adminUsersLink" href="users.html" hidden>Пользователи</a></nav></header>
 <section class="hero" id="dashboard"><div><div class="eyebrow">EXECUTIVE VIEW</div><h1>Платежный контроль</h1><p>Куда уходят деньги, за счёт какого источника и какие платежи требуют решения.</p></div><button class="reset" id="reset">Сбросить фильтры</button></section>
 <section class="cards"><div class="metric total"><label>ВСЕ ПЛАТЕЖИ</label><strong id="kpiTotal">—</strong><small>по выбранным фильтрам</small></div><div class="metric own" data-dash-field="source" data-dash-value="Собственные" role="button" tabindex="0" aria-label="Фильтр: собственные средства"><label>СОБСТВЕННЫЕ</label><strong id="kpiOwn">—</strong><small>красный — собственные средства</small></div><div class="metric credit" data-dash-field="source" data-dash-value="Кредит" role="button" tabindex="0" aria-label="Фильтр: кредитные средства"><label>КРЕДИТНЫЕ</label><strong id="kpiCredit">—</strong><small>синий — кредитные средства</small></div><div class="metric"><label>ДОЛЯ КРЕДИТА</label><strong id="kpiShare">—</strong><small>от общей суммы платежей</small></div></section>
 
@@ -49,7 +50,21 @@ const state={source:'',direction:'',entity:'',search:'',status:'',column:{}};let
 function fill(id,vals){const e=document.getElementById(id);vals.forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;e.appendChild(o)})}['source','direction','entity'].forEach(f=>fill(f+'Filter',uniq(f)));document.querySelectorAll('.column-filter').forEach(s=>{if(s.dataset.field!=='status')fillCol(s,s.dataset.field)});function fillCol(s,f){uniq(f).forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;s.appendChild(o)})}
 function getStatus(id){return approvals[id]?.status||'pending'}function getComment(id){return approvals[id]?.comment||''}
 async function loadApprovals(){try{const r=await fetch(SUPABASE_URL+'/rest/v1/payment_approvals?select=payment_id,status,comment,approved_by,updated_at',{headers:{apikey:SUPABASE_KEY,Authorization:'Bearer '+SUPABASE_KEY}});if(r.ok){approvals={};(await r.json()).forEach(x=>approvals[x.payment_id]=x)}}catch(e){}render()}
-async function saveApproval(id,status,comment=getComment(id)){const p={payment_id:id,status,comment:comment||null,approved_by:'Alexander',updated_at:new Date().toISOString()};try{const r=await fetch(SUPABASE_URL+'/rest/v1/payment_approvals?on_conflict=payment_id',{method:'POST',headers:{apikey:SUPABASE_KEY,Authorization:'Bearer '+SUPABASE_KEY,'Content-Type':'application/json',Prefer:'resolution=merge-duplicates,return=representation'},body:JSON.stringify(p)});if(r.ok)approvals[id]=(await r.json())[0]||p}catch(e){}render();if(modalPayment)openModal(modalPayment)}
+async function saveApproval(id,status,comment=getComment(id)){
+  if(!['admin','approver'].includes(window.__BAZA_AUTH_ROLE||'')){alert('Для согласования платежей необходима роль согласующего или администратора.');return;}
+  if(typeof window.approvalHeaders!=='function'){alert('Нет активной сессии. Войдите в систему повторно.');return;}
+  const p={payment_id:id,status,comment:comment||null,approved_by:window.__BAZA_AUTH_NAME||'',approved_by_user_id:window.__BAZA_AUTH_USER_ID||null,updated_at:new Date().toISOString()};
+  try{
+    const res=await fetch(SUPABASE_URL+'/rest/v1/payment_approvals?on_conflict=payment_id',{
+      method:'POST',headers:window.approvalHeaders({Prefer:'resolution=merge-duplicates,return=representation'}),body:JSON.stringify(p)
+    });
+    if(!res.ok){const err=await res.json().catch(()=>({}));throw new Error('Не удалось сохранить согласование: '+(err.message||'HTTP '+res.status));}
+    const saved=await res.json();
+    approvals[id]=saved[0]||p;
+    render();
+    if(modalPayment)openModal(modalPayment);
+  }catch(e){alert(e.message||'Ошибка сохранения. Попробуйте ещё раз.');}
+}
 function matches(r){if(state.source&&r.source!==state.source||state.direction&&r.direction!==state.direction||state.entity&&r.entity!==state.entity||state.status&&getStatus(r.id)!==state.status)return false;if(state.search&&![r.counterparty,r.entity,r.direction,r.project,r.subcategory,r.source].join(' ').toLowerCase().includes(state.search.toLowerCase()))return false;for(const[f,v]of Object.entries(state.column))if(v&&String(r[f]??'')!==v)return false;return true}window.__BAZA_MATCH_PAYMENTS=matches;function rows(){return PAY.filter(matches)}function agg(rs,f){const m={};rs.forEach(r=>m[r[f]]=(m[r[f]]||0)+Number(r.amount||0));return Object.entries(m).sort((a,b)=>b[1]-a[1])}
 function expenseRows(){return PAY.filter(r=>matches(r)&&!r.isNonExpense&&!r.isInternal&&!/\bм73\b|плейэстейт/i.test(String(r.entity||''))&&!/\bм73\b|плейэстейт/i.test(String(r.counterparty||'')));}
 function renderKpi(){const rs=expenseRows(),t=rs.reduce((s,r)=>s+r.amount,0),o=rs.filter(r=>r.source==='Собственные').reduce((s,r)=>s+r.amount,0),c=rs.filter(r=>r.source==='Кредит').reduce((s,r)=>s+r.amount,0);kpiTotal.textContent=money(t);kpiOwn.textContent=money(o);kpiCredit.textContent=money(c);kpiShare.textContent=(t?c/t*100:0).toFixed(1)+'%';dashboardTotal.textContent=money(t)}
@@ -191,7 +206,7 @@ document.getElementById('sourceDonut').addEventListener('click',e=>{
   applyDashboardFilter('source',deg<window.__BAZA_SOURCE_PCT*3.6?'Кредит':'Собственные');
 });
 reset.onclick=resetAll;
-render();loadApprovals();
+render();
 </script>
 <style>
 .vgo-section{margin-top:42px;border-top:1px solid #cfdae4;padding-top:30px}.vgo-head h2{font-size:23px;margin:5px 0}.vgo-note{color:#7890a7;font-size:10px}.vgo-cards{display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:12px;margin:12px 0}.vgo-card{background:#fff;border:1px solid #d9e5ef;border-radius:12px;padding:16px}.vgo-card label{display:block;color:#7890a7;font-size:8px;font-weight:800}.vgo-card strong{display:block;color:#6757b8;font-size:22px;margin-top:10px}.vgo-tools{display:flex;gap:8px;margin-bottom:8px}.vgo-tools input,.vgo-tools select{height:34px;border:1px solid #cfdfeb;border-radius:8px;background:#fff;padding:0 9px;color:#31536f;font-size:10px}.vgo-tools input{width:360px}.vgo-flow{font-weight:700;color:#173d60}@media(max-width:1050px){.vgo-cards{grid-template-columns:1fr 1fr}}@media(max-width:700px){.vgo-cards{grid-template-columns:1fr}.vgo-tools{display:block}.vgo-tools input,.vgo-tools select{width:100%;margin-bottom:6px}}
@@ -350,7 +365,7 @@ body.auth-ready .auth-screen{display:none}.auth-guard-note{font-size:9px;color:#
   window.bazaAuthHeaders=authHeaders;
   window.bazaAuthRole=()=>currentProfile?.role||'';
   function setTokens(data){accessToken=data.access_token||'';refreshToken=data.refresh_token||'';if(accessToken)localStorage.setItem('baza_access_token',accessToken);else localStorage.removeItem('baza_access_token');if(refreshToken)localStorage.setItem('baza_refresh_token',refreshToken);else localStorage.removeItem('baza_refresh_token');}
-  function clearSession(){accessToken='';refreshToken='';currentUser=null;currentProfile=null;localStorage.removeItem('baza_access_token');localStorage.removeItem('baza_refresh_token');document.body.classList.remove('auth-ready');document.body.classList.add('auth-locked');document.getElementById('authUser').style.display='none';}
+  function clearSession(){accessToken='';refreshToken='';currentUser=null;currentProfile=null;window.__BAZA_AUTH_ROLE='';window.__BAZA_AUTH_NAME='';window.__BAZA_AUTH_USER_ID=null;document.body.classList.remove('role-viewer');const adminLink=document.getElementById('adminUsersLink');if(adminLink)adminLink.hidden=true;localStorage.removeItem('baza_access_token');localStorage.removeItem('baza_refresh_token');document.body.classList.remove('auth-ready');document.body.classList.add('auth-locked');document.getElementById('authUser').style.display='none';}
   function showError(msg){document.getElementById('authError').textContent=msg||'';}
   async function refreshSession(){if(!refreshToken)return false;try{const res=await fetch(SUPABASE_URL+'/auth/v1/token?grant_type=refresh_token',{method:'POST',headers:{apikey:SUPABASE_KEY,'Content-Type':'application/json'},body:JSON.stringify({refresh_token:refreshToken})});if(!res.ok)throw new Error();setTokens(await res.json());return !!accessToken;}catch(e){clearSession();return false;}}
   async function getUser(){if(!accessToken)return null;let res=await fetch(SUPABASE_URL+'/auth/v1/user',{headers:authHeaders()});if(res.ok)return await res.json();if(res.status===401&&await refreshSession()){res=await fetch(SUPABASE_URL+'/auth/v1/user',{headers:authHeaders()});if(res.ok)return await res.json();}return null;}
@@ -398,7 +413,7 @@ function refillColumnFilters(){
   async function loadApprovalsSecure(){try{const res=await fetch(APPROVALS_ENDPOINT+'?select=payment_id,status,comment,approved_by,updated_at,approved_by_user_id',{headers:authHeaders()});if(!res.ok)throw new Error('HTTP '+res.status);const rows=await res.json();approvals={};rows.forEach(x=>approvals[String(x.payment_id)]=x);setConnectionState(true,'Синхронизировано');render();}catch(e){console.error(e);setConnectionState(false,'Ошибка подключения');render();}}
   window.loadApprovals=loadApprovalsSecure;
   window.approvalHeaders=function(extra={}){return Object.assign({apikey:SUPABASE_KEY,Authorization:'Bearer '+accessToken,'Content-Type':'application/json'},extra);};
-  async function boot(){const user=await getUser();if(!user){clearSession();return false;}const profile=await getProfile(user);if(!profile||!profile.is_active){clearSession();showError('Нет активного профиля доступа.');return false;}currentUser=user;currentProfile=profile;try{await loadPayments();}catch(e){clearSession();showError(e.message);return false;}refillColumnFilters();document.body.classList.remove('auth-locked');document.body.classList.add('auth-ready');document.getElementById('authUserText').textContent=(profile.full_name||profile.email||user.email||'')+' · '+profile.role;document.getElementById('authUser').style.display='block';render();await loadApprovalsSecure();return true;}
+  async function boot(){const user=await getUser();if(!user){clearSession();return false;}const profile=await getProfile(user);if(!profile||!profile.is_active){clearSession();showError('Нет активного профиля доступа.');return false;}currentUser=user;currentProfile=profile;window.__BAZA_AUTH_ROLE=profile.role;window.__BAZA_AUTH_NAME=profile.full_name||profile.email||user.email||'';window.__BAZA_AUTH_USER_ID=user.id;document.body.classList.toggle('role-viewer',profile.role==='viewer');const adminLink=document.getElementById('adminUsersLink');if(adminLink)adminLink.hidden=profile.role!=='admin';try{await loadPayments();}catch(e){clearSession();showError(e.message);return false;}refillColumnFilters();document.body.classList.remove('auth-locked');document.body.classList.add('auth-ready');document.getElementById('authUserText').textContent=(profile.full_name||profile.email||user.email||'')+' · '+profile.role;document.getElementById('authUser').style.display='block';render();await loadApprovalsSecure();return true;}
   document.getElementById('authForm').addEventListener('submit',async e=>{e.preventDefault();showError('');const btn=document.getElementById('authSubmit');btn.disabled=true;btn.textContent='Входим…';try{if(!await login(document.getElementById('authEmail').value.trim(),document.getElementById('authPassword').value))throw new Error('Не удалось войти');}catch(err){showError(err.message||'Ошибка входа');}finally{btn.disabled=false;btn.textContent='Войти';}});
   document.getElementById('authLogout').onclick=()=>clearSession();
   window.addEventListener('storage',e=>{if(e.key==='baza_access_token'&&!e.newValue)clearSession();});
@@ -425,19 +440,19 @@ function refillColumnFilters(){
   forgot.style='display:block;margin:10px auto 0;border:0;background:none;color:#2f75b5;font-size:10px;cursor:pointer';
   submit.insertAdjacentElement('afterend',forgot);
   let recovery=false;
-  function showRecovery(){
+  function showRecovery(isInvite=false){
     recovery=true;
     document.body.classList.remove('auth-ready');
     document.body.classList.add('auth-locked');
     authScreen.style.display='grid';
-    if(title)title.textContent='Новый пароль';
+    if(title)title.textContent=isInvite?'Создание пароля':'Новый пароль';
     const p=form.querySelector('p');if(p)p.textContent='Введите новый пароль для доступа к платежному контролю.';
     email.parentElement.style.display='none';
     password.autocomplete='new-password';
     password.placeholder='Новый пароль';
     forgot.style.display='none';
     submit.textContent='Сохранить пароль';
-    if(note)note.textContent='Ссылка восстановления активна · пароль обновляется через Supabase Auth.';
+    if(note)note.textContent=isInvite?'Приглашение принято · создайте свой пароль для входа.':'Ссылка восстановления активна · пароль обновляется через Supabase Auth.';
   }
   async function sendRecovery(){
     error.style.color='#c41d25';error.textContent='';
@@ -465,10 +480,10 @@ function refillColumnFilters(){
       history.replaceState(null,'',location.pathname+location.search);
       return false;
     }
-    if(!at||type!=='recovery')return false;
+    if(!at||!['recovery','invite'].includes(type))return false;
     localStorage.setItem('baza_access_token',at);
     if(rt)localStorage.setItem('baza_refresh_token',rt);
-    showRecovery();
+    showRecovery(type==='invite');
     history.replaceState(null,'',location.pathname+location.search);
     return true;
   }

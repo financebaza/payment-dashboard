@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>BAZA — Пользователи</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#eef4f9;font-family:Arial,Helvetica,sans-serif;color:#092e50;line-height:1.5}
+header{display:flex;justify-content:space-between;gap:12px;align-items:center;margin:auto;max-width:900px;padding:25px 22px}
+.brand{font-size:31px;font-weight:900;letter-spacing:-2px;color:#df1a2a}.brand small{display:block;font-size:9px;letter-spacing:1.6px;color:#6a829a}
+a{color:#215d91;text-decoration:none;font-size:13px}a:hover{text-decoration:underline}
+main{max-width:660px;padding:0 22px 42px;margin:5px auto}
+.card{padding:29px;background:#fff;border:1px solid #d8e3ec;box-shadow:0 14px 40px rgba(6,40,70,.07);border-radius:16px}
+h1{font-size:24px;margin:0 0 8px}.sub{font-size:13px;color:#69829a;margin:0 0 26px}
+label{display:block;font-weight:700;font-size:11px;text-transform:uppercase;color:#5c758c;letter-spacing:.06em;margin:16px 0 5px}
+input,select{width:100%;height:43px;border:1px solid #c9d9e7;border-radius:8px;padding:8px 11px;color:#103857;background:#fff;font-size:14px}
+input:focus,select:focus{outline:2px solid #a6c8e8}
+button{background:#092f53;color:#fff;border:0;border-radius:9px;padding:13px 20px;font-weight:700;cursor:pointer;font-size:13px;margin-top:22px;width:100%}
+button:hover{background:#174c77}button:disabled{opacity:.6;cursor:wait}
+.note{padding:12px 15px;border-radius:9px;background:#f0f5f9;color:#55748d;margin:16px 0;font-size:13px}
+.success{background:#e9f6ed;color:#1f683c}.error{background:#fff0f0;color:#9a2430}
+[hidden]{display:none!important}.small{margin-top:17px;color:#6b8296;font-size:11px}
+</style>
+</head>
+<body>
+<header><div class="brand">BAZA<small>ПЛАТЕЖНЫЙ КОНТРОЛЬ</small></div><a href="dashboard-20261020.html">← Вернуться к дашборду</a></header>
+<main>
+ <section class="card">
+  <h1>Добавить сотрудника</h1>
+  <p class="sub">Приглашение придёт на корпоративную почту. Сотрудник установит пароль самостоятельно.</p>
+  <div class="note" id="state" role="status">Проверяем права администратора…</div>
+  <form id="userForm" hidden>
+   <label for="fullName">Имя и фамилия</label>
+   <input id="fullName" name="fullName" type="text" value="Полина Шмакова" required minlength="3" maxlength="140" autocomplete="name">
+   <label for="email">Корпоративная почта</label>
+   <input id="email" name="email" type="email" value="p.shmakova@baza.bz" required autocomplete="email">
+   <label for="role">Роль</label>
+   <select id="role" name="role">
+    <option value="approver" selected>Согласующий — просмотр и согласование платежей</option>
+    <option value="viewer">Наблюдатель — только просмотр</option>
+   </select>
+   <button id="sendInvite" type="submit">Создать пользователя и отправить приглашение</button>
+  </form>
+  <div class="small">Добавлять сотрудников может только активный администратор. Права проверяются на сервере Supabase.</div>
+ </section>
+</main>
+<script>
+(function(){
+ const SUPABASE_URL="https://duvdlpzwxtuwbwyggpla.supabase.co";
+ const PUBLISHABLE_KEY="sb_publishable_WBg9viktHBpz9lw1Nwqtyw_49Src_lU";
+ const state=document.getElementById('state'),form=document.getElementById('userForm');
+ const submit=document.getElementById('sendInvite');
+ const authHeaders=t=>({apikey:PUBLISHABLE_KEY,Authorization:'Bearer '+t});
+ function show(message,kind){
+  state.textContent=message;state.className='note'+(kind?' '+kind:'');
+ }
+ async function refresh(){
+  const stored=localStorage.getItem('baza_refresh_token');
+  if(!stored)return null;
+  const res=await fetch(SUPABASE_URL+'/auth/v1/token?grant_type=refresh_token',{method:'POST',headers:{apikey:PUBLISHABLE_KEY,'Content-Type':'application/json'},body:JSON.stringify({refresh_token:stored})});
+  if(!res.ok)return null;
+  const data=await res.json();
+  if(!data.access_token)return null;
+  localStorage.setItem('baza_access_token',data.access_token);
+  if(data.refresh_token)localStorage.setItem('baza_refresh_token',data.refresh_token);
+  return data.access_token;
+ }
+ async function adminToken(){
+  let token=localStorage.getItem('baza_access_token');
+  if(!token)return null;
+  let res=await fetch(SUPABASE_URL+'/auth/v1/user',{headers:authHeaders(token)});
+  if(res.status===401){
+   token=await refresh();
+   if(!token)return null;
+   res=await fetch(SUPABASE_URL+'/auth/v1/user',{headers:authHeaders(token)});
+  }
+  if(!res.ok)return null;
+  const user=await res.json();
+  const profileRes=await fetch(SUPABASE_URL+'/rest/v1/user_profiles?select=role,is_active&id=eq.'+encodeURIComponent(user.id),{headers:authHeaders(token)});
+  if(!profileRes.ok)return null;
+  const profiles=await profileRes.json();
+  if(profiles[0]?.role!=='admin'||profiles[0]?.is_active!==true)return null;
+  return token;
+ }
+ async function init(){
+  try{
+   if(!(await adminToken())){show('Для приглашения сотрудников войдите в дашборд под учётной записью администратора.', 'error');return;}
+   show('Права администратора подтверждены. Проверьте данные Полины и отправьте приглашение.','success');
+   form.hidden=false;
+  }catch(err){show('Не удалось проверить сессию: '+(err.message||'ошибка соединения'), 'error');}
+ }
+ form.addEventListener('submit',async event=>{
+  event.preventDefault();
+  submit.disabled=true;submit.textContent='Отправляем приглашение…';
+  try{
+   const token=await adminToken();
+   if(!token)throw new Error('Сессия администратора недействительна. Откройте дашборд и войдите снова.');
+   const input={full_name:document.getElementById('fullName').value.trim(),email:document.getElementById('email').value.trim(),role:document.getElementById('role').value};
+   const res=await fetch(SUPABASE_URL+'/functions/v1/baza-invite-user',{
+    method:'POST',headers:{...authHeaders(token),'Content-Type':'application/json'},
+    body:JSON.stringify(input)
+   });
+   const result=await res.json().catch(()=>({}));
+   if(!res.ok)throw new Error(result.error||'Не удалось создать пользователя: HTTP '+res.status);
+   if(!result.ok)throw new Error('Supabase не подтвердил создание приглашения.');
+   const roleName=input.role==='approver'?'Согласующий':'Наблюдатель';
+   show('Приглашение создано для '+input.full_name+' ('+input.email+'). Роль: '+roleName+'. Supabase принял отправку письма. Доставку в почтовый ящик необходимо проверить.', 'success');
+   form.hidden=true;
+  }catch(err){
+   show(err.message||'Ошибка отправки приглашения','error');
+  }finally{submit.disabled=false;submit.textContent='Создать пользователя и отправить приглашение';}
+ });
+ init();
+})();
+</script>
+</body>
+</html>
