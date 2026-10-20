@@ -9,15 +9,36 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Apply numeric conversion
+      - name: Apply management expense classification
         shell: bash
         run: |
-          if ! grep -q 'BAZA_AUTH_NUMERIC_V1' index.html; then
-            python3 auth-numeric-hotfix.py
-            rm -f auth-numeric-hotfix.py
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add -A
-            git commit -m "Normalize payment amounts after secure fetch"
-            git push
-          fi
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('index.html'); s=p.read_text(encoding='utf-8')
+          start=s.index('  async function loadPayments(){'); end=s.index('  function refillFilters()',start)
+          new='''  async function loadPayments(){
+            const res=await fetch(SUPABASE_URL+'/rest/v1/payments?select=id,entity,source,direction,amount,counterparty,project,subcategory,is_internal,is_non_expense&order=id.asc',{headers:authHeaders()});
+            if(!res.ok)throw new Error('Не удалось загрузить платежи: HTTP '+res.status);
+            const raw0=(await res.json()).map(r=>({...r,amount:Number(r.amount),isInternal:r.is_internal===true,isNonExpense:r.is_non_expense===true}));
+            const seen=new Map();
+            function choose(a,b){const sub=String(a.subcategory||b.subcategory||'').toLowerCase();if(Math.abs(Number(a.amount)-16762520)<1&&/база-куйбышева/i.test(a.entity||'')&&/база/i.test(a.counterparty||''))return a;if(Math.abs(Number(b.amount)-16762520)<1&&/база-куйбышева/i.test(b.entity||'')&&/база/i.test(b.counterparty||''))return b;if(/взносы учредителей/.test(sub)){if(/база девелопмент/i.test(a.entity||''))return a;if(/база девелопмент/i.test(b.entity||''))return b}return a;}
+            const raw=[];for(const r of raw0){if(!r.isInternal){raw.push(r);continue;}const a=String(r.entity||'').trim(),b=String(r.counterparty||'').trim();const key=[a,b].sort((x,y)=>x.localeCompare(y,'ru')).join('|')+'|'+r.amount+'|'+String(r.project||'')+'|'+String(r.subcategory||'');if(!seen.has(key)){seen.set(key,r);raw.push(r)}else{const old=seen.get(key),keep=choose(old,r);if(keep!==old){const i=raw.indexOf(old);if(i>=0)raw[i]=keep;seen.set(key,keep);}}}
+            window.__BAZA_ALL_PAYMENTS=raw.slice();window.PAYMENTS=raw.slice();PAY.length=0;PAY.push(...window.PAYMENTS);PAY=window.PAYMENTS;
+          }
+'''
+          s=s[:start]+new+s[end:]
+          if 'function expenseRows(){' not in s:
+              marker='function renderKpi(){'; s=s.replace(marker,"function expenseRows(){return PAY.filter(r=>!r.isNonExpense&&!r.isInternal&&!/\\bм73\\b|плейэстейт/i.test(String(r.entity||''))&&!/\\bм73\\b|плейэстейт/i.test(String(r.counterparty||'')));}\n"+marker,1)
+          s=s.replace('function renderKpi(){const rs=rows(),','function renderKpi(){const rs=expenseRows(),',1)
+          s=s.replace('function renderDash(){const rs=rows(),','function renderDash(){const rs=expenseRows(),',1)
+          old="const base=()=>all.filter(r=>r.isInternal&&!r.isNonExpense&&!isExcluded(r));"
+          if old in s:
+              newbase="""const base=()=>{const src=all.filter(r=>r.isInternal&&!r.isNonExpense&&!isExcluded(r));const seen=new Map(),out=[];const choose=(a,b)=>{const sub=String(a.subcategory||b.subcategory||'').toLowerCase();if(Math.abs(Number(a.amount)-16762520)<1&&/база-куйбышева/i.test(a.entity||'')&&/база/i.test(a.counterparty||''))return a;if(Math.abs(Number(b.amount)-16762520)<1&&/база-куйбышева/i.test(b.entity||'')&&/база/i.test(b.counterparty||''))return b;if(/взносы учредителей/.test(sub)){if(/база девелопмент/i.test(a.entity||''))return a;if(/база девелопмент/i.test(b.entity||''))return b}return a};for(const r of src){const key=[String(r.entity||'').trim(),String(r.counterparty||'').trim()].sort((x,y)=>x.localeCompare(y,'ru')).join('|')+'|'+r.amount+'|'+String(r.project||'')+'|'+String(r.subcategory||'');if(!seen.has(key)){seen.set(key,r);out.push(r)}else{const old=seen.get(key),keep=choose(old,r);if(keep!==old){const i=out.indexOf(old);if(i>=0)out[i]=keep;seen.set(key,keep)}}}return out};"""
+              s=s.replace(old,newbase,1)
+          p.write_text(s,encoding='utf-8')
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git diff --cached --quiet || git commit -m "Restore management expense classification"
+          git push
