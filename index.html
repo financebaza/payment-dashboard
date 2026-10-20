@@ -230,18 +230,7 @@ body.auth-ready .auth-screen{display:none}.auth-guard-note{font-size:9px;color:#
   window.PAYMENTS=raw.slice();
   PAY.length=0;PAY.push(...window.PAYMENTS);PAY=window.PAYMENTS;
 }
-function refillColumnFilters(){
-    document.querySelectorAll('.column-filter').forEach(el=>{
-      const field=el.dataset.field;
-      if(field==='status')return;
-      const previous=el.value;
-      const values=[...new Set(PAY.map(r=>String(r[field]??'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ru'));
-      el.replaceChildren(new Option('Все',''),...values.map(v=>new Option(v,v)));
-      el.value=values.includes(previous)?previous:'';
-      if(!values.includes(previous))delete state.column[field];
-    });
-  }
-  function refillFilters(){[['sourceFilter','source','Все источники'],['directionFilter','direction','Все направления'],['entityFilter','entity','Все юрлица']].forEach(([id,field,first])=>{const el=document.getElementById(id);if(!el)return;const old=el.value;el.innerHTML='<option value="">'+first+'</option>';[...new Set(PAYMENTS.map(x=>x[field]).filter(Boolean))].sort((a,b)=>String(a).localeCompare(String(b),'ru')).forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;el.appendChild(o)});if([...el.options].some(o=>o.value===old))el.value=old;});}
+function refillFilters(){[['sourceFilter','source','Все источники'],['directionFilter','direction','Все направления'],['entityFilter','entity','Все юрлица']].forEach(([id,field,first])=>{const el=document.getElementById(id);if(!el)return;const old=el.value;el.innerHTML='<option value="">'+first+'</option>';[...new Set(PAYMENTS.map(x=>x[field]).filter(Boolean))].sort((a,b)=>String(a).localeCompare(String(b),'ru')).forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;el.appendChild(o)});if([...el.options].some(o=>o.value===old))el.value=old;});}
   async function loadApprovalsSecure(){try{const res=await fetch(APPROVALS_ENDPOINT+'?select=payment_id,status,comment,approved_by,updated_at,approved_by_user_id',{headers:authHeaders()});if(!res.ok)throw new Error('HTTP '+res.status);const rows=await res.json();approvals={};rows.forEach(x=>approvals[String(x.payment_id)]=x);setConnectionState(true,'Синхронизировано');render();}catch(e){console.error(e);setConnectionState(false,'Ошибка подключения');render();}}
   window.loadApprovals=loadApprovalsSecure;
   window.approvalHeaders=function(extra={}){return Object.assign({apikey:SUPABASE_KEY,Authorization:'Bearer '+accessToken,'Content-Type':'application/json'},extra);};
