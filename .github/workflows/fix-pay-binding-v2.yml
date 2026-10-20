@@ -11,23 +11,14 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
-      - name: Patch payment state binding
+      - name: Patch runtime binding
         run: |
           python3 - <<'PY'
           from pathlib import Path
           p = Path('index.html')
           s = p.read_text(encoding='utf-8')
-          old = "const PAY=Array.isArray(window.PAYMENTS)?window.PAYMENTS:[];"
-          new = "let PAY=[];"
-          if old in s:
-              s = s.replace(old, new, 1)
-          marker = "window.PAYMENTS=(await res.json()).map(r=>({...r,amount:Number(r.amount)}));"
-          old2 = marker + "PAY.length=0;PAY.push(...window.PAYMENTS);"
-          new2 = marker + "PAY=window.PAYMENTS;"
-          if old2 in s:
-              s = s.replace(old2, new2, 1)
-          elif marker in s and "PAY=window.PAYMENTS;" not in s:
-              s = s.replace(marker, new2, 1)
+          s = s.replace('renderAll();', 'render();')
+          s = s.replace('approvals.clear();rows.forEach(x=>approvals.set(String(x.payment_id),x));', "approvals={};rows.forEach(x=>approvals[String(x.payment_id)]=x);")
           p.write_text(s, encoding='utf-8')
           PY
       - name: Commit
@@ -38,6 +29,6 @@ jobs:
           if git diff --cached --quiet; then
             echo 'No changes needed'
           else
-            git commit -m 'Fix payment array binding'
+            git commit -m 'Fix dashboard render runtime'
             git push
           fi
