@@ -130,6 +130,8 @@ dialog::backdrop{background:rgba(11,39,64,.45)}
 @media(max-width:1120px){.period{display:none}.grid{grid-template-columns:1fr}}
 @media(max-width:900px){.page{padding:0 16px 35px}.topbar{flex-wrap:wrap}.nav{width:100%}.hero{align-items:start;flex-direction:column}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.issue{grid-template-columns:20px minmax(70px,1fr) 95px}.issue .badge{display:none}}
 @media(max-width:520px){.kpis{gap:8px}.kpi{padding:13px 12px}.kpi .value{font-size:23px}.kpi.money .value{font-size:19px}.tabs .right-label{display:none}.board{padding:14px 12px}.legend-status{grid-template-columns:1fr}.barrow{grid-template-columns:minmax(100px,125px) minmax(30px,1fr) 75px;gap:6px}.barlabel,.barvalue{font-size:9px}.detail-grid{grid-template-columns:1fr}}
+
+.drill-kpi{cursor:pointer;transition:transform .13s,box-shadow .13s}.drill-kpi:hover{transform:translateY(-2px);box-shadow:0 9px 20px #0b36501a}.drill-kpi:focus-visible{outline:3px solid #6ea5cf;outline-offset:2px}.drill-kpi.selected{outline:2px solid #4c94c5}.flow-button{cursor:pointer!important}.flow-button:hover,.flow-button.selected{background:#e8f3fc;border-color:#afcde2}.filter-summary{color:#728ba2;font-size:10px;margin:0 0 12px}
 </style>
 </head>
 <body>
@@ -158,19 +160,19 @@ dialog::backdrop{background:rgba(11,39,64,.45)}
   <button class="tab" data-tab="offcalendar" role="tab" aria-selected="false">Вне ПК <span id="tabOffCount"></span></button>
   <span class="right-label" id="loadedAs"></span>
  </div>
- <div id="chips" class="chips"></div>
+ <div id="chips" class="chips"></div><div id="filterSummary" class="filter-summary" hidden></div>
  <section id="overviewSection">
    <div class="kpis">
-    <div class="kpi emphasis"><div class="heading">ЗАЯВОК В ПЛАНЕ</div><div class="value" id="metricTotal">—</div><div class="sub">Недельный платёжный календарь</div></div>
-    <div class="kpi good"><div class="heading">ПОДТВЕРЖДЕНО ПО 1С</div><div class="value" id="metricConfirmed">—</div><div class="sub" id="confirmedPct">Точные / групповые совпадения</div></div>
-    <div class="kpi warn"><div class="heading">ТРЕБУЕТ ПРОВЕРКИ</div><div class="value" id="metricReview">—</div><div class="sub">Возможное / частичное совпадение</div></div>
-    <div class="kpi bad"><div class="heading">НЕ НАЙДЕНО В ВЫГРУЗКЕ</div><div class="value" id="metricMissing">—</div><div class="sub">Не означает доказанное отсутствие оплаты</div></div>
+    <div class="kpi emphasis drill-kpi" data-kpi="all" tabindex="0" role="button" aria-label="Открыть срез"><div class="heading">ЗАЯВОК В ПЛАНЕ</div><div class="value" id="metricTotal">—</div><div class="sub">Недельный платёжный календарь</div></div>
+    <div class="kpi good drill-kpi" data-kpi="confirmed" tabindex="0" role="button" aria-label="Открыть срез"><div class="heading">ПОДТВЕРЖДЕНО ПО 1С</div><div class="value" id="metricConfirmed">—</div><div class="sub" id="confirmedPct">Точные / групповые совпадения</div></div>
+    <div class="kpi warn drill-kpi" data-kpi="review" tabindex="0" role="button" aria-label="Открыть срез"><div class="heading">ТРЕБУЕТ ПРОВЕРКИ</div><div class="value" id="metricReview">—</div><div class="sub">Возможное / частичное совпадение</div></div>
+    <div class="kpi bad drill-kpi" data-kpi="missing" tabindex="0" role="button" aria-label="Открыть срез"><div class="heading">НЕ НАЙДЕНО В ВЫГРУЗКЕ</div><div class="value" id="metricMissing">—</div><div class="sub">Не означает доказанное отсутствие оплаты</div></div>
    </div>
    <div class="kpis">
-    <div class="kpi money"><div class="heading">ПЛАН СПИСАНИЙ</div><div class="value" id="metricPlan">—</div><div class="sub">По сводке исходного календаря</div></div>
-    <div class="kpi money"><div class="heading">ПОДТВЕРЖДЕНО ПО ПЛАНУ</div><div class="value" id="metricMatched">—</div><div class="sub">Включая займы, ВГО и покрытие аккредитивов</div></div>
-    <div class="kpi money"><div class="heading">ПЛАНОВЫЕ «ПРОЧИЕ» ОПЛАТЫ</div><div class="value" id="metricOther">—</div><div class="sub">Подтверждённые; отдельно от финансирования</div></div>
-    <div class="kpi money"><div class="heading">ФАКТ БЕЗ ДОСТОВЕРНОЙ СВЯЗИ</div><div class="value" id="metricUnlinked">—</div><div class="sub">Прочие списания 1С · нужна проверка</div></div>
+    <div class="kpi money drill-kpi" data-kpi="plan" tabindex="0" role="button" aria-label="Открыть срез"><div class="heading">ПЛАН СПИСАНИЙ</div><div class="value" id="metricPlan">—</div><div class="sub">По сводке исходного календаря</div></div>
+    <div class="kpi money drill-kpi" data-kpi="matched" tabindex="0" role="button" aria-label="Открыть срез"><div class="heading">ПОДТВЕРЖДЕНО ПО ПЛАНУ</div><div class="value" id="metricMatched">—</div><div class="sub">Включая займы, ВГО и покрытие аккредитивов</div></div>
+    <div class="kpi money drill-kpi" data-kpi="other" tabindex="0" role="button" aria-label="Открыть срез"><div class="heading">ПЛАНОВЫЕ «ПРОЧИЕ» ОПЛАТЫ</div><div class="value" id="metricOther">—</div><div class="sub">Подтверждённые; отдельно от финансирования</div></div>
+    <div class="kpi money drill-kpi" data-kpi="unlinked" tabindex="0" role="button" aria-label="Открыть срез"><div class="heading">ФАКТ БЕЗ ДОСТОВЕРНОЙ СВЯЗИ</div><div class="value" id="metricUnlinked">—</div><div class="sub">Прочие списания 1С · нужна проверка</div></div>
    </div>
    <div class="divider-head"><h2>Исполнение платёжного календаря</h2><small>Нажимайте на элементы диаграмм для фильтрации</small></div>
    <div class="grid">
@@ -236,7 +238,7 @@ dialog::backdrop{background:rgba(11,39,64,.45)}
  const MAX_ROWS=35;
  const STATUS={confirmed:['Оплачено','Оплачено с расхождением','Группа оплачена','Техпоток исполнен'],review:['Проверить совпадение','Проверить группу оплат','Возможна частичная оплата']};
  const STATUS_TITLE={confirmed:'Подтверждено',review:'На проверку',missing:'Не найдено'};
- const LABELS={bucket:'Результат',direction:'Направление',project:'Проект'};
+ const LABELS={bucket:'Результат',direction:'Направление',project:'Проект',flow:'Тип потока'};
  const el=id=>document.getElementById(id);
  const esc=value=>String(value==null?'':value).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
  const money=value=>new Intl.NumberFormat('ru-RU',{maximumFractionDigits:0}).format(Number(value)||0)+' ₽';
@@ -321,9 +323,20 @@ dialog::backdrop{background:rgba(11,39,64,.45)}
  }
  const shownPlan=()=>st.plans.filter(r=>matchPlan(r));
  const statusRows=()=>st.plans.filter(r=>(!st.direction||r.direction===st.direction)&&(!st.project||projectBucket(r.project)===st.project)&&(!st.flow||r.flow_type===st.flow));
- function setFilter(name,value){
-  st[name]=st[name]===value?'':value;
+ function setFilter(name,value){st[name]=st[name]===value?'':value;st.planShown=MAX_ROWS;renderAll();}
+ function selectKpi(key){
+  if(key==='unlinked'){chooseTab('unlinked');return;}
+  if(key==='all'||key==='plan'){st.bucket='';st.flow='';if(key==='all'){st.direction='';st.project='';st.query='';el('planSearch').value='';}chooseTab('plan');renderAll();return;}
+  if(key==='other'){st.bucket='confirmed';st.flow='Прочие платежи';}
+  else if(key==='matched'){st.bucket='confirmed';st.flow='';}
+  else if(['confirmed','review','missing'].includes(key)){st.bucket=st.bucket===key?'':key;st.flow='';}
   st.planShown=MAX_ROWS;renderAll();
+ }
+ function contextRows(exclude=''){
+  return st.plans.filter(r=>(exclude==='bucket'||!st.bucket||statusBucket(r.match_status)===st.bucket)&&
+    (exclude==='direction'||!st.direction||r.direction===st.direction)&&
+    (exclude==='project'||!st.project||projectBucket(r.project)===st.project)&&
+    (!st.flow||r.flow_type===st.flow));
  }
  function chooseTab(name){
   st.tab=name;
@@ -335,7 +348,7 @@ dialog::backdrop{background:rgba(11,39,64,.45)}
   if(name==='overview')renderOverview();
  }
  function renderChips(){
-  const selected=[['bucket',st.bucket?STATUS_TITLE[st.bucket]:''],['direction',st.direction],['project',st.project]].filter(x=>x[1]);
+  const selected=[['bucket',st.bucket?STATUS_TITLE[st.bucket]:''],['direction',st.direction],['project',st.project],['flow',st.flow]].filter(x=>x[1]);
   el('chips').innerHTML=selected.length?'<span class="title">Активные фильтры:</span>'+selected.map(([name,value])=>'<button class="chip" data-clear="'+name+'">'+esc(LABELS[name])+': '+esc(value)+' ×</button>').join('')+'<button class="secondary-btn" data-clear="all">Очистить всё</button>':'';
  }
  function barRows(target,items,onKind,options={}){
@@ -351,18 +364,24 @@ dialog::backdrop{background:rgba(11,39,64,.45)}
  function renderOverview(){
   const summary=st.period.summary||{};
   const all=st.plans;
-  const list=statusRows();
+  const list=contextRows('bucket');
   const counts={confirmed:0,review:0,missing:0};
   list.forEach(r=>{const b=statusBucket(r.match_status);counts[b]++});
-  el('metricTotal').textContent=int(all.length);
-  el('metricConfirmed').textContent=int(all.filter(r=>statusBucket(r.match_status)==='confirmed').length);
-  el('metricReview').textContent=int(all.filter(r=>statusBucket(r.match_status)==='review').length);
-  el('metricMissing').textContent=int(all.filter(r=>statusBucket(r.match_status)==='missing').length);
-  el('confirmedPct').textContent=pct(Number(summary.confirmed||0),all.length)+' заявок · включая технические потоки';
-  el('metricPlan').textContent=money(summary.plan_debits);
-  el('metricMatched').textContent=money(summary.confirmed_total);
-  el('metricOther').textContent=money(summary.confirmed_other_plan);
+  const filtered=shownPlan();
+  el('metricTotal').textContent=int(list.length);
+  el('metricConfirmed').textContent=int(counts.confirmed);
+  el('metricReview').textContent=int(counts.review);
+  el('metricMissing').textContent=int(counts.missing);
+  el('confirmedPct').textContent=pct(counts.confirmed,list.length)+' заявок в выбранном срезе';
+  document.querySelectorAll('.drill-kpi').forEach(card=>card.classList.toggle('selected',card.dataset.kpi===st.bucket));
+  const sliced=Boolean(st.bucket||st.direction||st.project||st.flow||st.query);
+  const amount=arr=>arr.reduce((sum,r)=>sum+Number(r.confirmed_amount||0),0);
+  el('metricPlan').textContent=money(sliced?filtered.filter(r=>r.flow_sign==='-').reduce((sum,r)=>sum+Number(r.plan_amount||0),0):summary.plan_debits);
+  el('metricMatched').textContent=money(sliced?amount(filtered):summary.confirmed_total);
+  el('metricOther').textContent=money(sliced?amount(filtered.filter(r=>r.flow_type==='Прочие платежи'&&statusBucket(r.match_status)==='confirmed')):summary.confirmed_other_plan);
   el('metricUnlinked').textContent=money(summary.fact_operational_unlinked);
+  el('filterSummary').hidden=!sliced;
+  el('filterSummary').textContent=sliced?'Активный срез: '+int(filtered.length)+' из '+int(all.length)+' заявок · нажмите повторно для снятия фильтра.':'';
   const total=Object.values(counts).reduce((a,b)=>a+b,0)||1;
   el('statusStack').innerHTML=['confirmed','review','missing'].map(k=>'<button title="'+STATUS_TITLE[k]+': '+int(counts[k])+'" data-choose="bucket" data-value="'+k+'" style="width:'+(100*counts[k]/total).toFixed(1)+'%" aria-label="'+STATUS_TITLE[k]+'"></button>').join('');
   const colors={confirmed:'#4a936b',review:'#d2a04f',missing:'#c7636b'};
@@ -373,11 +392,11 @@ dialog::backdrop{background:rgba(11,39,64,.45)}
   const max=Math.max(1,...flow.map(x=>Number(x.amount)||0));
   el('flowChart').innerHTML=flow.map(x=>{
     const amount=Number(x.amount)||0;
-    return '<div class="barrow" title="'+esc(x.type)+' · '+int(x.count)+' операций"><span class="barlabel">'+esc(x.type)+'</span><span class="track"><span class="fill sky" style="width:'+Math.max(.4,100*amount/max)+'%"></span></span><span class="barvalue">'+money(amount)+'</span></div>';
+    return '<button type="button" class="barrow flow-button" data-fact-flow="'+esc(x.type)+'" title="Открыть детализацию '+esc(x.type)+'"><span class="barlabel">'+esc(x.type)+'</span><span class="track"><span class="fill sky" style="width:'+Math.max(.4,100*amount/max)+'%"></span></span><span class="barvalue">'+money(amount)+'</span></button>';
   }).join('');
-  const rows=shownPlan();
-  barRows('directionChart',group(rows,r=>r.direction),'direction',{limit:12});
-  barRows('projectChart',group(rows,r=>projectBucket(r.project)),'project',{limit:12});
+    const rows=shownPlan();
+  barRows('directionChart',group(contextRows('direction'),r=>r.direction),'direction',{limit:12});
+  barRows('projectChart',group(contextRows('project'),r=>projectBucket(r.project)),'project',{limit:12});
   const exceptions=rows.filter(r=>r.flow_sign!=='+'&&statusBucket(r.match_status)!=='confirmed').sort((a,b)=>Number(b.plan_amount)-Number(a.plan_amount)).slice(0,9);
   el('issuesList').innerHTML=exceptions.map((r,i)=>'<button class="issue" data-open-plan="'+r.plan_row+'"><span class="number">'+(i+1)+'</span><span><span class="name">'+esc(r.counterparty)+'</span><span class="second">'+esc(r.payer)+' · '+esc(r.project||'Без проекта')+'</span></span><span class="amount">'+money(r.plan_amount)+'</span>'+badge(r.match_status)+'</button>').join('')||'<p class="empty">Все заявки в выбранной группе подтверждены</p>';
  }
@@ -421,6 +440,15 @@ dialog::backdrop{background:rgba(11,39,64,.45)}
    '<td class="amount">'+(Number(r.fact_amount)>0?money2(r.fact_amount):'—')+'</td><td>'+badge(r.match_status)+'</td></tr>').join('');
  }
  function renderAll(){renderChips();renderOverview();if(st.tab==='plan')renderPlanTable();if(st.tab==='unlinked')renderUnlinkedTable();if(st.tab==='offcalendar')renderOffcalendar()}
+ function showFlowDetails(type){
+  const entry=(st.period.summary?.flow_types||[]).find(x=>x.type===type);if(!entry)return;
+  el('detailTitle').textContent='Фактические движения · '+type;
+  el('detailBody').innerHTML='<dl class="detail-grid">'+labeled('Количество операций',int(entry.count))+labeled('Сумма',money2(entry.amount))+'</dl>'+
+    block('Пояснение',type==='Прочие фактические списания'?
+      'Сводка включает в том числе оплаченные по плану суммы. Подраздел «Факт без связи» содержит только операции без подтверждённого соответствия.':
+      'Отдельно классифицированный денежный поток 1С; его нельзя автоматически считать управленческим расходом.');
+  el('detailModal').showModal();
+ }
  function labeled(label,val){return '<div class="detail"><dt>'+label+'</dt><dd>'+esc(val==null?'—':val)+'</dd></div>'}
  function block(label,content){return content?'<div class="detail-block"><label>'+label+'</label>'+esc(content)+'</div>':'';}
  function openDetail(id,type){
@@ -473,13 +501,16 @@ dialog::backdrop{background:rgba(11,39,64,.45)}
    await loadPeriod();
   }catch(error){console.error(error);note(error.message||'Ошибка загрузки сверки',true)}
  }
+ document.addEventListener('keydown',event=>{const card=event.target.closest?.('[data-kpi]');if(card&&(event.key==='Enter'||event.key===' ')){event.preventDefault();selectKpi(card.dataset.kpi)}});
  document.addEventListener('click',event=>{
   const tab=event.target.closest('[data-tab]');
   if(tab){chooseTab(tab.dataset.tab);return;}
+  const card=event.target.closest('[data-kpi]');if(card){selectKpi(card.dataset.kpi);return;}
+  const flowButton=event.target.closest('[data-fact-flow]');if(flowButton){showFlowDetails(flowButton.dataset.factFlow);return;}
   const filter=event.target.closest('[data-choose]');
   if(filter){setFilter(filter.dataset.choose,filter.dataset.value);return;}
   const chip=event.target.closest('[data-clear]');
-  if(chip){if(chip.dataset.clear==='all'){st.bucket='';st.direction='';st.project='';}else st[chip.dataset.clear]='';renderAll();return;}
+  if(chip){if(chip.dataset.clear==='all'){st.bucket='';st.direction='';st.project='';st.flow='';}else st[chip.dataset.clear]='';renderAll();return;}
   const plan=event.target.closest('[data-open-plan]');
   if(plan){openDetail(plan.dataset.openPlan,'plan');return;}
   const fact=event.target.closest('[data-open-unlinked]');
