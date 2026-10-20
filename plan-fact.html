@@ -1,0 +1,507 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>BAZA · План / факт платежей</title>
+<style>
+*{box-sizing:border-box}
+:root{--bg:#eef4f9;--white:#fff;--ink:#0b3154;--navy:#113e6b;--muted:#7490a7;--border:#d9e5ef;--red:#e21c2a;--green:#428455;--amber:#bd8523;--blue:#3178b9}
+body{margin:0;background:var(--bg);color:var(--ink);font:12px/1.5 Arial,Helvetica,sans-serif}
+[hidden]{display:none!important}
+button,input,select{font:inherit}button{cursor:pointer}button:disabled{cursor:not-allowed;opacity:.6}
+a{color:inherit;text-decoration:none}
+.page{max-width:1570px;margin:0 auto;padding:0 30px 42px}
+.topbar{display:flex;align-items:center;gap:22px;justify-content:space-between;padding:22px 0 19px;border-bottom:1px solid var(--border)}
+.brand b{display:block;font-size:28px;font-weight:900;letter-spacing:-1.2px;color:var(--red);line-height:1}
+.brand small{display:block;font-weight:900;letter-spacing:1.15px;font-size:9px;color:#7891a7;margin-top:8px}
+.period{font-size:10px;letter-spacing:1.2px;font-weight:700;color:var(--muted)}
+.nav{display:flex;align-items:center;flex-wrap:wrap;gap:5px}
+.nav a{padding:9px 12px;border-radius:8px;color:#547087;font-size:11px;font-weight:700;white-space:nowrap}
+.nav a:hover,.nav a.active{background:#dcebf7;color:var(--navy)}
+.hero{display:flex;align-items:end;justify-content:space-between;gap:22px;padding:27px 0 22px}
+.eyebrow{font-size:9px;letter-spacing:1.6px;font-weight:900;color:#6c93b0;margin-bottom:9px}
+h1{font-size:29px;letter-spacing:-.6px;margin:0 0 7px;line-height:1.18}
+.hero p{font-size:12px;color:#6b8298;line-height:1.6;margin:0}
+.period-control{display:flex;align-items:center;gap:8px;white-space:nowrap}
+.period-control select{border:1px solid var(--border);background:#fff;color:var(--ink);border-radius:8px;padding:11px 12px;min-width:205px}
+.surface{border:1px solid var(--border);background:#fff;border-radius:14px;padding:20px}
+.notice{display:flex;align-items:start;gap:12px;margin-bottom:16px;padding:13px 17px;border:1px solid #d3e3f0;background:#f8fbff;border-radius:10px;color:#53718c;font-size:11px;line-height:1.55}
+.notice strong{color:var(--ink)}
+.notice .symbol{color:var(--blue);font-weight:800;font-size:19px;line-height:1}
+.notice.error{border-color:#f0cacd;background:#fff8f8;color:#a23b42}
+.notice.ok{border-color:#cbe6d2;background:#f5fbf7}
+.tabs{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:4px 0 16px}
+.tab{border:1px solid #d4e3ee;background:#fff;color:#58738b;border-radius:9px;padding:11px 15px;font-weight:700;font-size:11px}
+.tab:hover{background:#edf6ff}.tab.active{background:var(--navy);border-color:var(--navy);color:#fff}
+.tabs .right-label{margin-left:auto;color:var(--muted);font-size:10px}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:0 0 12px}
+.kpi{border:1px solid var(--border);border-radius:13px;background:#fff;padding:17px 19px;min-width:0}
+.kpi .heading{display:flex;justify-content:space-between;align-items:center;gap:8px;color:#748da3;font-size:10px;font-weight:800;letter-spacing:.7px}
+.kpi .value{margin-top:12px;font-size:29px;letter-spacing:-.7px;font-weight:900;line-height:1.12;white-space:nowrap}
+.kpi .sub{margin-top:8px;color:#8598aa;font-size:10px}
+.kpi.emphasis{background:var(--navy);color:#fff;border-color:var(--navy)}
+.kpi.emphasis .heading,.kpi.emphasis .sub{color:#c3d4e4}
+.kpi.good .value{color:#2d784c}
+.kpi.warn .value{color:#b8801e}
+.kpi.bad .value{color:#c04b53}
+.kpi.money .value{font-size:23px}
+.divider-head{margin:26px 0 13px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.divider-head h2{font-size:17px;margin:0}.divider-head small{font-size:10px;color:#8ba0b2}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+.board{background:#fff;border:1px solid var(--border);border-radius:14px;padding:18px 20px;min-width:0}
+.board h3{font-size:13px;margin:0 0 5px}
+.board .hint{font-size:10px;color:#8198a9;margin-bottom:15px}
+.board .empty{color:#8295a5;padding:20px 0;font-size:11px}
+.barrow{display:grid;grid-template-columns:minmax(115px,180px) minmax(30px,1fr) 104px;gap:11px;align-items:center;padding:7px 5px;border:1px solid transparent;border-radius:8px;width:100%;background:transparent;color:var(--ink);text-align:left}
+button.barrow:hover{background:#edf5fc;border-color:#d8e7f2}
+button.barrow.selected{background:#e7f2fc;border-color:#a8c9e2}
+.barlabel{overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:11px}
+.barlabel b{font-weight:800}
+.track{display:block;background:#eaf0f5;height:8px;border-radius:10px;overflow:hidden}
+.fill{display:block;background:var(--navy);height:100%;border-radius:10px}
+.fill.green{background:#528d66}.fill.amber{background:#d1a257}.fill.red{background:#ca6a72}.fill.sky{background:#5b99c8}
+.barvalue{text-align:right;font-size:11px;font-weight:800;white-space:nowrap}
+.metricline{display:flex;align-items:center;justify-content:space-between;gap:15px;margin-bottom:14px;font-size:11px}
+.metricline b{font-size:11px}.metricline span{color:var(--muted)}
+.stacked{display:flex;height:16px;border-radius:10px;overflow:hidden;background:#e9eff4;margin:13px 0 18px}
+.stacked button{height:100%;border:0;min-width:0;padding:0;transition:opacity .15s}.stacked button:hover{opacity:.75}
+.stacked button[data-bucket=confirmed]{background:#4a936b}
+.stacked button[data-bucket=review]{background:#d2a04f}
+.stacked button[data-bucket=missing]{background:#c7636b}
+.legend-status{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.legend-status button{background:#f7fafc;border:1px solid #e0e9f0;border-radius:9px;padding:13px 11px;text-align:left;color:var(--ink)}
+.legend-status button.selected{background:#e4f2fc;border-color:#9fc3df}
+.legend-status b{display:block;font-size:19px;margin:2px 0}
+.legend-status small{display:block;color:#728ca1}
+.legend-status i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px}
+.topissues{margin-top:13px}
+.issue{display:grid;grid-template-columns:26px minmax(130px,1fr) 116px auto;gap:12px;align-items:center;width:100%;border:0;border-bottom:1px solid #edf2f6;padding:11px 2px;background:transparent;text-align:left;color:var(--ink)}
+.issue:hover{background:#f4f8fc}
+.issue:last-child{border-bottom:0}
+.issue .number{color:#a9bbca;font-size:12px;font-weight:900}
+.issue .name{font-weight:700;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.issue .second{color:#8299aa;font-size:10px}
+.issue .amount{font-weight:900;text-align:right;white-space:nowrap;font-size:11px}
+.badge{display:inline-block;max-width:210px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-radius:20px;padding:5px 8px;font-size:9px;font-weight:800}
+.badge.paid{background:#edf7ef;color:#398255}.badge.review{background:#fff3dd;color:#a47725}.badge.missing{background:#fff0f0;color:#be4c53}.badge.tech{background:#e9f1fa;color:#45799f}
+.chips{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:0 0 12px}
+.chips:empty{display:none}
+.chips .title{color:#7c90a4;font-size:10px;font-weight:800}
+.chip{border:1px solid #b4d1e6;border-radius:22px;color:#225b87;background:#eaf3fb;font-size:10px;padding:7px 11px}
+.chip:hover{background:#d8eaf7}
+.tools{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:14px}
+.tools input,.tools select{background:#fff;border:1px solid #cddfec;border-radius:8px;height:39px;padding:7px 10px;color:var(--ink);min-width:130px;max-width:100%}
+.tools input{width:340px;flex:1}
+.tools label{font-size:10px;color:var(--muted);font-weight:700}
+.tools .counter{margin-left:auto;font-size:10px;color:var(--muted)}
+.secondary-btn{border:1px solid #ccdfed;background:#fff;color:#225779;border-radius:8px;padding:10px 13px;font-size:10px;font-weight:700}
+.secondary-btn:hover{background:#edf5fa}
+.table-wrap{overflow-x:auto;border:1px solid #d9e5ef;border-radius:11px}
+table{border-collapse:collapse;width:100%;font-size:10.5px;background:#fff}
+th{text-align:left;white-space:nowrap;font-size:9px;text-transform:uppercase;letter-spacing:.45px;color:#6c87a1;background:#f4f8fb;padding:13px 10px;position:sticky;top:0}
+td{border-top:1px solid #e8eff4;padding:11px 10px;vertical-align:middle}
+tbody tr:hover{background:#f6faff}
+td.amount{text-align:right;white-space:nowrap;font-weight:800}
+td.muted{color:#7e90a0}
+.linkish{border:0;background:transparent;color:#1b5c90;font-weight:800;text-align:left;padding:2px;cursor:pointer}
+.linkish:hover{text-decoration:underline}
+.inline-caption{font-size:10px;color:#6d889d;margin-top:11px}
+.table-footer{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:13px}
+.table-footer span{color:#748ca1;font-size:10px}
+.note-panel{display:flex;gap:10px;padding:15px 17px;border-radius:12px;background:#fff9ed;border:1px solid #f0dfb9;color:#99711f;font-size:11px;line-height:1.65;margin-bottom:13px}
+.note-panel strong{color:#735013}
+dialog{border:1px solid #d5e3ec;border-radius:16px;box-shadow:0 25px 80px rgba(0,28,49,.22);padding:0;width:min(660px,calc(100vw - 28px));max-height:88vh;color:var(--ink)}
+dialog::backdrop{background:rgba(11,39,64,.45)}
+.dialog-header{padding:19px 22px;background:#f3f8fc;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px}
+.dialog-header h2{margin:0;font-size:17px}.close{border:0;background:#fff;border-radius:8px;padding:8px 11px;font-size:18px;color:#53738b}
+.dialog-body{padding:19px 22px 24px;overflow:auto;max-height:calc(88vh - 75px)}
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:15px 0}
+.detail dt{color:#8299aa;font-size:9px;letter-spacing:.5px;text-transform:uppercase;margin-bottom:4px}
+.detail dd{font-size:12px;font-weight:700;margin:0;overflow-wrap:anywhere}
+.detail-block{margin-top:14px;padding:12px 14px;background:#f5f8fc;border-radius:9px;line-height:1.7;white-space:pre-wrap;overflow-wrap:anywhere}
+.detail-block label{display:block;margin-bottom:5px;font-weight:900;color:#7792a7;text-transform:uppercase;letter-spacing:.5px;font-size:9px}
+.hidden-section{display:none}
+.loading-area{padding:64px 20px;text-align:center;color:#7792a8;font-weight:700}
+.loading-area .spin{width:25px;height:25px;border:3px solid #d6e4ef;border-top-color:#23699e;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 14px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.smallprint{margin:24px 0;color:#869aab;font-size:10px;line-height:1.7}
+@media(max-width:1120px){.period{display:none}.grid{grid-template-columns:1fr}}
+@media(max-width:900px){.page{padding:0 16px 35px}.topbar{flex-wrap:wrap}.nav{width:100%}.hero{align-items:start;flex-direction:column}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.issue{grid-template-columns:20px minmax(70px,1fr) 95px}.issue .badge{display:none}}
+@media(max-width:520px){.kpis{gap:8px}.kpi{padding:13px 12px}.kpi .value{font-size:23px}.kpi.money .value{font-size:19px}.tabs .right-label{display:none}.board{padding:14px 12px}.legend-status{grid-template-columns:1fr}.barrow{grid-template-columns:minmax(100px,125px) minmax(30px,1fr) 75px;gap:6px}.barlabel,.barvalue{font-size:9px}.detail-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="page">
+<header class="topbar">
+ <a href="dashboard-20261020.html" class="brand" aria-label="BAZA, платёжный контроль"><b>BAZA</b><small>ПЛАТЕЖНЫЙ КОНТРОЛЬ</small></a>
+ <span class="period">ФИНАНСЫ · ПЛАН / ФАКТ · 2026</span>
+ <nav class="nav">
+  <a href="dashboard-20261020.html#dashboard">Дашборд</a>
+  <a href="dashboard-20261020.html#registry">Платежи</a>
+  <a href="plan-fact.html" class="active" aria-current="page">План / факт</a>
+  <a href="users.html" id="usersLink" hidden>Пользователи</a>
+ </nav>
+</header>
+<section class="hero">
+ <div><div class="eyebrow">КОНТРОЛЬ ИСПОЛНЕНИЯ</div><h1>План / факт платежей</h1><p>Проверка исполнения заявок по выгрузке 1С: что оплачено, что требует подтверждения и что пока не найдено.</p></div>
+ <div class="period-control"><label for="periodSelect">Период</label><select id="periodSelect" disabled><option>Загрузка…</option></select></div>
+</section>
+<div id="notice" class="notice"><span class="symbol">i</span><span><strong>Предварительная сверка, не бухгалтерское закрытие.</strong> Статьи БДДС в исходной выгрузке были заполнены не полностью. Возможные совпадения и частичные оплаты не засчитываются как исполненные до подтверждения.</span></div>
+<div id="loadState" class="loading-area"><div class="spin"></div>Загружаем защищённые данные из Supabase…</div>
+<div id="app" hidden>
+ <div class="tabs" role="tablist" aria-label="Разделы план-факт">
+  <button class="tab active" data-tab="overview" role="tab" aria-selected="true">Обзор</button>
+  <button class="tab" data-tab="plan" role="tab" aria-selected="false">Реестр план / факт <span id="tabPlanCount"></span></button>
+  <button class="tab" data-tab="unlinked" role="tab" aria-selected="false">Факт без связи <span id="tabUnlinkedCount"></span></button>
+  <button class="tab" data-tab="offcalendar" role="tab" aria-selected="false">Вне ПК <span id="tabOffCount"></span></button>
+  <span class="right-label" id="loadedAs"></span>
+ </div>
+ <div id="chips" class="chips"></div>
+ <section id="overviewSection">
+   <div class="kpis">
+    <div class="kpi emphasis"><div class="heading">ЗАЯВОК В ПЛАНЕ</div><div class="value" id="metricTotal">—</div><div class="sub">Недельный платёжный календарь</div></div>
+    <div class="kpi good"><div class="heading">ПОДТВЕРЖДЕНО ПО 1С</div><div class="value" id="metricConfirmed">—</div><div class="sub" id="confirmedPct">Точные / групповые совпадения</div></div>
+    <div class="kpi warn"><div class="heading">ТРЕБУЕТ ПРОВЕРКИ</div><div class="value" id="metricReview">—</div><div class="sub">Возможное / частичное совпадение</div></div>
+    <div class="kpi bad"><div class="heading">НЕ НАЙДЕНО В ВЫГРУЗКЕ</div><div class="value" id="metricMissing">—</div><div class="sub">Не означает доказанное отсутствие оплаты</div></div>
+   </div>
+   <div class="kpis">
+    <div class="kpi money"><div class="heading">ПЛАН СПИСАНИЙ</div><div class="value" id="metricPlan">—</div><div class="sub">По сводке исходного календаря</div></div>
+    <div class="kpi money"><div class="heading">ПОДТВЕРЖДЕНО ПО ПЛАНУ</div><div class="value" id="metricMatched">—</div><div class="sub">Включая займы, ВГО и покрытие аккредитивов</div></div>
+    <div class="kpi money"><div class="heading">ПЛАНОВЫЕ «ПРОЧИЕ» ОПЛАТЫ</div><div class="value" id="metricOther">—</div><div class="sub">Подтверждённые; отдельно от финансирования</div></div>
+    <div class="kpi money"><div class="heading">ФАКТ БЕЗ ДОСТОВЕРНОЙ СВЯЗИ</div><div class="value" id="metricUnlinked">—</div><div class="sub">Прочие списания 1С · нужна проверка</div></div>
+   </div>
+   <div class="divider-head"><h2>Исполнение платёжного календаря</h2><small>Нажимайте на элементы диаграмм для фильтрации</small></div>
+   <div class="grid">
+    <div class="board"><h3>Статусы заявок</h3><div class="hint">Распределение по количеству, независимо от размера платежа</div>
+      <div id="statusStack" class="stacked"></div><div id="statusLegend" class="legend-status"></div>
+      <p class="inline-caption">Четыре разновидности подтверждённых платежей сведены в одну группу. Неопределённые совпадения не считаются оплачеными.</p>
+    </div>
+    <div class="board"><h3>Структура фактических списаний 1С</h3><div class="hint">Брутто-обороты за неделю, раздельно по характеру движения денег</div><div id="flowChart"></div>
+      <p class="inline-caption">Депозиты, займы, ВГО, межсчётные переводы и аккредитивное покрытие не смешиваем с обычными расходами.</p>
+    </div>
+    <div class="board"><h3>Заявки по направлениям</h3><div class="hint">Количество платежей по направлениям; нажатие отфильтрует план и остальные графики</div><div id="directionChart"></div></div>
+    <div class="board"><h3>Заявки по проектам</h3><div class="hint">Только проекты, указанные для управленческого дашборда; совместные платежи объединены</div><div id="projectChart"></div></div>
+   </div>
+   <div class="divider-head"><h2>Приоритетные расхождения</h2><small>Крупнейшие неподтверждённые списания из недельного плана</small></div>
+   <div class="board topissues"><div id="issuesList"></div><div class="table-footer"><span>Открытие строки показывает основание сверки и кандидатов из 1С</span><button class="secondary-btn" id="showAllIssues">Показать весь план / факт →</button></div></div>
+ </section>
+ <section id="planSection" hidden>
+  <div class="divider-head"><h2>План / факт по заявкам</h2><small>122 строки · ссылки на операции 1С и основания сверки</small></div>
+  <div class="surface">
+   <div class="tools">
+    <input id="planSearch" type="search" placeholder="Контрагент, плательщик, проект, назначение или номер 1С…" aria-label="Поиск по заявкам">
+    <select id="planStatus" aria-label="Фильтр по результату"><option value="">Все результаты</option><option value="confirmed">Подтверждено</option><option value="review">На проверку</option><option value="missing">Не найдено</option></select>
+    <select id="planDirection" aria-label="Направление"><option value="">Все направления</option></select>
+    <select id="planProject" aria-label="Проект"><option value="">Все проекты</option></select>
+    <select id="planFlow" aria-label="Тип потока"><option value="">Все типы потоков</option></select>
+    <button id="clearFilters" class="secondary-btn" type="button">Сбросить</button>
+    <span class="counter" id="planTableCount"></span>
+   </div>
+   <div class="table-wrap"><table><thead><tr><th>Строка</th><th>Юрлицо / плательщик</th><th>Контрагент</th><th>Проект</th><th>План</th><th>Подтверждено</th><th>Статус</th><th>1С</th></tr></thead><tbody id="planTbody"></tbody></table></div>
+   <p class="inline-caption">Нажмите на контрагента, чтобы посмотреть направление, подстатью, дату, кандидатов и назначение платежа.</p>
+   <div class="table-footer"><span id="planPaging"></span><button class="secondary-btn" id="planMore" type="button">Показать ещё</button></div>
+  </div>
+ </section>
+ <section id="unlinkedSection" hidden>
+  <div class="divider-head"><h2>Факт без подтверждённой связи с планом</h2><small id="unlinkedSumLabel"></small></div>
+  <div class="note-panel"><span>!</span><span><strong>Не все эти оплаты внеплановые.</strong> Здесь также находятся платежи, для которых обнаружена возможная связь с заявкой, но её нельзя утверждать автоматически (например, ООО ПСГ / ПГС). Нужно проверить назначение и документы.</span></div>
+  <div class="surface">
+   <div class="tools"><input id="unlinkedSearch" type="search" placeholder="Поиск по операции, контрагенту, назначению…" aria-label="Поиск фактических платежей"><span class="counter" id="unlinkedTableCount"></span></div>
+   <div class="table-wrap"><table><thead><tr><th>Строка 1С</th><th>Дата</th><th>Наше юрлицо</th><th>Контрагент</th><th>Сумма</th><th>Назначение / пояснение</th></tr></thead><tbody id="unlinkedTbody"></tbody></table></div>
+   <div class="table-footer"><span id="unlinkedPaging"></span><button class="secondary-btn" id="unlinkedMore">Показать ещё</button></div>
+  </div>
+ </section>
+ <section id="offcalendarSection" hidden>
+  <div class="divider-head"><h2>Отдельный раздел «Вне ПК»</h2><small>14 строк исходного календаря 12–16 октября</small></div>
+  <div class="note-panel"><span>!</span><span><strong>Не смешивать с недельным планом.</strong> Эти заявки были вынесены отдельно в исходном Excel. Факт их исполнения указан для контроля, но не добавляется в показатель согласованного недельного календаря.</span></div>
+  <div class="surface">
+   <div class="table-wrap"><table><thead><tr><th>Строка</th><th>Наше юрлицо</th><th>Контрагент</th><th>Тип / проект</th><th>Заявлено</th><th>Факт 1С</th><th>Результат</th></tr></thead><tbody id="outsideTbody"></tbody></table></div>
+   <p class="inline-caption">Нажмите на контрагента, чтобы посмотреть пояснения и номера операций 1С.</p>
+  </div>
+ </section>
+</div>
+<p class="smallprint">Источник: «Сверка_план_факт_12-16_октября_2026.xlsx», созданная на основе календаря 12–16 октября и выгрузки «Факт БДДС» из 1С. Сверка предварительная: связи-кандидаты требуют подтверждения, внеплановость не доказана автоматически. Данные загружаются из Supabase после авторизации, а не встроены в публичную страницу.</p>
+</div>
+<dialog id="detailModal" aria-labelledby="detailTitle">
+ <div class="dialog-header"><h2 id="detailTitle">Карточка сверки</h2><button class="close" id="closeDetail" aria-label="Закрыть">×</button></div>
+ <div class="dialog-body" id="detailBody"></div>
+</dialog>
+<script>
+(function(){
+ 'use strict';
+ const BASE='https://duvdlpzwxtuwbwyggpla.supabase.co';
+ const KEY='sb_publishable_WBg9viktHBpz9lw1Nwqtyw_49Src_lU';
+ const MAX_ROWS=35;
+ const STATUS={confirmed:['Оплачено','Оплачено с расхождением','Группа оплачена','Техпоток исполнен'],review:['Проверить совпадение','Проверить группу оплат','Возможна частичная оплата']};
+ const STATUS_TITLE={confirmed:'Подтверждено',review:'На проверку',missing:'Не найдено'};
+ const LABELS={bucket:'Результат',direction:'Направление',project:'Проект'};
+ const el=id=>document.getElementById(id);
+ const esc=value=>String(value==null?'':value).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+ const money=value=>new Intl.NumberFormat('ru-RU',{maximumFractionDigits:0}).format(Number(value)||0)+' ₽';
+ const money2=value=>new Intl.NumberFormat('ru-RU',{minimumFractionDigits:2,maximumFractionDigits:2}).format(Number(value)||0)+' ₽';
+ const int=value=>new Intl.NumberFormat('ru-RU').format(Number(value)||0);
+ const pct=(a,b)=>b?new Intl.NumberFormat('ru-RU',{maximumFractionDigits:1}).format(100*a/b)+'%':'0%';
+ const statusBucket=status=>STATUS.confirmed.includes(status)?'confirmed':status==='Не найден'?'missing':'review';
+ const badge=status=>{const type=statusBucket(status);const kind=status==='Техпоток исполнен'?'tech':type==='confirmed'?'paid':type;return '<span class="badge '+kind+'" title="'+esc(status)+'">'+esc(status)+'</span>'};
+ const PROJECTS=['ДМД','ДМД-2','ПКП','ДНК','Алиса','Алиса 2','Алиса 3','Бестселлер','Бренд BAZA','Инвест'];
+ const projectBucket=value=>{
+   const x=String(value||'').trim();
+   if(!x)return '';
+   if(x.split(/[,;]/).map(s=>s.trim()).filter(Boolean).length>1)return 'Несколько проектов';
+   if(x.toLowerCase()==='бренд')return 'Бренд BAZA';
+   if(x.toLowerCase()==='инвест направления')return 'Инвест';
+   return PROJECTS.find(z=>z.toLowerCase()===x.toLowerCase())||'';
+ };
+ const st={user:null,token:'',periods:[],period:null,plans:[],unlinked:[],outside:[],tab:'overview',bucket:'',direction:'',project:'',query:'',flow:'',planShown:MAX_ROWS,unlinkedShown:MAX_ROWS,unlinkedQuery:''};
+ const note=(message,error=false)=>{el('loadState').innerHTML='<div class="notice'+(error?' error':'')+'" style="display:inline-flex;margin:0"><span class="symbol">'+(error?'!':'i')+'</span><span>'+esc(message)+'</span></div>'};
+ function authHeaders(token){return {apikey:KEY,Authorization:'Bearer '+token,Accept:'application/json'};}
+ async function refresh(){
+  const old=localStorage.getItem('baza_refresh_token');
+  if(!old)return null;
+  const res=await fetch(BASE+'/auth/v1/token?grant_type=refresh_token',{method:'POST',headers:{apikey:KEY,'Content-Type':'application/json'},body:JSON.stringify({refresh_token:old})});
+  if(!res.ok)return null;
+  const d=await res.json();
+  if(!d.access_token)return null;
+  localStorage.setItem('baza_access_token',d.access_token);
+  if(d.refresh_token)localStorage.setItem('baza_refresh_token',d.refresh_token);
+  return d.access_token;
+ }
+ async function identify(){
+  let token=localStorage.getItem('baza_access_token');
+  if(!token)return null;
+  let res=await fetch(BASE+'/auth/v1/user',{headers:authHeaders(token)});
+  if(res.status===401){token=await refresh();if(!token)return null;res=await fetch(BASE+'/auth/v1/user',{headers:authHeaders(token)})}
+  if(!res.ok)return null;
+  const user=await res.json();
+  const profileRes=await fetch(BASE+'/rest/v1/user_profiles?select=role,is_active,full_name,email&id=eq.'+encodeURIComponent(user.id),{headers:authHeaders(token)});
+  if(!profileRes.ok)return null;
+  const profiles=await profileRes.json();
+  const p=profiles[0];
+  if(!p||p.is_active!==true||!['admin','approver','viewer'].includes(p.role))return null;
+  return {token,user,profile:p};
+ }
+ async function rest(table,search){
+  let response=await fetch(BASE+'/rest/v1/'+table+'?'+search,{headers:{...authHeaders(st.token),Prefer:'count=exact'}});
+  if(response.status===401){const fresh=await refresh();if(!fresh)throw Error('Сессия истекла. Войдите снова.');st.token=fresh;response=await fetch(BASE+'/rest/v1/'+table+'?'+search,{headers:authHeaders(fresh)})}
+  if(!response.ok){const error=await response.json().catch(()=>({}));throw Error('Supabase: '+(error.message||'HTTP '+response.status))}
+  return response.json();
+ }
+ async function loadPeriod(){
+  const p=st.period;
+  if(!p)return;
+  note('Загружаем заявки и фактические платежи…');
+  const key=encodeURIComponent(p.period_id);
+  const [plans,unlinked,outside]=await Promise.all([
+    rest('reconciliation_plan_rows','select=*&period_id=eq.'+key+'&order=plan_row.asc&limit=1000'),
+    rest('reconciliation_unlinked_facts','select=*&period_id=eq.'+key+'&order=amount.desc&limit=1000'),
+    rest('reconciliation_offcalendar','select=*&period_id=eq.'+key+'&order=calendar_row.asc&limit=1000')
+  ]);
+  st.plans=plans;st.unlinked=unlinked;st.outside=outside;
+  const expected=Number(p.summary&&p.summary.rows);
+  if(expected&&st.plans.length!==expected)throw Error('Выгрузка сверки неполная: получено '+st.plans.length+' из '+expected+' заявок.');
+  el('tabPlanCount').textContent='· '+int(plans.length);
+  el('tabUnlinkedCount').textContent='· '+int(unlinked.length);
+  el('tabOffCount').textContent='· '+int(outside.length);
+  st.bucket='';st.direction='';st.project='';st.query='';st.flow='';st.planShown=MAX_ROWS;st.unlinkedShown=MAX_ROWS;st.unlinkedQuery='';
+  el('planSearch').value='';el('planStatus').value='';el('unlinkedSearch').value='';
+  fillSelections();
+  el('loadState').hidden=true;el('app').hidden=false;
+  renderAll();
+ }
+ function group(rows,fn){const m=new Map();rows.forEach(x=>{const k=fn(x);if(!k)return;m.set(k,(m.get(k)||0)+1)});return [...m].sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0],'ru'));}
+ function matchPlan(r,{search=true}={}){
+  if(st.bucket&&statusBucket(r.match_status)!==st.bucket)return false;
+  if(st.direction&&r.direction!==st.direction)return false;
+  if(st.project&&projectBucket(r.project)!==st.project)return false;
+  if(st.flow&&r.flow_type!==st.flow)return false;
+  if(search&&st.query&&!([r.payer,r.counterparty,r.direction,r.project,r.subcategory,r.flow_type,r.fact_refs,r.candidate_refs,r.payment_purpose,r.notes].join(' ').toLowerCase().includes(st.query.toLowerCase())))return false;
+  return true;
+ }
+ const shownPlan=()=>st.plans.filter(r=>matchPlan(r));
+ const statusRows=()=>st.plans.filter(r=>(!st.direction||r.direction===st.direction)&&(!st.project||projectBucket(r.project)===st.project)&&(!st.flow||r.flow_type===st.flow));
+ function setFilter(name,value){
+  st[name]=st[name]===value?'':value;
+  st.planShown=MAX_ROWS;renderAll();
+ }
+ function chooseTab(name){
+  st.tab=name;
+  document.querySelectorAll('[data-tab]').forEach(b=>{const on=b.dataset.tab===name;b.classList.toggle('active',on);b.setAttribute('aria-selected',String(on))});
+  ['overview','plan','unlinked','offcalendar'].forEach(key=>el(key+'Section').hidden=key!==name);
+  if(name==='plan')renderPlanTable();
+  if(name==='unlinked')renderUnlinkedTable();
+  if(name==='offcalendar')renderOffcalendar();
+  if(name==='overview')renderOverview();
+ }
+ function renderChips(){
+  const selected=[['bucket',st.bucket?STATUS_TITLE[st.bucket]:''],['direction',st.direction],['project',st.project]].filter(x=>x[1]);
+  el('chips').innerHTML=selected.length?'<span class="title">Активные фильтры:</span>'+selected.map(([name,value])=>'<button class="chip" data-clear="'+name+'">'+esc(LABELS[name])+': '+esc(value)+' ×</button>').join('')+'<button class="secondary-btn" data-clear="all">Очистить всё</button>':'';
+ }
+ function barRows(target,items,onKind,options={}){
+  const max=Math.max(items[0]?.[1]||1,1);
+  if(!items.length){el(target).innerHTML='<div class="empty">Для выбранных фильтров данных нет</div>';return;}
+  el(target).innerHTML=items.slice(0,options.limit||10).map(([name,amount])=>{
+   const selected=onKind==='direction'?st.direction===name:st.project===name;
+   return '<button class="barrow'+(selected?' selected':'')+'" data-choose="'+onKind+'" data-value="'+esc(name)+'" aria-pressed="'+selected+'" title="Фильтр: '+esc(name)+'">'+
+    '<span class="barlabel">'+esc(name)+'</span><span class="track"><span class="fill" style="width:'+Math.round(100*amount/max)+'%"></span></span>'+
+    '<span class="barvalue">'+int(amount)+' заяв.</span></button>';
+  }).join('');
+ }
+ function renderOverview(){
+  const summary=st.period.summary||{};
+  const all=st.plans;
+  const list=statusRows();
+  const counts={confirmed:0,review:0,missing:0};
+  list.forEach(r=>{const b=statusBucket(r.match_status);counts[b]++});
+  el('metricTotal').textContent=int(all.length);
+  el('metricConfirmed').textContent=int(all.filter(r=>statusBucket(r.match_status)==='confirmed').length);
+  el('metricReview').textContent=int(all.filter(r=>statusBucket(r.match_status)==='review').length);
+  el('metricMissing').textContent=int(all.filter(r=>statusBucket(r.match_status)==='missing').length);
+  el('confirmedPct').textContent=pct(Number(summary.confirmed||0),all.length)+' заявок · включая технические потоки';
+  el('metricPlan').textContent=money(summary.plan_debits);
+  el('metricMatched').textContent=money(summary.confirmed_total);
+  el('metricOther').textContent=money(summary.confirmed_other_plan);
+  el('metricUnlinked').textContent=money(summary.fact_operational_unlinked);
+  const total=Object.values(counts).reduce((a,b)=>a+b,0)||1;
+  el('statusStack').innerHTML=['confirmed','review','missing'].map(k=>'<button title="'+STATUS_TITLE[k]+': '+int(counts[k])+'" data-choose="bucket" data-value="'+k+'" style="width:'+(100*counts[k]/total).toFixed(1)+'%" aria-label="'+STATUS_TITLE[k]+'"></button>').join('');
+  const colors={confirmed:'#4a936b',review:'#d2a04f',missing:'#c7636b'};
+  el('statusLegend').innerHTML=['confirmed','review','missing'].map(k=>
+    '<button data-choose="bucket" data-value="'+k+'" class="'+(st.bucket===k?'selected':'')+'" aria-pressed="'+(st.bucket===k)+'">'+
+    '<small><i style="background:'+colors[k]+'"></i>'+STATUS_TITLE[k]+'</small><b>'+int(counts[k])+'</b><small>'+pct(counts[k],total)+' заявок</small></button>').join('');
+  const flow=Array.isArray(summary.flow_types)?summary.flow_types:[];
+  const max=Math.max(1,...flow.map(x=>Number(x.amount)||0));
+  el('flowChart').innerHTML=flow.map(x=>{
+    const amount=Number(x.amount)||0;
+    return '<div class="barrow" title="'+esc(x.type)+' · '+int(x.count)+' операций"><span class="barlabel">'+esc(x.type)+'</span><span class="track"><span class="fill sky" style="width:'+Math.max(.4,100*amount/max)+'%"></span></span><span class="barvalue">'+money(amount)+'</span></div>';
+  }).join('');
+  const rows=shownPlan();
+  barRows('directionChart',group(rows,r=>r.direction),'direction',{limit:12});
+  barRows('projectChart',group(rows,r=>projectBucket(r.project)),'project',{limit:12});
+  const exceptions=rows.filter(r=>r.flow_sign!=='+'&&statusBucket(r.match_status)!=='confirmed').sort((a,b)=>Number(b.plan_amount)-Number(a.plan_amount)).slice(0,9);
+  el('issuesList').innerHTML=exceptions.map((r,i)=>'<button class="issue" data-open-plan="'+r.plan_row+'"><span class="number">'+(i+1)+'</span><span><span class="name">'+esc(r.counterparty)+'</span><span class="second">'+esc(r.payer)+' · '+esc(r.project||'Без проекта')+'</span></span><span class="amount">'+money(r.plan_amount)+'</span>'+badge(r.match_status)+'</button>').join('')||'<p class="empty">Все заявки в выбранной группе подтверждены</p>';
+ }
+ function fillSelections(){
+  const defs=[['planDirection',st.plans.map(x=>x.direction)],['planProject',st.plans.map(x=>projectBucket(x.project)).filter(Boolean)],['planFlow',st.plans.map(x=>x.flow_type)]];
+  const defTexts=['Все направления','Все проекты','Все типы потоков'];
+  defs.forEach(([id,values],i)=>{const opts=[...new Set(values.filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ru'));el(id).innerHTML='<option value="">'+defTexts[i]+'</option>'+opts.map(x=>'<option value="'+esc(x)+'">'+esc(x)+'</option>').join('')});
+ }
+ function renderPlanTable(){
+  el('planStatus').value=st.bucket;el('planDirection').value=st.direction;el('planProject').value=st.project;el('planFlow').value=st.flow;
+  const data=shownPlan(),visible=data.slice(0,st.planShown);
+  el('planTableCount').textContent=int(data.length)+' из '+int(st.plans.length)+' заявок';
+  el('planTbody').innerHTML=visible.map(r=>'<tr><td class="muted">'+r.plan_row+'</td><td>'+esc(r.payer)+'</td>'+
+    '<td><button class="linkish" data-open-plan="'+r.plan_row+'">'+esc(r.counterparty)+'</button></td>'+
+    '<td>'+esc(projectBucket(r.project)||r.project||'—')+'</td><td class="amount">'+money2(r.plan_amount)+'</td><td class="amount">'+
+    (Number(r.confirmed_amount)>0?money2(r.confirmed_amount):'<span style="color:#adb9c4">—</span>')+'</td><td>'+badge(r.match_status)+'</td>'+
+    '<td class="muted">'+esc(r.fact_refs||r.candidate_refs||'—')+'</td></tr>').join('')||'<tr><td colspan="8" class="empty">По фильтрам заявок не найдено</td></tr>';
+  el('planPaging').textContent='Показано '+int(visible.length)+' из '+int(data.length);
+  el('planMore').hidden=visible.length>=data.length;
+ }
+ function renderUnlinkedTable(){
+  const q=st.unlinkedQuery.toLowerCase().trim();
+  const filtered=st.unlinked.filter(x=>!q||[x.payer,x.counterparty,x.fact_row,x.project,x.payment_purpose,x.notes].join(' ').toLowerCase().includes(q));
+  const visible=filtered.slice(0,st.unlinkedShown);
+  el('unlinkedSumLabel').textContent=int(st.unlinked.length)+' операций · сумма '+money(st.unlinked.reduce((a,x)=>a+Number(x.amount||0),0));
+  el('unlinkedTableCount').textContent=int(filtered.length)+' операций';
+  el('unlinkedTbody').innerHTML=visible.map(r=>
+    '<tr><td class="muted">'+r.fact_row+'</td><td class="muted">'+esc(r.operation_date||'—')+'</td>'+
+    '<td>'+esc(r.payer)+'</td><td><button class="linkish" data-open-unlinked="'+r.fact_row+'">'+esc(r.counterparty||'Не указан')+'</button></td>'+
+    '<td class="amount">'+money2(r.amount)+'</td><td>'+esc(String(r.payment_purpose||'').slice(0,130))+
+    (String(r.payment_purpose||'').length>130?'…':'')+
+    (r.duplication_note?'<span class="badge review">Проверить повтор</span>':'')+'</td></tr>').join('')||
+    '<tr><td colspan="6" class="empty">Нет платежей по запросу</td></tr>';
+  el('unlinkedPaging').textContent='Показано '+int(visible.length)+' из '+int(filtered.length);
+  el('unlinkedMore').hidden=visible.length>=filtered.length;
+ }
+ function renderOffcalendar(){
+  el('outsideTbody').innerHTML=st.outside.map(r=>'<tr><td class="muted">'+r.calendar_row+'</td><td>'+esc(r.payer)+'</td>'+
+   '<td><button class="linkish" data-open-offcalendar="'+r.calendar_row+'">'+esc(r.counterparty)+'</button></td>'+
+   '<td>'+esc(r.category)+(r.project?' · '+esc(r.project):'')+'</td><td class="amount">'+money2(r.plan_amount)+'</td>'+
+   '<td class="amount">'+(Number(r.fact_amount)>0?money2(r.fact_amount):'—')+'</td><td>'+badge(r.match_status)+'</td></tr>').join('');
+ }
+ function renderAll(){renderChips();renderOverview();if(st.tab==='plan')renderPlanTable();if(st.tab==='unlinked')renderUnlinkedTable();if(st.tab==='offcalendar')renderOffcalendar()}
+ function labeled(label,val){return '<div class="detail"><dt>'+label+'</dt><dd>'+esc(val==null?'—':val)+'</dd></div>'}
+ function block(label,content){return content?'<div class="detail-block"><label>'+label+'</label>'+esc(content)+'</div>':'';}
+ function openDetail(id,type){
+  let content='',title='';
+  if(type==='plan'){
+   const r=st.plans.find(x=>String(x.plan_row)===String(id));if(!r)return;
+   title='Заявка из плана · строка '+r.plan_row;
+   content='<div>'+badge(r.match_status)+'</div><dl class="detail-grid">'+
+    labeled('Юрлицо / плательщик',r.payer)+labeled('Контрагент',r.counterparty)+
+    labeled('Направление',r.direction)+labeled('Проект',r.project)+
+    labeled('План',money2(r.plan_amount)+(r.flow_sign==='+'?' · поступление':' · списание'))+
+    labeled('Факт подтверждён',money2(r.confirmed_amount))+
+    labeled('Не подтверждено',money2(r.unverified_amount))+
+    labeled('Дата факта',r.fact_date)+
+    labeled('Строка(и) 1С',r.fact_refs)+labeled('Возможные строки 1С',r.candidate_refs)+
+    labeled('Тип потока',r.flow_type)+labeled('Подстатья',r.subcategory)+
+    labeled('Исторический факт в календаре',r.manual_fact_amount==null?'—':money2(r.manual_fact_amount))+
+    labeled('Уверенность',r.confidence)+'</dl>'+
+    block('Основание сверки / что проверить',r.notes)+block('Назначение подтверждённых платежей',r.payment_purpose);
+  }else if(type==='unlinked'){
+   const r=st.unlinked.find(x=>String(x.fact_row)===String(id));if(!r)return;
+   title='Операция 1С · строка '+r.fact_row;
+   content='<dl class="detail-grid">'+labeled('Дата',r.operation_date)+labeled('Списано',money2(r.amount))+
+    labeled('Наше юрлицо',r.payer)+labeled('Контрагент',r.counterparty)+labeled('Проект в 1С',r.project)+'</dl>'+
+    block('Назначение платежа',r.payment_purpose)+block('Что проверить',r.notes)+block('Возможный повтор',r.duplication_note);
+  }else{
+   const r=st.outside.find(x=>String(x.calendar_row)===String(id));if(!r)return;
+   title='Вне ПК · строка '+r.calendar_row;
+   content='<div>'+badge(r.match_status)+'</div><dl class="detail-grid">'+labeled('Наше юрлицо',r.payer)+labeled('Контрагент',r.counterparty)+
+    labeled('Сумма в календаре',money2(r.plan_amount))+labeled('Факт 1С',money2(r.fact_amount))+
+    labeled('Статья',r.category)+labeled('Проект',r.project)+labeled('Строки 1С',r.fact_refs)+'</dl>'+block('Примечание',r.notes);
+  }
+  el('detailTitle').textContent=title;el('detailBody').innerHTML=content;
+  el('detailModal').showModal();
+ }
+ async function init(){
+  try{
+   const session=await identify();
+   if(!session){
+    el('loadState').innerHTML='<div class="notice error" style="display:block;margin:0"><strong>Необходимо войти в систему.</strong> <a style="color:#236999;text-decoration:underline" href="dashboard-20261020.html">Перейти к авторизации BAZA →</a></div>';return;
+   }
+   st.token=session.token;st.user=session.profile;
+   el('loadedAs').textContent=(session.profile.full_name||session.profile.email||session.user.email||'')+' · '+session.profile.role;
+   el('usersLink').hidden=session.profile.role!=='admin';
+   const periods=await rest('reconciliation_periods','select=period_id,title,date_start,date_end,summary&order=date_start.desc&limit=40');
+   if(!periods.length)throw Error('Периоды сверки пока не загружены.');
+   st.periods=periods;st.period=periods[0];
+   el('periodSelect').innerHTML=periods.map(p=>'<option value="'+esc(p.period_id)+'">'+esc(p.title)+'</option>').join('');
+   el('periodSelect').disabled=false;
+   await loadPeriod();
+  }catch(error){console.error(error);note(error.message||'Ошибка загрузки сверки',true)}
+ }
+ document.addEventListener('click',event=>{
+  const tab=event.target.closest('[data-tab]');
+  if(tab){chooseTab(tab.dataset.tab);return;}
+  const filter=event.target.closest('[data-choose]');
+  if(filter){setFilter(filter.dataset.choose,filter.dataset.value);return;}
+  const chip=event.target.closest('[data-clear]');
+  if(chip){if(chip.dataset.clear==='all'){st.bucket='';st.direction='';st.project='';}else st[chip.dataset.clear]='';renderAll();return;}
+  const plan=event.target.closest('[data-open-plan]');
+  if(plan){openDetail(plan.dataset.openPlan,'plan');return;}
+  const fact=event.target.closest('[data-open-unlinked]');
+  if(fact){openDetail(fact.dataset.openUnlinked,'unlinked');return;}
+  const outside=event.target.closest('[data-open-offcalendar]');
+  if(outside){openDetail(outside.dataset.openOffcalendar,'outside');return;}
+ });
+ el('showAllIssues').onclick=()=>{st.bucket='';st.planShown=MAX_ROWS;chooseTab('plan');renderAll();};
+ el('planSearch').oninput=e=>{st.query=e.target.value;st.planShown=MAX_ROWS;renderPlanTable()};
+ el('planStatus').onchange=e=>{st.bucket=e.target.value;st.planShown=MAX_ROWS;renderAll()};
+ el('planDirection').onchange=e=>{st.direction=e.target.value;st.planShown=MAX_ROWS;renderAll()};
+ el('planProject').onchange=e=>{st.project=e.target.value;st.planShown=MAX_ROWS;renderAll()};
+ el('planFlow').onchange=e=>{st.flow=e.target.value;st.planShown=MAX_ROWS;renderAll()};
+ el('clearFilters').onclick=()=>{st.bucket='';st.direction='';st.project='';st.flow='';st.query='';st.planShown=MAX_ROWS;el('planSearch').value='';renderAll()};
+ el('planMore').onclick=()=>{st.planShown+=MAX_ROWS;renderPlanTable()};
+ el('unlinkedSearch').oninput=e=>{st.unlinkedQuery=e.target.value;st.unlinkedShown=MAX_ROWS;renderUnlinkedTable()};
+ el('unlinkedMore').onclick=()=>{st.unlinkedShown+=MAX_ROWS;renderUnlinkedTable()};
+ el('periodSelect').onchange=async e=>{const p=st.periods.find(x=>x.period_id===e.target.value);if(!p)return;st.period=p;el('app').hidden=true;el('loadState').hidden=false;try{await loadPeriod()}catch(err){note(err.message,true)}};
+ el('closeDetail').onclick=()=>el('detailModal').close();
+ el('detailModal').addEventListener('click',e=>{if(e.target===el('detailModal'))el('detailModal').close()});
+ init();
+})();
+</script>
+</body>
+</html>
