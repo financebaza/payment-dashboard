@@ -30,6 +30,28 @@ button.legend-row.dashboard-clickable span{text-align:left}
 @media(max-width:700px){button.rank-row.dashboard-clickable{grid-template-columns:100px minmax(50px,1fr) 85px;gap:6px}}
 [hidden]{display:none!important}.role-viewer .approve,.role-viewer .reject,.role-viewer .comment-add,.role-viewer .modal-actions{display:none!important}
 
+
+
+/* BAZA_COMPACT_SOURCE_BARS */
+.source-split-caption{display:none!important}
+.split-track{height:10px}
+.project-item-track.split-track{height:9px}
+
+/* BAZA_SOURCE_SPLIT_V1 */
+.split-track{display:flex!important;align-items:stretch;overflow:hidden;gap:0;background:#e8eff5}
+.split-track i{display:block;height:100%;flex:0 0 auto;border-radius:0!important}
+.split-track .split-credit{background:var(--navy)!important}
+.split-track .split-own{background:var(--red)!important}
+.source-split-caption{display:flex;gap:5px 15px;align-items:center;flex-wrap:wrap;color:#67829b;font-size:9px;line-height:1.5}
+.source-split-caption>span{white-space:nowrap}
+.source-dot{display:inline-block;width:7px;height:7px;border-radius:2px;margin-right:5px}
+.source-dot.blue{background:var(--navy)}.source-dot.red{background:var(--red)}
+.project-item .source-split-caption{margin:0 0 6px}
+.split-rank .split-rank-middle{min-width:0;display:flex;flex-direction:column;gap:5px}
+button.rank-row.split-rank{grid-template-columns:minmax(90px,170px) minmax(0,1fr) 105px;align-items:center}
+.split-rank .source-split-caption{font-size:8px}
+@media(max-width:700px){button.rank-row.split-rank{grid-template-columns:minmax(75px,95px) minmax(0,1fr) 83px;gap:7px}.split-rank .source-split-caption{font-size:7px}}
+
 /* BAZA_PROJECT_BREAKDOWN_V1 */
 .project-board{margin-top:12px}
 .project-board .board-title{align-items:center;gap:20px}
@@ -112,13 +134,23 @@ function matches(r){if(state.source&&r.source!==state.source||state.direction&&r
 if((f==='project'?String(r.project??'').trim():String(r[f]??''))!==v)return false;}return true}window.__BAZA_MATCH_PAYMENTS=matches;function rows(){return PAY.filter(matches)}function agg(rs,f){const m={};rs.forEach(r=>m[r[f]]=(m[r[f]]||0)+Number(r.amount||0));return Object.entries(m).sort((a,b)=>b[1]-a[1])}
 function expenseRows(){return PAY.filter(r=>matches(r)&&!r.isNonExpense&&!r.isInternal&&!/(?:^|[^\p{L}\p{N}])[мm]73(?=$|[^\p{L}\p{N}])|пл[еэ]йэстейт|playestate/iu.test(String(r.entity||''))&&!/(?:^|[^\p{L}\p{N}])[мm]73(?=$|[^\p{L}\p{N}])|пл[еэ]йэстейт|playestate/iu.test(String(r.counterparty||'')));}
 function renderKpi(){const rs=expenseRows(),t=rs.reduce((s,r)=>s+r.amount,0),o=rs.filter(r=>r.source==='Собственные').reduce((s,r)=>s+r.amount,0),c=rs.filter(r=>r.source==='Кредит').reduce((s,r)=>s+r.amount,0);kpiTotal.textContent=money(t);kpiOwn.textContent=money(o);kpiCredit.textContent=money(c);kpiShare.textContent=(t?c/t*100:0).toFixed(1)+'%';dashboardTotal.textContent=money(t)}
+function sourceAmounts(rs){let credit=0,own=0;for(const r of rs){if(r.source==='Кредит')credit+=Number(r.amount||0);else if(r.source==='Собственные')own+=Number(r.amount||0);}return {credit,own,total:credit+own};}
+function sourceBar(v,max){const denom=Math.max(max,1);return '<span class="track split-track" aria-label="Кредит '+money(v.credit)+', собственные '+money(v.own)+'"><i class="split-credit" style="width:'+Math.max(0,100*v.credit/denom)+'%"></i><i class="split-own" style="width:'+Math.max(0,100*v.own/denom)+'%"></i></span>';}
+function sourceCaption(v){return '<span class="source-split-caption"><span><i class="source-dot blue"></i>Кредит: '+money(v.credit)+'</span><span><i class="source-dot red"></i>Собственные: '+money(v.own)+'</span></span>';}
 function renderRank(id,items,field,red=false){
-  const max=items[0]?.[1]||1;
+  const rs=expenseRows(),groups=new Map();
+  for(const r of rs){
+    const key=String(r[field]??'');
+    if(!groups.has(key))groups.set(key,[]);
+    groups.get(key).push(r);
+  }
+  const max=Math.max(1,...items.map(x=>Number(x[1])||0));
   document.getElementById(id).innerHTML=items.slice(0,10).map(x=>{
+    const v=sourceAmounts(groups.get(String(x[0]))||[]);
     const selected=state.column[field]===x[0];
-    return '<button type="button" class="rank-row dashboard-clickable'+(selected?' selected':'')+'" data-dash-field="'+esc(field)+'" data-dash-value="'+esc(x[0])+'" aria-pressed="'+selected+'" title="Нажмите, чтобы '+(selected?'снять фильтр':'отфильтровать платежи')+'">'+
+    return '<button type="button" class="rank-row dashboard-clickable split-rank'+(selected?' selected':'')+'" data-dash-field="'+esc(field)+'" data-dash-value="'+esc(x[0])+'" aria-pressed="'+selected+'" title="Кредит: '+money(v.credit)+' · Собственные: '+money(v.own)+'">'+
       '<span class="rank-name" title="'+esc(x[0])+'">'+esc(x[0])+'</span>'+
-      '<span class="track"><i style="width:'+(x[1]/max*100)+'%;'+(red?'background:var(--red)':'')+'"></i></span>'+
+      '<span class="split-rank-middle">'+sourceBar(v,max)+sourceCaption(v)+'</span>'+
       '<span class="rank-value">'+money(x[1])+'</span></button>';
   }).join('')||'<span style="color:var(--muted)">Нет данных</span>';
 }
@@ -127,35 +159,31 @@ function renderProjectRank(rs){
   for(const r of rs){
     const key=classifyProject(r.project);
     if(!key)continue;
-    const entry=totals.get(key)||{sum:0,count:0};
+    const entry=totals.get(key)||{sum:0,count:0,credit:0,own:0};
     entry.sum+=Number(r.amount||0);
     entry.count++;
+    if(r.source==='Кредит')entry.credit+=Number(r.amount||0);
+    else if(r.source==='Собственные')entry.own+=Number(r.amount||0);
     totals.set(key,entry);
   }
-  const projects=[...totals].map(([value,data])=>({
-    value,
-    name:PROJECT_DISPLAY_NAME(value),
-    amount:data.sum,
-    count:data.count
-  })).sort((a,b)=>b.amount-a.amount||a.name.localeCompare(b.name,'ru'));
+  const projects=[...totals].map(([value,data])=>({value,name:PROJECT_DISPLAY_NAME(value),amount:data.sum,count:data.count,credit:data.credit,own:data.own})).sort((a,b)=>b.amount-a.amount||a.name.localeCompare(b.name,'ru'));
   const total=projects.reduce((acc,p)=>acc+p.amount,0);
   const max=projects[0]?.amount||1;
-  document.getElementById('projectSummary').textContent=
-    projects.length+' '+(projects.length%10===1&&projects.length%100!==11?'категория':
-    (projects.length%10>=2&&projects.length%10<=4&&(projects.length%100<12||projects.length%100>14)?'категории':'категорий'))+
-    ' · '+money(total);
+  document.getElementById('projectSummary').textContent=projects.length+' категорий · '+money(total);
   const formatPct=new Intl.NumberFormat('ru-RU',{maximumFractionDigits:1});
   document.getElementById('projectRank').innerHTML=projects.map(p=>{
     const selected=state.column.project===p.value;
     const pct=total?p.amount/total*100:0;
     return '<button type="button" class="project-item dashboard-clickable'+(selected?' selected':'')+
       '" data-dash-field="project" data-dash-value="'+esc(p.value)+'" aria-pressed="'+selected+
-      '" title="'+esc(p.name)+': '+money(p.amount)+'. Нажмите, чтобы '+(selected?'снять фильтр.':'отфильтровать платежи.')+'">'+
+      '" title="'+esc(p.name)+': '+money(p.amount)+'. Кредит: '+money(p.credit)+'. Собственные: '+money(p.own)+'">'+
       '<span class="project-item-head"><span class="project-item-name">'+esc(p.name)+
       '</span><span class="project-item-sum">'+money(p.amount)+'</span></span>'+
-      '<span class="project-item-track"><i style="width:'+Math.max(0,Math.min(100,p.amount/max*100))+'%"></i></span>'+
-      '<span class="project-item-footer"><span>'+formatPct.format(pct)+'% от расходов по указанным категориям</span><span>'+p.count+' '+(p.count%10===1&&p.count%100!==11?'платёж':
-      (p.count%10>=2&&p.count%10<=4&&(p.count%100<12||p.count%100>14)?'платежа':'платежей'))+'</span></span></button>';
+      '<span class="project-item-track split-track">'+
+        '<i class="split-credit" style="width:'+Math.max(0,Math.min(100,p.credit/max*100))+'%"></i>'+
+        '<i class="split-own" style="width:'+Math.max(0,Math.min(100,p.own/max*100))+'%"></i></span>'+
+      sourceCaption(p)+
+      '<span class="project-item-footer"><span>'+formatPct.format(pct)+'% от расходов по указанным категориям</span><span>'+p.count+' платежей</span></span></button>';
   }).join('')||'<span style="color:var(--muted);font-size:11px">Нет расходов по указанным проектам при текущих фильтрах</span>';
 }
 function renderDash(){
@@ -602,4 +630,119 @@ function refillColumnFilters(){
   finishRecovery();
 })();
 </script>
+
+<style>
+/* BAZA_DRILLDOWN_V1 */
+.dd-backdrop{position:fixed;inset:0;z-index:9000;background:rgba(6,29,51,.62);display:none;align-items:center;justify-content:center;padding:18px}
+.dd-backdrop.visible{display:flex}
+.dd-panel{width:min(1100px,100%);max-height:91vh;display:flex;flex-direction:column;border-radius:16px;background:#fff;box-shadow:0 24px 75px #05172b55;overflow:hidden;color:#123b5a}
+.dd-head{display:flex;justify-content:space-between;align-items:start;gap:12px;padding:20px 23px;border-bottom:1px solid #e0eaf2}
+.dd-head h2{margin:4px 0;font-size:20px}.dd-head small{font-size:11px;color:#7891a6}
+.dd-close{border:1px solid #d3e0e9;background:#f4f8fb;border-radius:9px;padding:8px 12px;font-size:18px;cursor:pointer}
+.dd-summary{display:flex;flex-wrap:wrap;gap:24px;padding:14px 23px;background:#f6faff;font-size:12px}
+.dd-summary b{display:block;font-size:22px;color:#143f69}
+.dd-toolbar{padding:12px 23px;display:flex;align-items:center;gap:12px}
+.dd-toolbar input{min-width:0;flex:1;border:1px solid #d0e0eb;border-radius:8px;padding:10px;font-size:12px}
+.dd-toolbar span{font-size:11px;color:#6f8aa2}
+.dd-scroll{overflow:auto;padding:0 23px 20px}
+.dd-table{border-collapse:collapse;width:100%;font-size:11px}
+.dd-table th{text-align:left;position:sticky;top:0;background:#eaf2f8;color:#617e96;font-size:10px;z-index:1}
+.dd-table td,.dd-table th{padding:11px 9px;border-bottom:1px solid #e6edf3;white-space:nowrap}
+.dd-table td.dd-wrap{max-width:260px;overflow:hidden;text-overflow:ellipsis}
+.dd-table td.dd-num{text-align:right;font-weight:800}
+.dd-table button{border:0;background:transparent;text-align:left;color:#176aa3;font:inherit;font-weight:700;cursor:pointer}
+.dd-table button:hover{text-decoration:underline}
+.dd-back{border:0;background:#e9f3fb;color:#1b5b8b;border-radius:8px;padding:8px 12px;cursor:pointer}
+.metric.total,.metric:has(#kpiShare),#sourceDonut,.dashboard-clickable,.vgo-flow-group,.vgo-card{cursor:pointer}
+.metric.total:hover,.metric:has(#kpiShare):hover{outline:2px solid #a3c5df}
+@media(max-width:650px){.dd-head{padding:14px}.dd-toolbar,.dd-summary{padding:10px 14px}.dd-scroll{padding:0 10px 14px}.dd-head h2{font-size:16px}}
+</style>
+<div id="drillBackdrop" class="dd-backdrop" role="presentation">
+ <div class="dd-panel" role="dialog" aria-modal="true" aria-labelledby="drillTitle">
+  <div class="dd-head"><div><small>ДЕТАЛИЗАЦИЯ ПОКАЗАТЕЛЯ</small><h2 id="drillTitle">Платежи</h2><small id="drillScope"></small></div><button id="drillClose" class="dd-close" type="button" aria-label="Закрыть детализацию">×</button></div>
+  <div class="dd-summary"><div>Сумма<b id="drillAmount">—</b></div><div>Операций<b id="drillCount">—</b></div></div>
+  <div class="dd-toolbar"><input id="drillSearch" type="search" placeholder="Поиск по контрагенту, юрлицу, проекту, статье…" aria-label="Поиск в детализации"><span id="drillShown"></span></div>
+  <div class="dd-scroll"><table class="dd-table"><thead><tr><th>Контрагент</th><th>Юрлицо</th><th>Проект</th><th>Направление</th><th>Источник</th><th>Сумма</th><th>Статус</th></tr></thead><tbody id="drillRows"></tbody></table></div>
+ </div>
+</div>
+<script>
+/* BAZA_DRILLDOWN_V1 */
+(function(){
+ 'use strict';
+ const backdrop=document.getElementById('drillBackdrop');
+ const search=document.getElementById('drillSearch');
+ let selection=[],title='',origin=null;
+ const moneyLocal=n=>new Intl.NumberFormat('ru-RU',{maximumFractionDigits:0}).format(Number(n)||0)+' ₽';
+ const html=s=>String(s??'—').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
+ const excluded=r=>r.isNonExpense||r.isInternal||/(?:^|[^\p{L}\p{N}])[мm]73(?=$|[^\p{L}\p{N}])|пл[еэ]йэстейт|playestate/iu.test(String(r.entity||'')+' '+String(r.counterparty||''));
+ const expense=()=>PAY.filter(r=>matches(r)&&!excluded(r));
+ function show(label,list,source){
+   title=label;selection=list.slice();origin=source||null;search.value='';
+   document.getElementById('drillTitle').textContent=label;
+   document.getElementById('drillScope').textContent='Состав показателя по текущим фильтрам · суммы без двойного счёта';
+   backdrop.classList.add('visible');document.body.style.overflow='hidden';draw();search.focus();
+ }
+ function draw(){
+   const q=search.value.trim().toLocaleLowerCase('ru-RU');
+   const rs=selection.filter(r=>!q||[r.counterparty,r.entity,r.project,r.direction,r.source,r.subcategory,r.id].join(' ').toLocaleLowerCase('ru-RU').includes(q));
+   document.getElementById('drillAmount').textContent=moneyLocal(rs.reduce((a,r)=>a+Number(r.amount||0),0));
+   document.getElementById('drillCount').textContent=rs.length;
+   document.getElementById('drillShown').textContent=q?'Отобрано '+rs.length+' из '+selection.length:'';
+   document.getElementById('drillRows').innerHTML=rs.slice().sort((a,b)=>Number(b.amount||0)-Number(a.amount||0)).map(r=>{
+     const st=getStatus(r.id),label=st==='approved'?'Согласован':st==='rejected'?'Не согласован':'Ожидает';
+     const clickable=PAY.some(p=>p.id===r.id);
+     return '<tr><td class="dd-wrap" title="'+html(r.counterparty)+'">'+(clickable?'<button type="button" data-dd-id="'+html(r.id)+'">'+html(r.counterparty)+'</button>':html(r.counterparty))+
+       '</td><td class="dd-wrap" title="'+html(r.entity)+'">'+html(r.entity)+'</td><td>'+html(r.project)+'</td><td>'+html(r.direction)+'</td><td>'+html(r.source)+'</td><td class="dd-num">'+moneyLocal(r.amount)+'</td><td>'+html(label)+'</td></tr>';
+   }).join('')||'<tr><td colspan="7">Платежи не найдены</td></tr>';
+ }
+ function close(){backdrop.classList.remove('visible');document.body.style.overflow='';if(origin?.focus)origin.focus();}
+ function select(field,value,label){
+   if(field==='status')show(label,rows().filter(r=>getStatus(r.id)===value));
+   else if(field==='project')show(label,expense().filter(r=>classifyProject(r.project)===value));
+   else show(label,expense().filter(r=>String(r[field]??'')===value));
+ }
+ document.addEventListener('click',e=>{
+   if(!document.body.classList.contains('auth-ready'))return;
+   const metric=e.target.closest('.metric');
+   if(metric&&metric.closest('.cards')){
+     e.preventDefault();e.stopImmediatePropagation();
+     if(metric.querySelector('#kpiTotal')||metric.querySelector('#kpiShare'))show(metric.querySelector('label')?.textContent||'Все расходы',expense(),metric);
+     else if(metric.dataset.dashField)select(metric.dataset.dashField,metric.dataset.dashValue,metric.querySelector('label')?.textContent||metric.dataset.dashValue);
+     return;
+   }
+   const target=e.target.closest('#directionRank [data-dash-field],#projectRank [data-dash-field],#entityRank [data-dash-field],#statusBoard [data-dash-field],#sourceLegend [data-dash-field]');
+   if(target){
+     e.preventDefault();e.stopImmediatePropagation();
+     select(target.dataset.dashField,target.dataset.dashValue,target.querySelector('.rank-name,.project-item-name')?.textContent||target.dataset.dashValue);
+     return;
+   }
+   if(e.target.closest('#sourceDonut')){
+     const node=document.getElementById('sourceDonut'),rect=node.getBoundingClientRect(),x=e.clientX-rect.left-rect.width/2,y=e.clientY-rect.top-rect.height/2;
+     if(Math.hypot(x,y)<rect.width*.17)return;
+     const deg=(Math.atan2(y,x)*180/Math.PI+450)%360,src=deg<(window.__BAZA_SOURCE_PCT||0)*3.6?'Кредит':'Собственные';
+     e.preventDefault();e.stopImmediatePropagation();select('source',src,src==='Кредит'?'Кредитные средства':'Собственные средства');
+     return;
+   }
+   const quick=e.target.closest('[data-quick]');
+   if(quick){e.preventDefault();e.stopImmediatePropagation();select('status',quick.dataset.quick,quick.textContent.trim());return;}
+   const group=e.target.closest('#vgoClearBoard .vgo-flow-group');
+   if(group){
+     const source=group.querySelector('.vgo-flow-source span')?.textContent;
+     if(!source)return;
+     const list=(window.__BAZA_ALL_PAYMENTS||[]).filter(r=>r.isInternal&&!r.isNonExpense&&r.entity===source&&!/(?:^|[^\p{L}\p{N}])[мm]73(?=$|[^\p{L}\p{N}])|пл[еэ]йэстейт|playestate/iu.test(String(r.entity||'')+' '+String(r.counterparty||''))&&matches(r));
+     show('ВГО: '+source,list,group);return;
+   }
+ },true);
+ backdrop.addEventListener('click',e=>{if(e.target===backdrop)close();});
+ document.getElementById('drillClose').addEventListener('click',close);
+ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&backdrop.classList.contains('visible')){e.stopPropagation();close();}});
+ search.addEventListener('input',draw);
+ document.getElementById('drillRows').addEventListener('click',e=>{
+   const btn=e.target.closest('[data-dd-id]');if(!btn)return;
+   const payment=PAY.find(r=>String(r.id)===btn.dataset.ddId);
+   if(payment){close();openModal(payment);}
+ });
+})();
+</script>
+
 </body></html>
