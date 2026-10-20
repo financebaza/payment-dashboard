@@ -1,0 +1,38 @@
+name: Fix auth runtime
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: github.event.head_commit.message != 'Apply auth runtime fix'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch missing auth status helper
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+          marker = "let PAY=[];const money="
+          helper = "function setConnectionState(ok,text){const el=document.getElementById('supabaseStatus');if(!el)return;el.className='supabase-status '+(ok?'ok':'err');const span=el.querySelector('span:last-child');if(span)span.textContent=text;}\n"
+          if 'function setConnectionState(' not in s:
+              if marker not in s:
+                  raise SystemExit('Insertion marker not found')
+              s = s.replace(marker, helper + marker, 1)
+              p.write_text(s, encoding='utf-8')
+          else:
+              print('Helper already present')
+          PY
+      - name: Commit fix
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          git diff --cached --quiet || git commit -m 'Apply auth runtime fix'
+          git push
