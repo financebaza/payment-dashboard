@@ -1,0 +1,24 @@
+name: Run VGO dedup
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  run:
+    if: github.event.head_commit.message != 'Deduplicate reciprocal internal transfers'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('index.html'); s=p.read_text()
+          old="""const raw=(await res.json()).map(r=>({...r,amount:Number(r.amount),isInternal:r.is_internal===true,isNonExpense:r.is_non_expense===true}));"""
+          new="""const raw0=(await res.json()).map(r=>({...r,amount:Number(r.amount),isInternal:r.is_internal===true,isNonExpense:r.is_non_expense===true}));const seen=new Set();const raw=raw0.filter(r=>{if(!r.isInternal)return true;const a=String(r.entity||'').trim(),b=String(r.counterparty||'').trim();const key=[a,b,r.amount,r.project,r.subcategory].sort().join('|');if(seen.has(key))return false;seen.add(key);return true;});"""
+          if old not in s: raise SystemExit('target not found')
+          p.write_text(s.replace(old,new,1))
+          PY
+          git config user.name 'github-actions[bot]'; git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html; git commit -m 'Deduplicate reciprocal internal transfers'; git push
