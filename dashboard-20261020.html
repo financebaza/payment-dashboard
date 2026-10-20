@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BAZA · Платежный контроль</title>
+<script>window.PAYMENTS = [];</script>
+<style>
+*{box-sizing:border-box}:root{--bg:#eef4f9;--card:#fff;--ink:#0a3155;--muted:#7890a7;--line:#d9e5ef;--navy:#123b67;--red:#e51d2a;--green:#719d18;--amber:#d49a19}body{margin:0;background:var(--bg);color:var(--ink);font:12px Arial,sans-serif}.page{max-width:1500px;margin:auto;padding:0 24px 44px}.topbar{height:66px;display:flex;align-items:center;border-bottom:1px solid var(--line);background:rgba(255,255,255,.96);position:sticky;top:0;z-index:20}.brand{width:170px}.brand b{font-size:29px;color:var(--red);letter-spacing:-2px}.brand small{display:block;color:var(--red);font-size:8px;font-weight:800;letter-spacing:.1em}.period{flex:1;color:var(--muted);font-weight:700;font-size:10px;letter-spacing:.08em}.nav a{margin-left:18px;color:#5f7890;text-decoration:none;font-size:10px}.hero{padding:28px 0 18px;display:flex;justify-content:space-between;align-items:end}.eyebrow{font-size:9px;letter-spacing:.16em;color:var(--muted);font-weight:800}.hero h1{font-size:30px;margin:7px 0}.hero p{margin:0;color:var(--muted)}.reset{border:1px solid #cbdbe8;background:#fff;color:#49667f;border-radius:8px;padding:9px 13px;cursor:pointer}.cards{display:grid;grid-template-columns:1.3fr 1fr 1fr 1fr;gap:12px}.metric{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:17px 18px;min-height:100px}.metric label{font-size:9px;color:var(--muted);font-weight:800;letter-spacing:.12em}.metric strong{display:block;font-size:25px;margin:12px 0 3px}.metric small{font-size:9px;color:#9aabb9}.metric.total{background:var(--ink);color:#fff;border-color:var(--ink)}.metric.total label,.metric.total small{color:#bdd0e1}.metric.own{border-top:3px solid var(--red)}.metric.credit{border-top:3px solid var(--navy)}.filters{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr 1fr auto;gap:8px;margin:14px 0 18px}.field label{display:block;color:var(--muted);font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;margin:0 0 5px 2px}.field input,.field select{width:100%;height:36px;border:1px solid #cfdfeb;border-radius:8px;background:#fff;padding:0 9px;color:#31536f;font-size:11px}.section{margin-top:14px}.section-head{display:flex;justify-content:space-between;align-items:end;margin-bottom:9px}.section-head h2{margin:0;font-size:18px}.section-head span{color:var(--muted);font-size:10px}.kpi-board{display:grid;grid-template-columns:1.45fr .8fr .8fr;gap:12px}.board{background:#fff;border:1px solid var(--line);border-radius:13px;padding:17px}.board-title{display:flex;justify-content:space-between;align-items:start;margin-bottom:15px}.board-title h3{margin:0;font-size:13px}.board-title span{font-size:9px;color:var(--muted)}.source-board{display:flex;align-items:center;gap:22px;min-height:250px}.donut{width:170px;height:170px;border-radius:50%;position:relative;flex:none}.donut:after{content:"";position:absolute;inset:27px;border-radius:50%;background:#fff}.donut-center{position:absolute;inset:0;display:grid;place-items:center;text-align:center;z-index:1;font-weight:800;font-size:18px}.donut-center small{display:block;color:var(--muted);font-size:8px;font-weight:500}.legend{flex:1}.legend-row{display:flex;align-items:center;gap:8px;margin:12px 0}.dot{width:8px;height:8px;border-radius:50%;flex:none}.dot.credit{background:var(--navy)}.dot.own{background:var(--red)}.legend-row b{margin-left:auto;font-size:11px}.legend-row span{font-size:10px;color:#5f7890}.rank-wrap{min-height:250px}.rank-row{display:grid;grid-template-columns:145px 1fr 100px;gap:12px;align-items:center;margin:14px 0}.rank-name{font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.track{height:8px;background:#eaf0f5;border-radius:8px;overflow:hidden}.track i{display:block;height:100%;border-radius:8px;background:var(--navy)}.rank-value{text-align:right;font-size:10px;font-weight:800}.entity-board{margin-top:12px}.entity-list{display:grid;grid-template-columns:1fr 1fr;column-gap:34px}.entity-row{display:grid;grid-template-columns:170px 1fr 105px;gap:12px;align-items:center;padding:9px 0;border-bottom:1px solid #edf2f6}.entity-row .track i{background:var(--red)}.status-strip{display:flex;justify-content:space-between;align-items:center;background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 15px;margin-top:12px}.status-strip b{font-size:11px}.status-strip small{color:var(--muted);font-size:9px;margin-left:7px}.counts{display:flex;gap:18px}.count{cursor:pointer;font-size:10px;color:#607991}.count i{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px}.count.approved i{background:var(--green)}.count.rejected i{background:var(--red)}.count.pending i{background:var(--amber)}.count b{color:var(--ink);margin-left:2px}.registry{margin-top:26px}.registry-head{display:flex;justify-content:space-between;align-items:end;margin-bottom:10px}.registry-head h2{font-size:23px;margin:4px 0 0}.registry-head span{font-size:10px;color:var(--muted)}.registry-tools{display:flex;gap:8px;margin-bottom:8px}.registry-tools input,.registry-tools select{height:36px;border:1px solid #cfdfeb;border-radius:8px;background:#fff;padding:0 9px;color:#31536f;font-size:11px}.registry-tools input{width:360px}.table-card{background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden}.table-wrap{overflow:auto;max-height:650px}table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:10px}th{position:sticky;top:0;background:#f7fafc;z-index:3;color:#6d87a0;text-transform:uppercase;letter-spacing:.07em;font-size:8px;text-align:left;padding:8px 7px;border-bottom:1px solid var(--line)}th:nth-child(1){width:14%}th:nth-child(2){width:12%}th:nth-child(3){width:11%}th:nth-child(4){width:11%}th:nth-child(5){width:13%}th:nth-child(6){width:8%}th:nth-child(7){width:8%}th:nth-child(8){width:13%}th:nth-child(9){width:10%}td{padding:8px 7px;border-bottom:1px solid #edf2f6;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}tr:hover{background:#f8fbfd}.counterparty{font-weight:700;color:#173d60}.num{text-align:right;font-variant-numeric:tabular-nums}.badge{display:inline-block;padding:3px 6px;border-radius:99px;font-size:8px;font-weight:800}.badge.credit{background:#e8f0f9;color:var(--navy)}.badge.own{background:#fff0f1;color:#c51d28}.status-actions{display:flex;gap:4px;align-items:center}.pill{padding:4px 6px;border-radius:99px;font-size:8px;font-weight:800}.pill.pending{background:#fff7e5;color:#8a6500}.pill.approved{background:#f0f7e8;color:#557e00}.pill.rejected{background:#fff0f1;color:#c41d25}.status-actions button{border:1px solid #cbd9e4;background:#fff;border-radius:6px;padding:4px 6px;font-size:9px;cursor:pointer}.status-actions .approve{color:#557e00}.status-actions .reject{color:#c41d25}.status-actions .active.approve{background:#f0f7e8}.status-actions .active.reject{background:#fff0f1}.column-filter{width:100%;height:24px;margin-top:5px;border:1px solid #cfdfeb;border-radius:5px;background:#fff;color:#45637d;font-size:8px}.comment-view{display:flex;gap:5px;align-items:center}.comment-text{overflow:hidden;text-overflow:ellipsis}.comment-add{border:0;background:none;color:#2f75b5;font-size:9px;cursor:pointer;padding:0}.modal.hidden{display:none}.modal{position:fixed;inset:0;z-index:50;display:grid;place-items:center}.backdrop{position:absolute;inset:0;background:#05203999}.modal-card{position:relative;background:#fff;width:min(650px,calc(100vw - 26px));max-height:calc(100vh - 30px);overflow:auto;border-radius:15px;padding:22px;box-shadow:0 25px 70px #001a3333}.close{position:absolute;right:12px;top:8px;border:0;background:none;font-size:24px;color:#899bad;cursor:pointer}.modal-card h2{margin:5px 0;font-size:20px}.amount{font-size:25px;font-weight:800;margin:8px 0}.details{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid var(--line);margin-top:10px}.detail{padding:9px 0;border-bottom:1px solid var(--line)}.detail:nth-child(even){padding-left:12px;border-left:1px solid var(--line)}.detail label{display:block;color:var(--muted);font-size:8px;text-transform:uppercase;margin-bottom:3px}.comment{margin-top:14px}.comment label{display:block;color:var(--muted);font-size:8px;text-transform:uppercase;margin-bottom:5px}.comment textarea{width:100%;min-height:70px;border:1px solid #cfdfeb;border-radius:8px;padding:8px;font-size:10px}.modal-actions{display:flex;gap:7px;margin-top:12px}.modal-actions button{border:1px solid #cbd9e4;background:#fff;border-radius:7px;padding:8px 11px;font-size:10px;font-weight:700;cursor:pointer}.modal-actions .approve{background:#f0f7e8;color:#557e00}.modal-actions .reject{background:#fff0f1;color:#c41d25}@media(max-width:1050px){.cards{grid-template-columns:1fr 1fr}.filters{grid-template-columns:1fr 1fr 1fr}.kpi-board{grid-template-columns:1fr}.entity-list{grid-template-columns:1fr}.source-board{justify-content:center}.table-wrap{overflow:auto}table{min-width:1050px}}@media(max-width:700px){.page{padding:0 12px 30px}.nav{display:none}.period{font-size:9px}.hero{display:block}.hero .reset{margin-top:12px}.cards{grid-template-columns:1fr}.filters{grid-template-columns:1fr 1fr}.counts{gap:9px;flex-wrap:wrap}.status-strip{display:block}.counts{margin-top:8px}.source-board{display:block}.donut{margin:auto}.legend{margin-top:10px}.registry-tools{display:block}.registry-tools input,.registry-tools select{width:100%;margin-bottom:6px}.rank-row,.entity-row{grid-template-columns:110px 1fr 80px}}
+</style>
+</head>
+<body>
+<div class="page">
+<header class="topbar"><div class="brand"><b>BAZA</b><small>ПЛАТЕЖНЫЙ КОНТРОЛЬ</small></div><div class="period">19–25 ОКТЯБРЯ 2026 · ФИНАНСОВЫЙ КОНТРОЛЬ</div><nav class="nav"><a href="#dashboard">Дашборд</a><a href="#registry">Платежный календарь</a></nav></header>
+<section class="hero" id="dashboard"><div><div class="eyebrow">EXECUTIVE VIEW</div><h1>Платежный контроль</h1><p>Куда уходят деньги, за счёт какого источника и какие платежи требуют решения.</p></div><button class="reset" id="reset">Сбросить фильтры</button></section>
+<section class="cards"><div class="metric total"><label>ВСЕ ПЛАТЕЖИ</label><strong id="kpiTotal">—</strong><small>по выбранным фильтрам</small></div><div class="metric own"><label>СОБСТВЕННЫЕ</label><strong id="kpiOwn">—</strong><small>красный — собственные средства</small></div><div class="metric credit"><label>КРЕДИТНЫЕ</label><strong id="kpiCredit">—</strong><small>синий — кредитные средства</small></div><div class="metric"><label>ДОЛЯ КРЕДИТА</label><strong id="kpiShare">—</strong><small>от общей суммы платежей</small></div></section>
+<section class="filters"><div class="field"><label>Поиск</label><input id="globalSearch" placeholder="Контрагент, проект, статья…"></div><div class="field"><label>Источник</label><select id="sourceFilter"><option value="">Все источники</option></select></div><div class="field"><label>Направление</label><select id="directionFilter"><option value="">Все направления</option></select></div><div class="field"><label>Юр. лицо</label><select id="entityFilter"><option value="">Все юрлица</option></select></div><div class="field"><label>Статус</label><select id="payStatus"><option value="">Все статусы</option><option value="pending">Ожидает согласования</option><option value="approved">Согласован</option><option value="rejected">Не согласован</option></select></div><button class="reset" id="reset2">Сбросить</button></section>
+<section class="section"><div class="section-head"><h2>Структура платежей</h2><span id="dashboardTotal">—</span></div><div class="kpi-board"><div class="board"><div class="board-title"><h3>Расходы по направлениям</h3><span>ТОП-8</span></div><div id="directionRank" class="rank-wrap"></div></div><div class="board"><div class="board-title"><h3>Источники финансирования</h3><span>структура</span></div><div class="source-board"><div id="sourceDonut" class="donut"></div><div id="sourceLegend" class="legend"></div></div></div><div class="board"><div class="board-title"><h3>Статусы</h3><span>по количеству</span></div><div id="statusBoard" class="rank-wrap"></div></div></div><div class="board entity-board"><div class="board-title"><h3>Расходы по юридическим лицам</h3><span>рейтинг · по сумме платежей</span></div><div id="entityRank" class="entity-list"></div></div></section>
+<section class="status-strip"><div><b>Согласование</b><small>нажмите на статус для фильтрации реестра</small></div><div class="counts"><span class="count approved" data-quick="approved"><i></i>Согласовано <b id="approvedCount">0</b></span><span class="count rejected" data-quick="rejected"><i></i>Не согласовано <b id="rejectedCount">0</b></span><span class="count pending" data-quick="pending"><i></i>Ожидает <b id="pendingCount">0</b></span></div></section>
+<section class="registry" id="registry"><div class="registry-head"><div><div class="eyebrow">РЕЕСТР</div><h2>Платежи</h2></div><span id="rowsCount">—</span></div><div class="registry-tools"><input id="registrySearch" placeholder="Поиск по реестру…"><select id="registryStatus"><option value="">Все статусы</option><option value="pending">Ожидает согласования</option><option value="approved">Согласован</option><option value="rejected">Не согласован</option></select></div><div class="table-card"><div class="table-wrap"><table><thead><tr><th>Контрагент<select class="column-filter" data-field="counterparty"><option value="">Все</option></select></th><th>Юрлицо<select class="column-filter" data-field="entity"><option value="">Все</option></select></th><th>Направление<select class="column-filter" data-field="direction"><option value="">Все</option></select></th><th>Проект<select class="column-filter" data-field="project"><option value="">Все</option></select></th><th>Подстатья<select class="column-filter" data-field="subcategory"><option value="">Все</option></select></th><th>Источник<select class="column-filter" data-field="source"><option value="">Все</option></select></th><th>Сумма</th><th>Статус / действие<select class="column-filter" data-field="status"><option value="">Все</option><option value="pending">Ожидает</option><option value="approved">Согласован</option><option value="rejected">Не согласован</option></select></th><th>Комментарий</th></tr></thead><tbody id="paymentTable"></tbody></table></div></div></section>
+</div>
+<div id="modal" class="modal hidden"><div class="backdrop"></div><div class="modal-card"><button class="close" id="modalClose">×</button><div class="eyebrow">КАРТОЧКА ПЛАТЕЖА</div><h2 id="modalCounterparty">—</h2><div id="modalAmount" class="amount">—</div><div id="modalStatus"></div><div id="modalDetails" class="details"></div><div class="comment"><label>Комментарий</label><textarea id="modalComment" placeholder="Причина отказа или дополнительный комментарий…"></textarea></div><div class="modal-actions"><button id="modalApprove" class="approve">✓ Согласовать</button><button id="modalReject" class="reject">✕ Отклонить</button><button id="modalSaveComment">Сохранить комментарий</button></div></div></div>
+<script>
+const SUPABASE_URL='https://duvdlpzwxtuwbwyggpla.supabase.co',SUPABASE_KEY='sb_publishable_WBg9viktHBpz9lw1Nwqtyw_49Src_lU';
+function setConnectionState(ok,text){const el=document.getElementById('supabaseStatus');if(!el)return;el.className='supabase-status '+(ok?'ok':'err');const span=el.querySelector('span:last-child');if(span)span.textContent=text;}
+let PAY=[];const money=n=>new Intl.NumberFormat('ru-RU',{maximumFractionDigits:0}).format(Math.round(Number(n)||0))+' ₽';const esc=s=>String(s??'—').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));const uniq=f=>[...new Set(PAY.map(x=>x[f]).filter(Boolean))].sort((a,b)=>String(a).localeCompare(String(b),'ru'));
+const state={source:'',direction:'',entity:'',search:'',status:'',column:{}};let approvals={},modalPayment=null;
+function fill(id,vals){const e=document.getElementById(id);vals.forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;e.appendChild(o)})}['source','direction','entity'].forEach(f=>fill(f+'Filter',uniq(f)));document.querySelectorAll('.column-filter').forEach(s=>{if(s.dataset.field!=='status')fillCol(s,s.dataset.field)});function fillCol(s,f){uniq(f).forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;s.appendChild(o)})}
+function getStatus(id){return approvals[id]?.status||'pending'}function getComment(id){return approvals[id]?.comment||''}
+async function loadApprovals(){try{const r=await fetch(SUPABASE_URL+'/rest/v1/payment_approvals?select=payment_id,status,comment,approved_by,updated_at',{headers:{apikey:SUPABASE_KEY,Authorization:'Bearer '+SUPABASE_KEY}});if(r.ok){approvals={};(await r.json()).forEach(x=>approvals[x.payment_id]=x)}}catch(e){}render()}
+async function saveApproval(id,status,comment=getComment(id)){const p={payment_id:id,status,comment:comment||null,approved_by:'Alexander',updated_at:new Date().toISOString()};try{const r=await fetch(SUPABASE_URL+'/rest/v1/payment_approvals?on_conflict=payment_id',{method:'POST',headers:{apikey:SUPABASE_KEY,Authorization:'Bearer '+SUPABASE_KEY,'Content-Type':'application/json',Prefer:'resolution=merge-duplicates,return=representation'},body:JSON.stringify(p)});if(r.ok)approvals[id]=(await r.json())[0]||p}catch(e){}render();if(modalPayment)openModal(modalPayment)}
+function matches(r){if(state.source&&r.source!==state.source||state.direction&&r.direction!==state.direction||state.entity&&r.entity!==state.entity||state.status&&getStatus(r.id)!==state.status)return false;if(state.search&&![r.counterparty,r.entity,r.direction,r.project,r.subcategory,r.source].join(' ').toLowerCase().includes(state.search.toLowerCase()))return false;for(const[f,v]of Object.entries(state.column))if(v&&String(r[f]??'')!==v)return false;return true}function rows(){return PAY.filter(matches)}function agg(rs,f){const m={};rs.forEach(r=>m[r[f]]=(m[r[f]]||0)+Number(r.amount||0));return Object.entries(m).sort((a,b)=>b[1]-a[1])}
+function expenseRows(){return PAY.filter(r=>!r.isNonExpense&&!r.isInternal&&!/\bм73\b|плейэстейт/i.test(String(r.entity||''))&&!/\bм73\b|плейэстейт/i.test(String(r.counterparty||'')));}
+function renderKpi(){const rs=expenseRows(),t=rs.reduce((s,r)=>s+r.amount,0),o=rs.filter(r=>r.source==='Собственные').reduce((s,r)=>s+r.amount,0),c=rs.filter(r=>r.source==='Кредит').reduce((s,r)=>s+r.amount,0);kpiTotal.textContent=money(t);kpiOwn.textContent=money(o);kpiCredit.textContent=money(c);kpiShare.textContent=(t?c/t*100:0).toFixed(1)+'%';dashboardTotal.textContent=money(t)}
+function renderRank(id,items,red=false){const max=items[0]?.[1]||1;document.getElementById(id).innerHTML=items.slice(0,10).map(x=>`<div class="rank-row"><div class="rank-name" title="${esc(x[0])}">${esc(x[0])}</div><div class="track"><i style="width:${x[1]/max*100}%;${red?'background:var(--red)':''}"></i></div><div class="rank-value">${money(x[1])}</div></div>`).join('')||'<span style="color:var(--muted)">Нет данных</span>'}
+function renderDash(){const rs=expenseRows(),sources=agg(rs,'source'),dirs=agg(rs,'direction'),ents=agg(rs,'entity'),t=sources.reduce((s,x)=>s+x[1],0),credit=(sources.find(x=>x[0]==='Кредит')||['',0])[1],own=(sources.find(x=>x[0]==='Собственные')||['',0])[1],pct=t?credit/t*100:0;const donut=document.getElementById('sourceDonut');donut.style.background=`conic-gradient(var(--navy) 0 ${pct}%,var(--red) ${pct}% 100%)`;donut.innerHTML=`<div class="donut-center">${pct.toFixed(0)}%<small>кредит</small></div>`;document.getElementById('sourceLegend').innerHTML=`<div class="legend-row"><i class="dot credit"></i><span>Кредитные</span><b>${money(credit)}</b></div><div class="legend-row"><i class="dot own"></i><span>Собственные</span><b>${money(own)}</b></div>`;renderRank('directionRank',dirs);renderRank('entityRank',ents,true);const counts={approved:0,rejected:0,pending:0};PAY.forEach(r=>counts[getStatus(r.id)]++);const max=Math.max(...Object.values(counts),1);document.getElementById('statusBoard').innerHTML=[['Согласовано','approved'],['Не согласовано','rejected'],['Ожидает','pending']].map(([n,k])=>`<div class="rank-row"><div class="rank-name">${n}</div><div class="track"><i style="width:${counts[k]/max*100}%;background:${k==='approved'?'var(--green)':k==='rejected'?'var(--red)':'var(--amber)'}"></i></div><div class="rank-value">${counts[k]}</div></div>`).join('')}
+function renderTable(){const rs=rows();paymentTable.innerHTML=rs.map(r=>{const s=getStatus(r.id),c=getComment(r.id);return `<tr data-open="${esc(r.id)}"><td class="counterparty" title="${esc(r.counterparty)}">${esc(r.counterparty)}</td><td>${esc(r.entity)}</td><td>${esc(r.direction)}</td><td>${esc(r.project)}</td><td>${esc(r.subcategory)}</td><td><span class="badge ${r.source==='Кредит'?'credit':'own'}">${esc(r.source)}</span></td><td class="num"><b>${money(r.amount)}</b></td><td><div class="status-actions"><span class="pill ${s}">${s==='approved'?'Согласован':s==='rejected'?'Не согласован':'Ожидает'}</span><button class="approve ${s==='approved'?'active':''}" data-action="approve" data-id="${esc(r.id)}">✓</button><button class="reject ${s==='rejected'?'active':''}" data-action="reject" data-id="${esc(r.id)}">✕</button></div></td><td>${c?`<div class="comment-view" title="${esc(c)}"><span class="comment-text">${esc(c)}</span><button class="comment-add" data-edit="${esc(r.id)}">изменить</button></div>`:`<button class="comment-add" data-add="${esc(r.id)}">+ Добавить</button>`}</td></tr>`}).join('');rowsCount.textContent=`Показаны ${rs.length} из ${PAY.length} платежей`;document.querySelectorAll('[data-action]').forEach(b=>b.onclick=e=>{e.stopPropagation();saveApproval(b.dataset.id,b.dataset.action==='approve'?'approved':'rejected')});document.querySelectorAll('[data-add],[data-edit]').forEach(b=>b.onclick=e=>{e.stopPropagation();const id=b.dataset.add||b.dataset.edit;openModal(PAY.find(x=>x.id===id))});document.querySelectorAll('#paymentTable tr').forEach(tr=>tr.onclick=()=>openModal(PAY.find(x=>x.id===tr.dataset.open)))}
+function render(){renderKpi();renderDash();renderTable();approvedCount.textContent=PAY.filter(r=>getStatus(r.id)==='approved').length;rejectedCount.textContent=PAY.filter(r=>getStatus(r.id)==='rejected').length;pendingCount.textContent=PAY.filter(r=>getStatus(r.id)==='pending').length}
+function openModal(r){if(!r)return;modalPayment=r;const s=getStatus(r.id);modalCounterparty.textContent=r.counterparty;modalAmount.textContent=money(r.amount);modalStatus.textContent=s==='approved'?'Согласован':s==='rejected'?'Не согласован':'Ожидает';modalStatus.className='pill '+s;modalDetails.innerHTML=[['Юрлицо',r.entity],['Источник',r.source],['Направление',r.direction],['Проект',r.project],['Подстатья',r.subcategory],['ID',r.id]].map(x=>`<div class="detail"><label>${esc(x[0])}</label><b>${esc(x[1])}</b></div>`).join('');modalComment.value=getComment(r.id);modal.classList.remove('hidden')}
+modalClose.onclick=()=>modal.classList.add('hidden');document.querySelector('.backdrop').onclick=()=>modal.classList.add('hidden');modalApprove.onclick=()=>saveApproval(modalPayment.id,'approved',modalComment.value.trim());modalReject.onclick=()=>saveApproval(modalPayment.id,'rejected',modalComment.value.trim());modalSaveComment.onclick=()=>saveApproval(modalPayment.id,getStatus(modalPayment.id),modalComment.value.trim());
+function resetAll(){Object.assign(state,{source:'',direction:'',entity:'',search:'',status:'',column:{}});['sourceFilter','directionFilter','entityFilter','payStatus','registryStatus'].forEach(id=>document.getElementById(id).value='');globalSearch.value='';registrySearch.value='';document.querySelectorAll('.column-filter').forEach(s=>s.value='');render()}
+sourceFilter.onchange=e=>{state.source=e.target.value;render()};directionFilter.onchange=e=>{state.direction=e.target.value;render()};entityFilter.onchange=e=>{state.entity=e.target.value;render()};payStatus.onchange=e=>{state.status=e.target.value;registryStatus.value=e.target.value;render()};registryStatus.onchange=e=>{state.status=e.target.value;payStatus.value=e.target.value;render()};globalSearch.oninput=e=>{state.search=e.target.value;registrySearch.value=e.target.value;render()};registrySearch.oninput=e=>{state.search=e.target.value;globalSearch.value=e.target.value;render()};document.querySelectorAll('.column-filter').forEach(s=>s.onchange=e=>{state.column[s.dataset.field]=e.target.value;render()});document.querySelectorAll('[data-quick]').forEach(x=>x.onclick=()=>{state.status=state.status===x.dataset.quick?'':x.dataset.quick;payStatus.value=state.status;registryStatus.value=state.status;render()});reset.onclick=resetAll;reset2.onclick=resetAll;render();loadApprovals();
+</script>
+<style>
+.vgo-section{margin-top:42px;border-top:1px solid #cfdae4;padding-top:30px}.vgo-head h2{font-size:23px;margin:5px 0}.vgo-note{color:#7890a7;font-size:10px}.vgo-cards{display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:12px;margin:12px 0}.vgo-card{background:#fff;border:1px solid #d9e5ef;border-radius:12px;padding:16px}.vgo-card label{display:block;color:#7890a7;font-size:8px;font-weight:800}.vgo-card strong{display:block;color:#6757b8;font-size:22px;margin-top:10px}.vgo-tools{display:flex;gap:8px;margin-bottom:8px}.vgo-tools input,.vgo-tools select{height:34px;border:1px solid #cfdfeb;border-radius:8px;background:#fff;padding:0 9px;color:#31536f;font-size:10px}.vgo-tools input{width:360px}.vgo-flow{font-weight:700;color:#173d60}@media(max-width:1050px){.vgo-cards{grid-template-columns:1fr 1fr}}@media(max-width:700px){.vgo-cards{grid-template-columns:1fr}.vgo-tools{display:block}.vgo-tools input,.vgo-tools select{width:100%;margin-bottom:6px}}
+</style>
+<script>
+/* BAZA_VGO_PATCHED */
+(function(){
+  if(window.__BAZA_VGO_PATCHED)return;
+  window.__BAZA_VGO_PATCHED=true;
+  const all=window.PAYMENTS.slice();
+  window.__BAZA_ALL_PAYMENTS=all;
+  const expenses=all.filter(r=>!r.isInternal&&!r.isNonExpense);
+  window.PAYMENTS.splice(0,window.PAYMENTS.length,...expenses);
+  const page=document.querySelector('.page');if(!page)return;
+  page.insertAdjacentHTML('beforeend',`<section class="vgo-section" id="vgo"><div class="vgo-head"><div><div class="eyebrow">ВГО · ВНУТРИГРУППОВЫЕ ДВИЖЕНИЯ</div><h2>ВГО / внутренние перечисления</h2><div class="vgo-note">Не входят в реальные расходы и не попадают в реестр согласования.</div></div></div><div class="vgo-cards"><div class="vgo-card"><label>ВСЕ ВГО / ВНУТРЕННИЕ</label><strong id="vgoTotal">—</strong></div><div class="vgo-card"><label>КОЛИЧЕСТВО ОПЕРАЦИЙ</label><strong id="vgoCount">—</strong></div><div class="vgo-card"><label>КРУПНЕЙШИЙ ПРОЕКТ</label><strong id="vgoTop">—</strong></div></div><div class="vgo-tools"><input id="vgoSearch" placeholder="Юрлицо, контрагент, проект…"><select id="vgoEntity"><option value="">Все юрлица</option></select><select id="vgoProject"><option value="">Все проекты</option></select></div><div class="table-card"><div class="table-wrap"><table><thead><tr><th>Откуда</th><th>Куда</th><th>Проект</th><th>Направление</th><th>Подстатья</th><th>Сумма</th></tr></thead><tbody id="vgoTable"></tbody></table></div></div></section>`);
+  const vgoRows=()=>window.__BAZA_ALL_PAYMENTS.filter(r=>r.isInternal&&!r.isNonExpense);
+  const fmt=n=>new Intl.NumberFormat('ru-RU',{maximumFractionDigits:0}).format(Math.round(Number(n)||0))+' ₽';
+  const esc2=s=>String(s??'—').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
+  const fill=(id,arr)=>arr.forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;document.getElementById(id).appendChild(o)});
+  fill('vgoEntity',[...new Set(vgoRows().map(r=>r.entity).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ru')));
+  fill('vgoProject',[...new Set(vgoRows().map(r=>r.project).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ru')));
+  function renderVgo(){const q=(document.getElementById('vgoSearch').value||'').toLowerCase(),en=document.getElementById('vgoEntity').value,pr=document.getElementById('vgoProject').value;const rs=vgoRows().filter(r=>(!en||r.entity===en)&&(!pr||r.project===pr)&&(!q||[r.entity,r.counterparty,r.project,r.direction,r.subcategory].join(' ').toLowerCase().includes(q))).sort((a,b)=>b.amount-a.amount);document.getElementById('vgoTotal').textContent=fmt(rs.reduce((s,r)=>s+r.amount,0));document.getElementById('vgoCount').textContent=rs.length;const p={};rs.forEach(r=>p[r.project]=(p[r.project]||0)+r.amount);const top=Object.entries(p).sort((a,b)=>b[1]-a[1])[0];document.getElementById('vgoTop').textContent=top?top[0]+' · '+fmt(top[1]):'—';document.getElementById('vgoTable').innerHTML=rs.map(r=>`<tr><td class="vgo-flow">${esc2(r.entity)}</td><td class="vgo-flow">${esc2(r.counterparty)}</td><td>${esc2(r.project)}</td><td>${esc2(r.direction)}</td><td>${esc2(r.subcategory)}</td><td class="num"><b>${fmt(r.amount)}</b></td></tr>`).join('')||'<tr><td colspan="6" style="padding:18px;color:#7890a7">Нет операций</td></tr>'}
+  document.getElementById('vgoSearch').oninput=renderVgo;document.getElementById('vgoEntity').onchange=renderVgo;document.getElementById('vgoProject').onchange=renderVgo;
+  const oldRender=window.render;if(typeof oldRender==='function'){window.render=function(){oldRender();renderVgo()};}
+  renderVgo();if(typeof window.render==='function')window.render();
+})();
+</script>
+
+<style>
+.vgo-flow-board{margin:12px 0;background:#fff;border:1px solid #d9e5ef;border-radius:13px;padding:15px}.vgo-flow-head{display:flex;justify-content:space-between;align-items:end;margin-bottom:8px}.vgo-flow-head h3{margin:0;font-size:13px}.vgo-flow-head span{font-size:9px;color:#7890a7}.vgo-flow-svg{width:100%;height:300px;display:block}.vgo-node rect{fill:#f7fafc;stroke:#cbdbe8;stroke-width:1}.vgo-node text{fill:#173d60;font:700 11px Arial,sans-serif}.vgo-node .sum{fill:#7890a7;font:9px Arial,sans-serif}.vgo-edge{stroke:#9aabc0;stroke-width:1.5;fill:none}.vgo-edge-label{fill:#5f7890;font:700 9px Arial,sans-serif}.vgo-filter-row th{background:#fff;padding:4px 6px 7px}.vgo-filter-row select{width:100%;height:24px;border:1px solid #cfdfeb;border-radius:5px;background:#fff;color:#45637d;font-size:8px;padding:0 5px}.vgo-filter-row th:last-child select{display:none}.vgo-tools #vgoEntity,.vgo-tools #vgoProject{display:none}
+@media(max-width:700px){.vgo-flow-svg{height:420px}.vgo-filter-row select{font-size:7px}}
+</style>
+<script>
+/* BAZA_VGO_V2 */
+(function(){
+  if(window.__BAZA_VGO_V2)return; window.__BAZA_VGO_V2=true;
+  const esc=s=>String(s??'—').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
+  const fmt=n=>new Intl.NumberFormat('ru-RU',{maximumFractionDigits:0}).format(Math.round(Number(n)||0))+' ₽';
+  const base=()=>window.__BAZA_ALL_PAYMENTS.filter(r=>r.isInternal&&!r.isNonExpense);
+  const section=document.getElementById('vgo'); if(!section)return;
+  const table=section.querySelector('table');
+  const thead=table.querySelector('thead');
+  const fields=['entity','counterparty','project','direction','subcategory'];
+  const fr=document.createElement('tr'); fr.className='vgo-filter-row';
+  fields.forEach(f=>{const th=document.createElement('th');const sel=document.createElement('select');sel.dataset.vgoFilter=f;sel.innerHTML='<option value="">Все</option>';[...new Set(base().map(r=>r[f]).filter(Boolean))].sort((a,b)=>String(a).localeCompare(String(b),'ru')).forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;sel.appendChild(o)});th.appendChild(sel);fr.appendChild(th)});
+  const blank=document.createElement('th');fr.appendChild(blank);thead.appendChild(fr);
+  const scheme=document.createElement('div'); scheme.className='vgo-flow-board'; scheme.innerHTML='<div class="vgo-flow-head"><h3>Схема внутригрупповых движений</h3><span id="vgoFlowNote">по текущим фильтрам</span></div><svg class="vgo-flow-svg" id="vgoFlowSvg" viewBox="0 0 1100 300" preserveAspectRatio="xMidYMid meet"></svg>';
+  section.insertBefore(scheme,section.querySelector('.table-card'));
+  const state={q:'',filters:{}};
+  const rows=()=>base().filter(r=>fields.every(f=>!state.filters[f]||r[f]===state.filters[f])&&(!state.q||[r.entity,r.counterparty,r.project,r.direction,r.subcategory].join(' ').toLowerCase().includes(state.q)));
+  function renderTable(rs){
+    document.getElementById('vgoTotal').textContent=fmt(rs.reduce((s,r)=>s+r.amount,0));
+    document.getElementById('vgoCount').textContent=rs.length;
+    const p={};rs.forEach(r=>p[r.project]=(p[r.project]||0)+r.amount);const top=Object.entries(p).sort((a,b)=>b[1]-a[1])[0];document.getElementById('vgoTop').textContent=top?top[0]+' · '+fmt(top[1]):'—';
+    document.getElementById('vgoTable').innerHTML=rs.slice().sort((a,b)=>b.amount-a.amount).map(r=>`<tr><td class="vgo-flow">${esc(r.entity)}</td><td class="vgo-flow">${esc(r.counterparty)}</td><td>${esc(r.project)}</td><td>${esc(r.direction)}</td><td>${esc(r.subcategory)}</td><td class="num"><b>${fmt(r.amount)}</b></td></tr>`).join('')||'<tr><td colspan="6" style="padding:18px;color:#7890a7">Нет операций</td></tr>';
+  }
+  function renderScheme(rs){
+    const svg=document.getElementById('vgoFlowSvg');
+    const pairs={}; rs.forEach(r=>{const k=r.entity+'|||'+r.counterparty;pairs[k]=(pairs[k]||0)+Number(r.amount||0)});
+    const edges=Object.entries(pairs).map(([k,v])=>{const [a,b]=k.split('|||');return {a,b,v}}).sort((x,y)=>y.v-x.v).slice(0,18);
+    const left=[...new Set(edges.map(e=>e.a))], right=[...new Set(edges.map(e=>e.b))];
+    const W=1100,H=Math.max(220,Math.min(420,Math.max(left.length,right.length)*62+30));svg.setAttribute('viewBox',`0 0 ${W} ${H}`);svg.setAttribute('height',H);
+    const yMap=(arr)=>{const step=(H-50)/Math.max(arr.length,1);const m={};arr.forEach((n,i)=>m[n]=25+i*step+step/2);return m};
+    const yl=yMap(left),yr=yMap(right);
+    const short=s=>String(s).length>29?String(s).slice(0,28)+'…':String(s);
+    const totals={};edges.forEach(e=>{totals[e.a]=(totals[e.a]||0)+e.v;totals[e.b]=(totals[e.b]||0)+e.v});
+    const node=(x,y,name,total)=>`<g class="vgo-node"><rect x="${x}" y="${y-18}" width="230" height="36" rx="8"></rect><text x="${x+10}" y="${y-3}">${esc(short(name))}</text><text class="sum" x="${x+10}" y="${y+11}">${fmt(total)}</text></g>`;
+    let out='<defs><marker id="vgoArrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 z" fill="#9aabc0"></path></marker></defs>';
+    edges.forEach(e=>{const y1=yl[e.a],y2=yr[e.b];out+=`<path class="vgo-edge" d="M 260 ${y1} C 430 ${y1}, 670 ${y2}, 840 ${y2}" marker-end="url(#vgoArrow)"></path><text class="vgo-edge-label" x="550" y="${(y1+y2)/2-4}" text-anchor="middle">${fmt(e.v)}</text>`});
+    left.forEach(n=>out+=node(10,yl[n],n,totals[n])); right.forEach(n=>out+=node(860,yr[n],n,totals[n]));
+    svg.innerHTML=out; document.getElementById('vgoFlowNote').textContent=edges.length?`${edges.length} связей · по текущим фильтрам`:'нет связей по текущим фильтрам';
+  }
+  function render(){const rs=rows();renderTable(rs);renderScheme(rs)}
+  document.getElementById('vgoSearch').oninput=e=>{state.q=e.target.value.toLowerCase();render()};
+  section.querySelectorAll('[data-vgo-filter]').forEach(sel=>sel.onchange=e=>{state.filters[e.target.dataset.vgoFilter]=e.target.value;render()});
+  render();
+})();
+</script>
+
+
+<style>
+.vgo-flow-board{display:none!important}.vgo-clear-board{background:#fff;border:1px solid #d9e5ef;border-radius:13px;padding:16px;margin:12px 0}.vgo-clear-title{display:flex;justify-content:space-between;align-items:end;margin-bottom:4px}.vgo-clear-title h3{margin:0;font-size:13px}.vgo-clear-title span{font-size:9px;color:#7890a7}.vgo-flow-groups{display:grid;grid-template-columns:1fr 1fr;gap:8px 14px}.vgo-flow-group{border:1px solid #e1eaf1;border-radius:10px;background:#fbfdff;padding:10px 12px}.vgo-flow-source{font-weight:800;color:#173d60;font-size:11px;margin-bottom:7px;display:flex;justify-content:space-between;gap:8px}.vgo-flow-source b{color:#6757b8;white-space:nowrap}.vgo-flow-link{display:grid;grid-template-columns:minmax(0,1fr) 28px 92px;align-items:center;gap:7px;padding:5px 0;border-top:1px solid #edf2f6;font-size:10px}.vgo-flow-arrow{text-align:center;color:#8aa0b5;font-size:16px}.vgo-flow-amount{text-align:right;font-weight:800;color:#31536f;white-space:nowrap}.vgo-excluded-note{color:#7890a7;font-size:9px;margin-top:5px;margin-bottom:10px}@media(max-width:900px){.vgo-flow-groups{grid-template-columns:1fr}}
+</style>
+<script>
+/* BAZA_VGO_V3 */
+(function(){
+ if(window.__BAZA_VGO_V3)return; window.__BAZA_VGO_V3=true;
+ const all=window.__BAZA_ALL_PAYMENTS||[];
+ const isExcluded=r=>/\bм73\b|плейэстейт/i.test(String(r.entity||''))||/\bм73\b|плейэстейт/i.test(String(r.counterparty||''));
+ const base=()=>(window.__BAZA_ALL_PAYMENTS||[]).filter(r=>r.isInternal&&!r.isNonExpense&&!isExcluded(r));
+ const section=document.getElementById('vgo'); if(!section)return;
+ const esc=s=>String(s??'—').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
+ const fmt=n=>new Intl.NumberFormat('ru-RU',{maximumFractionDigits:0}).format(Math.round(Number(n)||0))+' ₽';
+ const fields=['entity','counterparty','project','direction','subcategory'];
+ const filterSelects=[...section.querySelectorAll('[data-vgo-filter]')];
+ const state={q:'',filters:{}};
+ function fillFilters(){filterSelects.forEach(sel=>{const f=sel.dataset.vgoFilter,old=state.filters[f]||'';sel.innerHTML='<option value="">Все</option>';[...new Set(base().map(r=>r[f]).filter(Boolean))].sort((a,b)=>String(a).localeCompare(String(b),'ru')).forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;sel.appendChild(o)});sel.value=old;if(sel.value!==old)state.filters[f]=''});}
+ const match=r=>fields.every(f=>!state.filters[f]||r[f]===state.filters[f])&&(!state.q||[r.entity,r.counterparty,r.project,r.direction,r.subcategory].join(' ').toLowerCase().includes(state.q));
+ const rows=()=>base().filter(match);
+ let board=document.getElementById('vgoClearBoard');
+ if(!board){board=document.createElement('div');board.id='vgoClearBoard';board.className='vgo-clear-board';const old=section.querySelector('.vgo-flow-board');if(old)old.after(board);else section.insertBefore(board,section.querySelector('.table-card'));}
+ function render(rs){
+   document.getElementById('vgoTotal').textContent=fmt(rs.reduce((s,r)=>s+Number(r.amount||0),0));
+   document.getElementById('vgoCount').textContent=rs.length;
+   const p={};rs.forEach(r=>p[r.project]=(p[r.project]||0)+Number(r.amount||0));const top=Object.entries(p).sort((a,b)=>b[1]-a[1])[0];document.getElementById('vgoTop').textContent=top?top[0]+' · '+fmt(top[1]):'—';
+   document.getElementById('vgoTable').innerHTML=rs.slice().sort((a,b)=>b.amount-a.amount).map(r=>`<tr><td class="vgo-flow">${esc(r.entity)}</td><td class="vgo-flow">${esc(r.counterparty)}</td><td>${esc(r.project)}</td><td>${esc(r.direction)}</td><td>${esc(r.subcategory)}</td><td class="num"><b>${fmt(r.amount)}</b></td></tr>`).join('')||'<tr><td colspan="6" style="padding:18px;color:#7890a7">Нет операций</td></tr>';
+   const pairs={};rs.forEach(r=>{const k=r.entity+'|||'+r.counterparty;pairs[k]=(pairs[k]||0)+Number(r.amount||0)});
+   const bySource={};Object.entries(pairs).forEach(([k,v])=>{const [a,b]=k.split('|||');(bySource[a]??=[]).push([b,v])});
+   const groups=Object.entries(bySource).sort((a,b)=>b[1].reduce((s,x)=>s+x[1],0)-a[1].reduce((s,x)=>s+x[1],0));
+   let html='<div class="vgo-clear-title"><h3>Куда уходят деньги внутри группы</h3><span>стрелка = направление · сумма = оборот</span></div><div class="vgo-excluded-note">М73 и Плэйэстейт исключены из ВГО.</div><div class="vgo-flow-groups">';
+   groups.slice(0,12).forEach(([src,dests])=>{const total=dests.reduce((s,x)=>s+x[1],0);html+=`<div class="vgo-flow-group"><div class="vgo-flow-source"><span>${esc(src)}</span><b>${fmt(total)}</b></div>`+dests.sort((a,b)=>b[1]-a[1]).slice(0,6).map(([dst,v])=>`<div class="vgo-flow-link"><span>${esc(dst)}</span><span class="vgo-flow-arrow">→</span><span class="vgo-flow-amount">${fmt(v)}</span></div>`).join('')+'</div>'});
+   if(!groups.length)html+='<div style="color:#7890a7;font-size:10px;padding:10px">Нет операций по текущим фильтрам</div>';
+   html+='</div>';board.innerHTML=html;
+ }
+ fillFilters();
+ document.getElementById('vgoSearch').oninput=e=>{state.q=e.target.value.toLowerCase();render(rows())};
+ filterSelects.forEach(sel=>sel.onchange=e=>{state.filters[e.target.dataset.vgoFilter]=e.target.value;render(rows())});
+ render(rows());
+})();
+
+</script>
+<style>
+/* BAZA_AUTH_V1 */
+body.auth-locked .page{display:none!important}
+.auth-screen{position:fixed;inset:0;background:#eef4f9;display:grid;place-items:center;z-index:9999}
+.auth-card{width:min(420px,calc(100vw - 32px));background:#fff;border:1px solid #d9e5ef;border-radius:18px;padding:30px;box-shadow:0 25px 70px rgba(0,26,51,.14)}
+.auth-brand{font-size:34px;font-weight:900;letter-spacing:-2px;color:#e51d2a}.auth-sub{font-size:9px;color:#7890a7;font-weight:800;letter-spacing:.12em;margin-top:2px}
+.auth-card h2{margin:28px 0 6px;color:#0a3155;font-size:22px}.auth-card p{margin:0 0 18px;color:#7890a7;font-size:11px;line-height:1.5}
+.auth-field{margin:10px 0}.auth-field label{display:block;font-size:9px;color:#7890a7;font-weight:800;text-transform:uppercase;margin:0 0 5px 2px}.auth-field input{width:100%;height:42px;border:1px solid #cfdfeb;border-radius:9px;padding:0 11px;color:#173d60;font-size:12px;outline:none}.auth-field input:focus{border-color:#789ab7}
+.auth-submit{width:100%;height:42px;margin-top:10px;border:0;border-radius:9px;background:#0a3155;color:#fff;font-weight:800;cursor:pointer}.auth-submit:disabled{opacity:.6;cursor:wait}.auth-error{min-height:18px;margin-top:10px;color:#c41d25;font-size:10px}.auth-user{display:none;position:fixed;right:20px;top:16px;z-index:40;background:#fff;border:1px solid #d9e5ef;border-radius:9px;padding:7px 10px;font-size:9px;color:#49667f}.auth-user button{margin-left:8px;border:0;background:none;color:#c41d25;cursor:pointer;font-size:9px}
+body.auth-ready .auth-screen{display:none}.auth-guard-note{font-size:9px;color:#9aabb9;margin-top:14px}
+</style>
+<div class="auth-screen" id="authScreen">
+  <form class="auth-card" id="authForm">
+    <div class="auth-brand">BAZA</div><div class="auth-sub">ПЛАТЕЖНЫЙ КОНТРОЛЬ</div>
+    <h2>Вход в систему</h2>
+    <p>Доступ к платежному календарю только для авторизованных пользователей.</p>
+    <div class="auth-field"><label>Email</label><input id="authEmail" type="email" autocomplete="username" value="a.semin@baza.bz" required></div>
+    <div class="auth-field"><label>Пароль</label><input id="authPassword" type="password" autocomplete="current-password" required></div>
+    <button class="auth-submit" id="authSubmit" type="submit">Войти</button>
+    <div class="auth-error" id="authError"></div>
+    <div class="auth-guard-note">Сессия защищена Supabase Auth · данные платежей загружаются только после входа.</div>
+  </form>
+</div>
+<div class="auth-user" id="authUser"><span id="authUserText"></span><button id="authLogout">Выйти</button></div>
+<script>
+/* BAZA_AUTH_V1 */
+(function(){
+  document.body.classList.add('auth-locked');
+  let accessToken = localStorage.getItem('baza_access_token') || '';
+  let refreshToken = localStorage.getItem('baza_refresh_token') || '';
+  let currentUser = null;
+  let currentProfile = null;
+  const authHeaders = extra => Object.assign({apikey:SUPABASE_KEY,Authorization:'Bearer '+accessToken,'Content-Type':'application/json'},extra||{});
+  window.bazaAuthHeaders=authHeaders;
+  window.bazaAuthRole=()=>currentProfile?.role||'';
+  function setTokens(data){accessToken=data.access_token||'';refreshToken=data.refresh_token||'';if(accessToken)localStorage.setItem('baza_access_token',accessToken);else localStorage.removeItem('baza_access_token');if(refreshToken)localStorage.setItem('baza_refresh_token',refreshToken);else localStorage.removeItem('baza_refresh_token');}
+  function clearSession(){accessToken='';refreshToken='';currentUser=null;currentProfile=null;localStorage.removeItem('baza_access_token');localStorage.removeItem('baza_refresh_token');document.body.classList.remove('auth-ready');document.body.classList.add('auth-locked');document.getElementById('authUser').style.display='none';}
+  function showError(msg){document.getElementById('authError').textContent=msg||'';}
+  async function refreshSession(){if(!refreshToken)return false;try{const res=await fetch(SUPABASE_URL+'/auth/v1/token?grant_type=refresh_token',{method:'POST',headers:{apikey:SUPABASE_KEY,'Content-Type':'application/json'},body:JSON.stringify({refresh_token:refreshToken})});if(!res.ok)throw new Error();setTokens(await res.json());return !!accessToken;}catch(e){clearSession();return false;}}
+  async function getUser(){if(!accessToken)return null;let res=await fetch(SUPABASE_URL+'/auth/v1/user',{headers:authHeaders()});if(res.ok)return await res.json();if(res.status===401&&await refreshSession()){res=await fetch(SUPABASE_URL+'/auth/v1/user',{headers:authHeaders()});if(res.ok)return await res.json();}return null;}
+  async function getProfile(user){const res=await fetch(SUPABASE_URL+'/rest/v1/user_profiles?select=id,email,full_name,role,is_active&id=eq.'+encodeURIComponent(user.id),{headers:authHeaders()});if(!res.ok)return null;const rows=await res.json();return rows[0]||null;}
+  async function login(email,password){const res=await fetch(SUPABASE_URL+'/auth/v1/token?grant_type=password',{method:'POST',headers:{apikey:SUPABASE_KEY,'Content-Type':'application/json'},body:JSON.stringify({email,password})});const data=await res.json().catch(()=>({}));if(!res.ok)throw new Error(data.error_description||data.msg||'Не удалось войти');setTokens(data);return boot();}
+  async function loadPayments(){
+  const res=await fetch(SUPABASE_URL+'/rest/v1/payments?select=id,entity,source,direction,amount,counterparty,project,subcategory,is_internal,is_non_expense&order=id.asc',{headers:authHeaders()});
+  if(!res.ok)throw new Error('Не удалось загрузить платежи: HTTP '+res.status);
+  const raw0=(await res.json()).map(r=>({...r,amount:Number(r.amount),isInternal:r.is_internal===true,isNonExpense:r.is_non_expense===true}));
+  const seen=new Map();
+  function choose(a,b){
+    const sub=String(a.subcategory||b.subcategory||'').toLowerCase();
+    if(Math.abs(Number(a.amount)-16762520)<1&&/база-куйбышева/i.test(a.entity||'')&&/база/i.test(a.counterparty||''))return a;
+    if(Math.abs(Number(b.amount)-16762520)<1&&/база-куйбышева/i.test(b.entity||'')&&/база/i.test(b.counterparty||''))return b;
+    if(/взносы учредителей/.test(sub)){
+      if(/база девелопмент/i.test(a.entity||''))return a;
+      if(/база девелопмент/i.test(b.entity||''))return b;
+    }
+    return a;
+  }
+  const raw=[];
+  for(const r of raw0){
+    if(!r.isInternal){raw.push(r);continue;}
+    const a=String(r.entity||'').trim(),b=String(r.counterparty||'').trim();
+    const key=[a,b].sort((x,y)=>x.localeCompare(y,'ru')).join('|')+'|'+r.amount+'|'+String(r.project||'')+'|'+String(r.subcategory||'');
+    if(!seen.has(key)){seen.set(key,r);raw.push(r)}
+    else{const old=seen.get(key),keep=choose(old,r);if(keep!==old){const i=raw.indexOf(old);if(i>=0)raw[i]=keep;seen.set(key,keep)}}
+  }
+  window.__BAZA_ALL_PAYMENTS=raw.slice();
+  window.PAYMENTS=raw.slice();
+  PAY.length=0;PAY.push(...window.PAYMENTS);PAY=window.PAYMENTS;
+}
+function refillFilters(){[['sourceFilter','source','Все источники'],['directionFilter','direction','Все направления'],['entityFilter','entity','Все юрлица']].forEach(([id,field,first])=>{const el=document.getElementById(id);if(!el)return;const old=el.value;el.innerHTML='<option value="">'+first+'</option>';[...new Set(PAYMENTS.map(x=>x[field]).filter(Boolean))].sort((a,b)=>String(a).localeCompare(String(b),'ru')).forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;el.appendChild(o)});if([...el.options].some(o=>o.value===old))el.value=old;});}
+  function refillColumnFilters(){
+    document.querySelectorAll('.column-filter').forEach(sel=>{
+      const field=sel.dataset.field;
+      if(field==='status')return;
+      const previous=sel.value;
+      const values=[...new Set(PAY.map(r=>String(r[field]??'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ru'));
+      sel.replaceChildren(new Option('Все',''),...values.map(v=>new Option(v,v)));
+      sel.value=values.includes(previous)?previous:'';
+      if(previous && !values.includes(previous))delete state.column[field];
+    });
+  }
+  const APPROVALS_ENDPOINT=SUPABASE_URL+'/rest/v1/payment_approvals';
+  async function loadApprovalsSecure(){try{const res=await fetch(APPROVALS_ENDPOINT+'?select=payment_id,status,comment,approved_by,updated_at,approved_by_user_id',{headers:authHeaders()});if(!res.ok)throw new Error('HTTP '+res.status);const rows=await res.json();approvals={};rows.forEach(x=>approvals[String(x.payment_id)]=x);setConnectionState(true,'Синхронизировано');render();}catch(e){console.error(e);setConnectionState(false,'Ошибка подключения');render();}}
+  window.loadApprovals=loadApprovalsSecure;
+  window.approvalHeaders=function(extra={}){return Object.assign({apikey:SUPABASE_KEY,Authorization:'Bearer '+accessToken,'Content-Type':'application/json'},extra);};
+  async function boot(){const user=await getUser();if(!user){clearSession();return false;}const profile=await getProfile(user);if(!profile||!profile.is_active){clearSession();showError('Нет активного профиля доступа.');return false;}currentUser=user;currentProfile=profile;try{await loadPayments();}catch(e){clearSession();showError(e.message);return false;}refillFilters();refillColumnFilters();document.body.classList.remove('auth-locked');document.body.classList.add('auth-ready');document.getElementById('authUserText').textContent=(profile.full_name||profile.email||user.email||'')+' · '+profile.role;document.getElementById('authUser').style.display='block';render();await loadApprovalsSecure();return true;}
+  document.getElementById('authForm').addEventListener('submit',async e=>{e.preventDefault();showError('');const btn=document.getElementById('authSubmit');btn.disabled=true;btn.textContent='Входим…';try{if(!await login(document.getElementById('authEmail').value.trim(),document.getElementById('authPassword').value))throw new Error('Не удалось войти');}catch(err){showError(err.message||'Ошибка входа');}finally{btn.disabled=false;btn.textContent='Войти';}});
+  document.getElementById('authLogout').onclick=()=>clearSession();
+  window.addEventListener('storage',e=>{if(e.key==='baza_access_token'&&!e.newValue)clearSession();});
+  (async()=>{if(!(await boot()))document.getElementById('authScreen').style.display='grid';})();
+})();
+</script>
+<script>/* BAZA_AUTH_NUMERIC_V1 */</script>
+<script>
+/* BAZA_AUTH_RECOVERY_V2 */
+(function(){
+  const PROD_URL='https://financebaza.github.io/payment-dashboard/';
+  const redirectUrl=()=>PROD_URL;
+  const authScreen=document.getElementById('authScreen');
+  const form=document.getElementById('authForm');
+  const title=form&&form.querySelector('h2');
+  const note=form&&form.querySelector('.auth-guard-note');
+  const submit=document.getElementById('authSubmit');
+  const error=document.getElementById('authError');
+  const password=document.getElementById('authPassword');
+  const email=document.getElementById('authEmail');
+  if(!form||!authScreen||!submit||!error||!password||!email)return;
+  const forgot=document.createElement('button');
+  forgot.type='button';forgot.textContent='Забыли пароль?';
+  forgot.style='display:block;margin:10px auto 0;border:0;background:none;color:#2f75b5;font-size:10px;cursor:pointer';
+  submit.insertAdjacentElement('afterend',forgot);
+  let recovery=false;
+  function showRecovery(){
+    recovery=true;
+    document.body.classList.remove('auth-ready');
+    document.body.classList.add('auth-locked');
+    authScreen.style.display='grid';
+    if(title)title.textContent='Новый пароль';
+    const p=form.querySelector('p');if(p)p.textContent='Введите новый пароль для доступа к платежному контролю.';
+    email.parentElement.style.display='none';
+    password.autocomplete='new-password';
+    password.placeholder='Новый пароль';
+    forgot.style.display='none';
+    submit.textContent='Сохранить пароль';
+    if(note)note.textContent='Ссылка восстановления активна · пароль обновляется через Supabase Auth.';
+  }
+  async function sendRecovery(){
+    error.style.color='#c41d25';error.textContent='';
+    const em=email.value.trim();
+    if(!em){error.textContent='Введите email';return;}
+    forgot.disabled=true;forgot.textContent='Отправляем…';
+    try{
+      const res=await fetch(SUPABASE_URL+'/auth/v1/recover',{method:'POST',headers:{apikey:SUPABASE_KEY,'Content-Type':'application/json'},body:JSON.stringify({email:em,redirect_to:redirectUrl()})});
+      if(!res.ok){const d=await res.json().catch(()=>({}));throw new Error(d.msg||d.error_description||'Не удалось отправить письмо');}
+      error.style.color='#557e00';error.textContent='Письмо отправлено. Используйте только последнее письмо.';
+    }catch(e){error.style.color='#c41d25';error.textContent=e.message||'Ошибка';}
+    finally{forgot.disabled=false;forgot.textContent='Забыли пароль?';}
+  }
+  async function finishRecovery(){
+    const h=new URLSearchParams(location.hash.replace(/^#/,'') );
+    const at=h.get('access_token');
+    const rt=h.get('refresh_token');
+    const type=h.get('type');
+    const authError=h.get('error_code')||h.get('error');
+    if(authError){
+      document.body.classList.add('auth-locked');
+      authScreen.style.display='grid';
+      error.style.color='#c41d25';
+      error.textContent=authError==='otp_expired'?'Ссылка восстановления недействительна или уже использована. Запросите новое письмо.':(h.get('error_description')||authError);
+      history.replaceState(null,'',location.pathname+location.search);
+      return false;
+    }
+    if(!at||type!=='recovery')return false;
+    localStorage.setItem('baza_access_token',at);
+    if(rt)localStorage.setItem('baza_refresh_token',rt);
+    showRecovery();
+    history.replaceState(null,'',location.pathname+location.search);
+    return true;
+  }
+  forgot.onclick=sendRecovery;
+  form.addEventListener('submit',async function(e){
+    if(!recovery)return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    error.style.color='#c41d25';error.textContent='';
+    const pw=password.value;
+    if(pw.length<8){error.textContent='Пароль должен быть не короче 8 символов';return;}
+    submit.disabled=true;submit.textContent='Сохраняем…';
+    try{
+      const token=localStorage.getItem('baza_access_token');
+      if(!token)throw new Error('Сессия восстановления не найдена. Запросите новое письмо.');
+      const res=await fetch(SUPABASE_URL+'/auth/v1/user',{method:'PUT',headers:{apikey:SUPABASE_KEY,Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({password:pw})});
+      const d=await res.json().catch(()=>({}));
+      if(!res.ok)throw new Error(d.msg||d.error_description||d.message||'Не удалось изменить пароль');
+      localStorage.removeItem('baza_access_token');localStorage.removeItem('baza_refresh_token');
+      error.style.color='#557e00';error.textContent='Пароль изменён. Теперь войдите с новым паролем.';
+      recovery=false;
+      if(title)title.textContent='Вход в систему';
+      const p=form.querySelector('p');if(p)p.textContent='Доступ к платежному календарю только для авторизованных пользователей.';
+      email.parentElement.style.display='block';password.value='';password.placeholder='';password.autocomplete='current-password';forgot.style.display='block';submit.textContent='Войти';
+      if(note)note.textContent='Сессия защищена Supabase Auth · данные платежей загружаются только после входа.';
+    }catch(e){error.textContent=e.message||'Ошибка';}
+    finally{submit.disabled=false;if(recovery)submit.textContent='Сохранить пароль';}
+  },true);
+  finishRecovery();
+})();
+</script>
+</body></html>
