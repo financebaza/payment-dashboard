@@ -214,4 +214,84 @@ body.auth-ready .auth-screen{display:none}.auth-guard-note{font-size:9px;color:#
 })();
 </script>
 <script>/* BAZA_AUTH_NUMERIC_V1 */</script>
+<script>
+/* BAZA_AUTH_RECOVERY_V1 */
+(function(){
+  const PROD_URL='https://financebaza.github.io/payment-dashboard/';
+  const redirectUrl=()=>location.hostname==='financebaza.github.io'?PROD_URL:location.origin+'/';
+  const authScreen=document.getElementById('authScreen');
+  const form=document.getElementById('authForm');
+  const title=form&&form.querySelector('h2');
+  const note=form&&form.querySelector('.auth-guard-note');
+  const submit=document.getElementById('authSubmit');
+  const error=document.getElementById('authError');
+  if(!form||!authScreen)return;
+  const password=document.getElementById('authPassword');
+  const email=document.getElementById('authEmail');
+  const forgot=document.createElement('button');
+  forgot.type='button';forgot.textContent='Забыли пароль?';
+  forgot.style='display:block;margin:10px auto 0;border:0;background:none;color:#2f75b5;font-size:10px;cursor:pointer';
+  submit.insertAdjacentElement('afterend',forgot);
+  let recovery=false;
+  function showRecovery(){
+    recovery=true;
+    document.body.classList.remove('auth-ready');
+    document.body.classList.add('auth-locked');
+    authScreen.style.display='grid';
+    title.textContent='Новый пароль';
+    form.querySelector('p').textContent='Введите новый пароль для доступа к платежному контролю.';
+    email.parentElement.style.display='none';
+    password.autocomplete='new-password';
+    password.placeholder='Новый пароль';
+    forgot.style.display='none';
+    submit.textContent='Сохранить пароль';
+    note.textContent='Ссылка восстановления активна · пароль обновляется через Supabase Auth.';
+  }
+  async function sendRecovery(){
+    error.textContent='';
+    const em=email.value.trim();
+    if(!em){error.textContent='Введите email';return;}
+    forgot.disabled=true;forgot.textContent='Отправляем…';
+    try{
+      const res=await fetch(SUPABASE_URL+'/auth/v1/recover',{method:'POST',headers:{apikey:SUPABASE_KEY,'Content-Type':'application/json'},body:JSON.stringify({email:em,redirect_to:redirectUrl()})});
+      if(!res.ok){const d=await res.json().catch(()=>({}));throw new Error(d.msg||d.error_description||'Не удалось отправить письмо');}
+      error.style.color='#557e00';error.textContent='Письмо для восстановления отправлено. Проверьте почту.';
+    }catch(e){error.style.color='#c41d25';error.textContent=e.message||'Ошибка';}
+    finally{forgot.disabled=false;forgot.textContent='Забыли пароль?';}
+  }
+  async function finishRecovery(){
+    const h=new URLSearchParams(location.hash.replace(/^#/,'') );
+    const at=h.get('access_token');
+    const rt=h.get('refresh_token');
+    const type=h.get('type');
+    if(!at||type!=='recovery')return false;
+    localStorage.setItem('baza_access_token',at);
+    if(rt)localStorage.setItem('baza_refresh_token',rt);
+    showRecovery();
+    history.replaceState(null,'',location.pathname+location.search);
+    return true;
+  }
+  forgot.onclick=sendRecovery;
+  const originalSubmit=form.onsubmit;
+  form.addEventListener('submit',async function(e){
+    if(!recovery)return;
+    e.preventDefault();
+    error.style.color='#c41d25';error.textContent='';
+    const pw=password.value;
+    if(pw.length<8){error.textContent='Пароль должен быть не короче 8 символов';return;}
+    submit.disabled=true;submit.textContent='Сохраняем…';
+    try{
+      const token=localStorage.getItem('baza_access_token');
+      const res=await fetch(SUPABASE_URL+'/auth/v1/user',{method:'PUT',headers:{apikey:SUPABASE_KEY,Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({password:pw})});
+      const d=await res.json().catch(()=>({}));
+      if(!res.ok)throw new Error(d.msg||d.error_description||d.message||'Не удалось изменить пароль');
+      localStorage.removeItem('baza_access_token');localStorage.removeItem('baza_refresh_token');
+      error.style.color='#557e00';error.textContent='Пароль изменён. Теперь войдите с новым паролем.';
+      recovery=false;title.textContent='Вход в систему';form.querySelector('p').textContent='Доступ к платежному календарю только для авторизованных пользователей.';email.parentElement.style.display='block';password.value='';password.placeholder='';password.autocomplete='current-password';forgot.style.display='block';submit.textContent='Войти';note.textContent='Сессия защищена Supabase Auth · данные платежей загружаются только после входа.';
+    }catch(e){error.textContent=e.message||'Ошибка';}
+    finally{submit.disabled=false;if(recovery)submit.textContent='Сохранить пароль';}
+  },true);
+  finishRecovery();
+})();
+</script>
 </body></html>
