@@ -185,6 +185,18 @@ button.project-item.dashboard-clickable.selected{background:#e3f0fc;border-color
   box-shadow:inset 0 -3px 0 #a90d1f!important;
 }
 
+
+/* BAZA_COMPACT_HIDE_EXPLANATIONS_V1 */
+/* Keep KPI values and the four numeric cash-reconciliation figures. */
+.hero > div > p,
+.project-board .board-title > div > span,
+#cashBoard > p:first-of-type,
+#cashBoard > #cashNote,
+.vgo-section .vgo-note,
+.cash-reconciliation .cash-recon-note:not(.cash-recon-warning){
+  display:none!important;
+}
+
 </style>
 </head>
 <body>
@@ -1049,7 +1061,7 @@ function renderCash(){
   '<span>Переводы вне контура остатков: <b>−'+fmt(transfersOutside)+'</b></span>'+
   '<span>Чистое движение группы: <b class="cash-recon-net">'+signed(netFlow)+'</b></span>'+
   (Math.abs(incompleteDelta)>.01?'<span class="cash-recon-note">В строке «ИТОГО» изменение учитывает только юрлица с известным начальным остатком. Неучтённое движение: '+signed(incompleteDelta)+'. Общий конечный остаток пока неполный.</span>':'')+
-  (Math.abs(netFlow-(creditDisbursements-externalPayments-transfersOutside))>.01?'<span class="cash-recon-note">ВНИМАНИЕ: движение и аналитическая сверка расходятся. Требуется проверка.</span>':'');
+  (Math.abs(netFlow-(creditDisbursements-externalPayments-transfersOutside))>.01?'<span class="cash-recon-note cash-recon-warning">ВНИМАНИЕ: движение и аналитическая сверка расходятся. Требуется проверка.</span>':'');
 
  document.getElementById('cashNote').textContent='Начальные остатки на 19.10.2026 из Excel. Поступления: кредитные выгрузки и перечисления от компаний группы по исходному платежному календарю. Внутренние перечисления учитываются как расход отправителя и приход получателя; зеркальные строки не задваиваются. М73 исключена. '+(complete?'Все строки заполнены.':'* Итог на конец — сумма рассчитанных остатков. Для '+missing+' строк отсутствует начальный остаток и/или план поступлений; окончательный полный итог пока неизвестен.');
 }
