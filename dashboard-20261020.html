@@ -926,6 +926,72 @@ async function load(){
  }catch(err){document.getElementById('cashRows').innerHTML='<tr><td colspan="7">'+escapeHtml(err.message)+'</td></tr>';}
  finally{loading=false;}
 }
+
+function cashDrillButton(side,key,value){
+ const n=Number(value||0);
+ if(!n)return fmt(0);
+ return '<button type="button" class="cash-detail-link" data-cash-detail="'+escapeHtml(key)+'" data-cash-side="'+side+'" title="Показать операции, из которых сложилась сумма">'+fmt(n)+'</button>';
+}
+function cashMovementRows(side,key){
+ const output=[];
+ const payments=(window.__BAZA_ALL_PAYMENTS||PAY||[]);
+ for(const r of payments){
+  const from=getKey(r.entity),to=getKey(r.counterparty);
+  if(side==='expense'&&!r.isNonExpense&&from!=='m73'&&(key==='__TOTAL__'||key===from)){
+   output.push({amount:Number(r.amount||0),kind:r.isInternal?'Внутренний перевод':'Внешний платёж',sender:r.entity,receiver:r.counterparty,project:r.project,subcategory:r.subcategory,source:r.source,id:r.id});
+  }
+  if(side==='income'&&getKey(r.entity)!=='m73'){
+   const credit=r.isNonExpense&&/выгрузка кредитных средств/i.test(String(r.subcategory||''));
+   const transfer=!r.isNonExpense&&to&&to!=='m73'&&to!==from;
+   const dest=credit?from:(transfer?to:null);
+   if(dest&&(key==='__TOTAL__'||key===dest)){
+    output.push({amount:Number(r.amount||0),kind:credit?'Выгрузка кредита':'Внутреннее поступление',sender:credit?r.counterparty:r.entity,receiver:credit?r.entity:r.counterparty,project:r.project,subcategory:r.subcategory,source:r.source,id:r.id});
+   }
+  }
+ }
+ return output.sort((a,b)=>b.amount-a.amount);
+}
+const cashDetailLayer=document.createElement('div');
+cashDetailLayer.className='cash-detail-overlay';
+cashDetailLayer.id='cashDetailOverlay';
+cashDetailLayer.innerHTML=
+ '<div class="cash-detail-dialog" role="dialog" aria-modal="true" aria-labelledby="cashDetailTitle">'+
+ '<div class="cash-detail-top"><div><h3 id="cashDetailTitle"></h3><p id="cashDetailSubtitle"></p></div><button type="button" class="cash-detail-close" aria-label="Закрыть">×</button></div>'+
+ '<div class="cash-detail-summary"><strong id="cashDetailTotal"></strong><span id="cashDetailCount"></span></div>'+
+ '<div class="cash-detail-scroll"><table class="cash-detail-table"><thead><tr><th>Тип</th><th>От кого</th><th>Кому</th><th>Проект</th><th>Статья / подстатья</th><th>Сумма</th></tr></thead><tbody id="cashDetailRows"></tbody></table></div>'+
+ '<div class="cash-detail-footnote" id="cashDetailFootnote"></div></div>';
+document.body.appendChild(cashDetailLayer);
+function closeCashDetails(){cashDetailLayer.classList.remove('visible');document.body.style.removeProperty('overflow');}
+function openCashDetails(side,key){
+ if(!loaded)return;
+ const all=key==='__TOTAL__';
+ const entity=balances.find(r=>r.entity_key===key);
+ const label=all?'Все юридические лица':(entity?entity.entity_name:key);
+ const list=cashMovementRows(side,key);
+ const sum=list.reduce((n,r)=>n+r.amount,0);
+ const expected=side==='income'?
+   (all?balances.reduce((n,r)=>n+Number(r.planned_receipts||0),0):Number(entity?.planned_receipts||0)):
+   (all?sum:(window.__BAZA_ALL_PAYMENTS||PAY||[]).filter(r=>!r.isNonExpense&&getKey(r.entity)===key&&key!=='m73').reduce((n,r)=>n+Number(r.amount||0),0));
+ const delta=Number((expected-sum).toFixed(2));
+ document.getElementById('cashDetailTitle').textContent=(side==='income'?'Приход · ':'Расход · ')+label;
+ document.getElementById('cashDetailSubtitle').textContent='Плановые операции за 19–25 октября 2026';
+ document.getElementById('cashDetailTotal').textContent=fmt(expected);
+ document.getElementById('cashDetailCount').textContent=list.length+' операций';
+ const rs=list.map(r=>'<tr><td>'+escapeHtml(r.kind)+'</td><td>'+escapeHtml(r.sender)+'</td><td>'+escapeHtml(r.receiver)+'</td><td>'+escapeHtml(r.project||'—')+'</td><td>'+escapeHtml(r.subcategory||'—')+'</td><td>'+fmt(r.amount)+'</td></tr>');
+ if(Math.abs(delta)>.01){
+  rs.push('<tr class="cash-unmatched"><td colspan="5">Расхождение с введённым планом: сумма без привязки к конкретной операции. Требует проверки.</td><td>'+(delta<0?'−':'')+fmt(Math.abs(delta))+'</td></tr>');
+ }
+ rs.push('<tr><td colspan="5"><b>ИТОГО</b></td><td><b>'+fmt(expected)+'</b></td></tr>');
+ document.getElementById('cashDetailRows').innerHTML=rs.join('');
+ document.getElementById('cashDetailFootnote').textContent='Источник: платёжный календарь Supabase. Кредитные выгрузки отражаются как приход, перечисления внутри группы — у отправителя в расходе и у получателя в приходе. Зеркальные строки не учитываются повторно. Это плановые записи, а не подтверждённые банковские проводки.';
+ cashDetailLayer.classList.add('visible');
+ document.body.style.overflow='hidden';
+ cashDetailLayer.querySelector('.cash-detail-close').focus();
+}
+cashDetailLayer.querySelector('.cash-detail-close').addEventListener('click',closeCashDetails);
+cashDetailLayer.addEventListener('click',e=>{if(e.target===cashDetailLayer)closeCashDetails();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&cashDetailLayer.classList.contains('visible'))closeCashDetails();});
+
 function renderCash(){
  if(!loaded)return;
  const debits=new Map(),entities=new Map();
