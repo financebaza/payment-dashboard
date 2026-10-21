@@ -229,6 +229,31 @@ dialog::backdrop{background:rgba(11,39,64,.45)}
 .pf-method-note summary{cursor:pointer;font-weight:800;color:#50738e}
 .pf-method-note div{padding:9px 0 2px;line-height:1.6}
 
+
+/* BAZA_RECONCILE_AUTO_UI_V1 */
+.pf-match-controls{display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:flex-end}
+.pf-reconcile-btn{color:#fff;border:1px solid #123b67;background:#123b67;padding:10px 14px;border-radius:8px;font-weight:800;font-size:11px;white-space:nowrap}
+.pf-reconcile-btn:hover{background:#23577e}.pf-reconcile-btn:disabled{opacity:.55;cursor:wait}
+.pf-match-dialog{width:min(920px,calc(100vw - 25px));max-height:90vh}
+.pf-match-dialog .dialog-header{background:#e9f3fa}
+.pf-match-dialog .dialog-header small{font-size:10px;color:#8099ac}
+.pf-match-dialog .dialog-body{max-height:calc(90vh - 82px)}
+.pf-match-dialog h3{margin:20px 0 10px;font-size:14px}
+.pf-match-summary{background:#eef5fb;border:1px solid #d6e5f0;padding:14px;border-radius:10px;display:flex;gap:10px 23px;flex-wrap:wrap;font-size:11px}
+.pf-match-summary b{color:#113e67}
+.pf-match-list{display:grid;gap:7px}
+.pf-match-option{display:flex;gap:10px;align-items:start;border:1px solid #e0eaf2;border-radius:9px;padding:11px 13px;background:#fff}
+.pf-match-option.auto{border-left:4px solid #368764}.pf-match-option.review{border-left:4px solid #d69b32}
+.pf-match-option input{width:17px;height:17px;margin:3px 0 0}
+.pf-match-option strong{display:block;font-size:11px}
+.pf-match-option .summary{display:block;color:#718da2;font-size:10px;margin-top:3px;line-height:1.6}
+.pf-match-option .explain{display:block;color:#59768c;font-size:10px;margin-top:5px}
+.pf-match-list .empty{font-size:11px;padding:10px 0}
+.pf-match-dialog #matcherApplyAuto,.pf-match-dialog #matcherApproveReview{margin-top:12px}
+.pf-match-footnote{margin:17px 0 0;color:#8197a7;font-size:10px;line-height:1.6}
+.pf-match-error{color:#b12235;font-weight:700}
+@media(max-width:650px){.pf-match-controls{justify-content:flex-start}.pf-match-summary{gap:7px}.pf-match-dialog .dialog-body{padding:13px}}
+
 </style>
 </head>
 <body>
@@ -281,7 +306,7 @@ dialog::backdrop{background:rgba(11,39,64,.45)}
      <div class="kpi drill-kpi pf-status-review" data-kpi="review" role="button" tabindex="0"><div class="heading">НА ПРОВЕРКЕ</div><div class="value" id="metricReview">—</div><div class="sub">Требуется подтвердить совпадение</div></div>
      <div class="kpi drill-kpi pf-status-missing" data-kpi="missing" role="button" tabindex="0"><div class="heading">НЕ НАЙДЕНО В 1С</div><div class="value" id="metricMissing">—</div><div class="sub">По данным загруженной сверки</div></div>
    </div>
-   <div class="pf-section-head"><h2>Структура исполнения</h2><span id="overviewScope">План / факт · текущий период</span></div>
+   <div class="pf-section-head"><h2>Структура исполнения</h2><div class="pf-match-controls"><span id="overviewScope">План / факт · текущий период</span><button id="runMatcher" type="button" class="pf-reconcile-btn">Автосверка 1С</button></div></div>
    <div class="pf-overview-grid">
      <div class="board pf-status-board">
        <div class="pf-board-head"><h3>Статусы заявок</h3><span>по количеству</span></div>
@@ -346,6 +371,20 @@ dialog::backdrop{background:rgba(11,39,64,.45)}
 </div>
 <p class="smallprint">Источник: «Сверка_план_факт_12-16_октября_2026.xlsx», созданная на основе календаря 12–16 октября и выгрузки «Факт БДДС» из 1С. Сверка предварительная: связи-кандидаты требуют подтверждения, внеплановость не доказана автоматически. Данные загружаются из Supabase после авторизации, а не встроены в публичную страницу.</p>
 </div>
+<dialog id="matcherDialog" class="pf-match-dialog" aria-labelledby="matcherTitle">
+  <div class="dialog-header"><div><h2 id="matcherTitle">Автоматическая сверка 1С</h2><small id="matcherPeriod"></small></div><button class="close" id="matcherClose" aria-label="Закрыть">×</button></div>
+  <div class="dialog-body">
+    <div id="matcherMessage" role="status">Готовим предложения по факту БДДС…</div>
+    <div id="matcherResults" hidden>
+      <div id="matcherStats" class="pf-match-summary"></div>
+      <h3>Однозначные совпадения</h3><div id="matcherAuto" class="pf-match-list"></div>
+      <button id="matcherApplyAuto" class="pf-reconcile-btn" type="button" hidden>Применить надёжные совпадения</button>
+      <h3>Требуют проверки</h3><div id="matcherReview" class="pf-match-list"></div>
+      <button id="matcherApproveReview" class="secondary-btn" type="button" hidden>Подтвердить выбранные вручную</button>
+      <p class="pf-match-footnote">Повторное использование проводок заблокировано. Неоднозначные совпадения не изменяют цифры, пока согласователь их не подтвердит.</p>
+    </div>
+  </div>
+</dialog>
 <dialog id="detailModal" aria-labelledby="detailTitle">
  <div class="dialog-header"><h2 id="detailTitle">Карточка сверки</h2><button class="close" id="closeDetail" aria-label="Закрыть">×</button></div>
  <div class="dialog-body" id="detailBody"></div>
@@ -662,6 +701,84 @@ dialog::backdrop{background:rgba(11,39,64,.45)}
    await loadPeriod();
   }catch(error){console.error(error);note(error.message||'Ошибка загрузки сверки',true)}
  }
+
+ let matcherPreview=null;
+ const canConfirmMatches=()=>['admin','approver'].includes(st.user?.role);
+ async function matcherRequest(action,selectedIds=[]){
+  const run=async token=>{
+   return fetch(BASE+'/functions/v1/baza-reconcile',{method:'POST',headers:{...authHeaders(token),'Content-Type':'application/json'},
+    body:JSON.stringify({period_id:st.period.period_id,action,selected_ids:selectedIds})});
+  };
+  let response=await run(st.token);
+  if(response.status===401){const token=await refresh();if(!token)throw Error('Сессия истекла. Войдите повторно.');st.token=token;response=await run(token);}
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok||!data.ok)throw Error(data.error||'Ошибка сервиса сверки: HTTP '+response.status);
+  return data;
+ }
+ function drawMatcher(){
+  const data=matcherPreview?.result;
+  if(!data)return;
+  const stats=data.stats||{};
+  el('matcherStats').innerHTML='<span>Новых однозначных групп: <b>'+int(stats.auto_groups||0)+'</b></span>'+
+   '<span>Операций в группах: <b>'+int(stats.auto_allocations||0)+'</b></span>'+
+   '<span>На ручную проверку: <b>'+int(stats.review_groups||0)+'</b></span>'+
+   '<span>Защищено уже связанных или повторных операций: <b>'+int(stats.protected_facts||0)+'</b></span>';
+  const planByRow=new Map(st.plans.map(p=>[p.plan_row,p]));
+  const renderSuggestion=(x,mode)=>{
+   const first=planByRow.get(x.plan_rows[0]);
+   const title=first?first.payer+' → '+first.counterparty:'Заявка';
+   const labels=x.plan_rows.length>1?'Заявки №'+x.plan_rows.join(', '):'Заявка №'+x.plan_rows[0];
+   const lines=x.entries.map(e=>'1С №'+e.fact_row+' · '+money2(e.amount)).join('; ');
+   const check=mode==='review'&&canConfirmMatches()?'<input type="checkbox" name="matcherReviewItem" value="'+esc(x.id)+'" aria-label="Выбрать '+esc(labels)+'">':'';
+   return '<label class="pf-match-option '+mode+'">'+check+'<span><strong>'+esc(labels)+' · '+money2(x.amount)+
+    '</strong><span class="summary">'+esc(title)+' · '+esc(lines)+'</span><span class="explain">'+esc(x.reason)+'</span></span></label>';
+  };
+  el('matcherAuto').innerHTML=data.auto.length?data.auto.map(x=>renderSuggestion(x,'auto')).join(''):'<div class="empty">Новых однозначных совпадений не обнаружено</div>';
+  el('matcherReview').innerHTML=data.review.length?data.review.map(x=>renderSuggestion(x,'review')).join(''):'<div class="empty">Нет новых предложений для проверки</div>';
+  el('matcherApplyAuto').hidden=!canConfirmMatches()||!data.auto.length;
+  el('matcherApproveReview').hidden=!canConfirmMatches()||!data.review.length;
+  el('matcherResults').hidden=false;
+ }
+ async function openMatcher(){
+  matcherPreview=null;
+  el('matcherResults').hidden=true;el('matcherMessage').className='';
+  el('matcherMessage').textContent='Сопоставляем заявки и операции 1С…';
+  el('matcherPeriod').textContent=st.period?.title||'';
+  if(!el('matcherDialog').open)el('matcherDialog').showModal();
+  el('runMatcher').disabled=true;
+  try{
+   matcherPreview=await matcherRequest('preview');
+   el('matcherMessage').textContent='Предварительная сверка завершена. Никакие записи пока не изменены.';
+   drawMatcher();
+  }catch(e){el('matcherMessage').textContent=e.message;el('matcherMessage').className='pf-match-error';}
+  finally{el('runMatcher').disabled=false;}
+ }
+ async function applyMatcher(mode){
+  if(!matcherPreview||!canConfirmMatches())return;
+  const ids=mode==='auto'?matcherPreview.result.auto.map(x=>x.id):
+    [...document.querySelectorAll('input[name="matcherReviewItem"]:checked')].map(i=>i.value);
+  if(!ids.length){alert('Выберите хотя бы одно предложение');return;}
+  const message=mode==='auto'?'Применить '+ids.length+' однозначных сопоставлений?':'Подтвердить вручную '+ids.length+' спорных сопоставлений? Проверьте все суммы и основания.';
+  if(!confirm(message))return;
+  const btn=el(mode==='auto'?'matcherApplyAuto':'matcherApproveReview');
+  btn.disabled=true;el('matcherMessage').textContent='Проверяем суммы и сохраняем связи в Supabase…';
+  try{
+   const data=await matcherRequest(mode==='auto'?'apply_auto':'approve_review',ids);
+   el('matcherMessage').textContent='Сохранено '+(data.applied?.allocations||0)+' распределений. Обновляем план / факт…';
+   const updated=await rest('reconciliation_periods','select=*&period_id=eq.'+encodeURIComponent(st.period.period_id));
+   if(updated[0]){st.period=updated[0];st.periods=st.periods.map(p=>p.period_id===updated[0].period_id?updated[0]:p);}
+   await loadPeriod();
+   el('matcherDialog').close();
+   chooseTab('overview');
+  }catch(e){el('matcherMessage').textContent=e.message;el('matcherMessage').className='pf-match-error';}
+  finally{btn.disabled=false;}
+ }
+ el('runMatcher').addEventListener('click',openMatcher);
+ el('matcherClose').addEventListener('click',()=>el('matcherDialog').close());
+ el('matcherApplyAuto').addEventListener('click',()=>applyMatcher('auto'));
+ el('matcherApproveReview').addEventListener('click',()=>applyMatcher('review'));
+ el('matcherDialog').addEventListener('click',e=>{if(e.target===el('matcherDialog'))el('matcherDialog').close()});
+
  document.addEventListener('keydown',event=>{const card=event.target.closest?.('[data-kpi]');if(card&&(event.key==='Enter'||event.key===' ')){event.preventDefault();selectKpi(card.dataset.kpi)}});
  document.addEventListener('click',event=>{
   const tab=event.target.closest('[data-tab]');
