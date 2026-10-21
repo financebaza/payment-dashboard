@@ -29,13 +29,26 @@ Deno.serve(async(req:Request)=>{
  if(!/^[\w-]{5,64}$/.test(period))return reply(400,{error:'Некорректный период'});
  if(!['preview','apply_auto','approve_review'].includes(action))return reply(400,{error:'Неизвестное действие'});
  if(action!=='preview'&&!['admin','approver'].includes(profile.role))return reply(403,{error:'Подтверждение сверки доступно только согласователю и администратору'});
- const [{data:periodData,error:periodError},{data:plans,error:planError},{data:facts,error:factError}]=await Promise.all([
-  admin.from('reconciliation_periods').select('period_id,title,date_start,date_end,summary').eq('period_id',period).maybeSingle(),
-  admin.from('reconciliation_plan_rows').select('plan_row,payer,counterparty,flow_sign,flow_type,plan_amount,confirmed_amount,subcategory,project,notes,payment_purpose').eq('period_id',period).order('plan_row').limit(3000),
-  admin.from('reconciliation_fact_operations').select('fact_row,operation_date,payer,counterparty,amount_signed,flow_type,reconciliation_status,plan_refs,payment_purpose,suspected_duplicate').eq('period_id',period).order('fact_row').limit(5000)
- ]);
- if(periodError||planError||factError||!periodData||!plans||!facts)return reply(502,{error:'Не удалось загрузить период сверки',details:periodError?.message||planError?.message||factError?.message});
- if(plans.length>=3000||facts.length>=5000)return reply(422,{error:'Размер периода превышает безопасный предел. Требуется постраничная загрузка.'});
+ async function readAll(table:string,fields:string,sort:string,limit:number){
+   const all:any[]=[];
+   for(let start=0;start<limit;start+=1000){
+     const {data,error}=await admin.from(table).select(fields).eq('period_id',period).order(sort).range(start,start+999);
+     if(error)throw Error(error.message);
+     all.push(...(data||[]));
+     if(!data||data.length<1000)return all;
+   }
+   throw Error('Слишком много строк для одного периода. Данные не должны сверяться частично.');
+ }
+ let periodData:any,plans:any[],facts:any[];
+ try{
+   const {data,error}=await admin.from('reconciliation_periods').select('period_id,title,date_start,date_end,summary').eq('period_id',period).maybeSingle();
+   if(error||!data)throw Error(error?.message||'Период не найден');
+   periodData=data;
+   [plans,facts]=await Promise.all([
+     readAll('reconciliation_plan_rows','plan_row,payer,counterparty,flow_sign,flow_type,plan_amount,confirmed_amount,subcategory,project,notes,payment_purpose','plan_row',3000),
+     readAll('reconciliation_fact_operations','fact_row,operation_date,payer,counterparty,amount_signed,flow_type,reconciliation_status,plan_refs,payment_purpose,suspected_duplicate','fact_row',5000)
+   ]);
+ }catch(e){return reply(502,{error:'Не удалось загрузить весь период сверки',details:e instanceof Error?e.message:String(e)});}
  const result=suggestMatches(plans,facts,{date_start:periodData.date_start,date_end:periodData.date_end});
  const suggestions={auto:result.auto.map((x:any)=>({...x,id:keyOf(x)})),review:result.review.map((x:any)=>({...x,id:keyOf(x)}))};
  if(action==='preview')return reply(200,{ok:true,period:periodData.title,period_id:period,result:{stats:result.stats,...suggestions}});
