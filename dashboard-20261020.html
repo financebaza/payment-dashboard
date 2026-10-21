@@ -197,12 +197,73 @@ button.project-item.dashboard-clickable.selected{background:#e3f0fc;border-color
   display:none!important;
 }
 
+
+/* BAZA_CALENDAR_FORMED_REVIEW_V1 */
+#calendarReviewBanner[hidden],#calendarConfirmDialog[hidden]{display:none!important}
+#calendarReviewBanner{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:13px;background:#f9fcff;border:1px solid #c8dceb;border-left:4px solid #123b67;border-radius:11px;padding:16px 19px;margin-bottom:16px}
+#calendarReviewBanner h2{margin:4px 0 7px;font-size:16px}
+#calendarReviewBanner p{margin:0;color:#638098;font-size:11px;line-height:1.7}
+.calendar-review-label{font-size:9px;font-weight:900;color:#7891a5;letter-spacing:.09em}
+.calendar-review-controls{display:flex;align-items:end;gap:8px;flex-wrap:wrap}
+.calendar-review-controls select{height:38px;min-width:172px;padding:7px 9px;background:#fff;border:1px solid #c9dce8;border-radius:8px;color:#173e5c}
+.calendar-review-btn{height:38px;border:1px solid #123b67;border-radius:8px;background:#123b67;color:#fff;font-weight:800;font-size:11px;padding:8px 13px;cursor:pointer}
+.calendar-review-btn.secondary{background:#fff;color:#305d7c;border-color:#c9dce8}
+.calendar-review-btn:disabled{opacity:.5;cursor:wait}
+#calendarReviewStatus{display:inline-flex;background:#e6eef6;border:1px solid #c4d7e9;color:#235779;border-radius:20px;padding:3px 9px;font-size:10px;font-weight:800}
+#calendarReviewStatus.locked{background:#e8f4ee;border-color:#c6e2d1;color:#286c49}
+body.calendar-review-mode .status-strip,
+body.calendar-review-mode .kpi-board>.board:nth-child(3),
+body.calendar-review-mode #registry thead th:nth-child(8),
+body.calendar-review-mode #registry thead th:nth-child(9),
+body.calendar-review-mode #paymentTable td:nth-child(8),
+body.calendar-review-mode #paymentTable td:nth-child(9),
+body.calendar-review-mode #cashBoard,
+body.calendar-review-mode .modal-actions,
+body.calendar-review-mode #modalStatus,
+body.calendar-review-mode .modal-card>.comment,
+body.calendar-review-mode a[href="#cashBoard"] {display:none!important}
+body.calendar-review-mode .kpi-board{grid-template-columns:1.5fr 1fr}
+#calendarConfirmDialog{width:min(570px,calc(100vw - 30px));border:1px solid #d3e2ec;border-radius:15px;padding:0;color:#153b59;box-shadow:0 23px 70px #103c5470;font:12px Arial,sans-serif}
+#calendarConfirmDialog::backdrop{background:#0e294c80}
+#calendarConfirmDialog .calendar-dialog-head{display:flex;align-items:center;justify-content:space-between;background:#f1f7fb;border-bottom:1px solid #d9e6ed;padding:14px 20px}
+#calendarConfirmDialog .calendar-dialog-head h2{font-size:17px;margin:0}
+#calendarConfirmDialog .calendar-dialog-body{padding:20px}
+#calendarConfirmDialog .calendar-dialog-body p{color:#648098;line-height:1.7}
+#calendarConfirmDialog label{display:block;font-weight:700;font-size:11px;margin:15px 0 5px}
+#calendarConfirmDialog textarea{min-height:75px;width:100%;padding:9px;border:1px solid #d0dfeb;border-radius:8px;font:12px Arial}
+#calendarConfirmDialog .check{display:flex;gap:8px;align-items:start;line-height:1.5}
+#calendarConfirmDialog .check input{width:18px;height:18px;flex:none}
+#calendarConfirmDialog .dialog-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:18px}
+@media(max-width:850px){body.calendar-review-mode .kpi-board{grid-template-columns:1fr}#calendarReviewBanner{align-items:start}}
+
 </style>
 </head>
 <body>
 <div class="page">
 <header class="topbar"><div class="brand"><b>BAZA</b><small>ПЛАТЕЖНЫЙ КОНТРОЛЬ</small></div><div class="period">19–25 ОКТЯБРЯ 2026 · ФИНАНСОВЫЙ КОНТРОЛЬ</div><nav class="nav"><a href="#dashboard">Дашборд</a><a href="#registry">Реестр платежей</a><a href="calendar.html">Формирование ПК</a><a href="#cashBoard">Остатки</a><a href="plan-fact.html">План / факт</a><a id="adminUsersLink" href="users.html" hidden>Пользователи</a></nav></header>
 <section class="hero" id="dashboard"><div><div class="eyebrow">EXECUTIVE VIEW</div><h1>Платежный контроль</h1><p>Куда уходят деньги, за счёт какого источника и какие платежи требуют решения.</p></div><button class="reset" id="reset">Сбросить фильтры</button></section>
+<section id="calendarReviewBanner" hidden aria-live="polite">
+ <div style="flex:1;min-width:235px"><div class="calendar-review-label">НЕДЕЛЬНЫЙ ПЛАТЁЖНЫЙ КАЛЕНДАРЬ</div>
+ <h2><span id="calendarReviewWeek">—</span> <span id="calendarReviewStatus">—</span></h2>
+ <p id="calendarReviewNote">Лидеры рассматривают ПК здесь. Согласование происходит вне системы — дополнительных кнопок согласования нет.</p></div>
+ <div class="calendar-review-controls">
+  <div><div class="calendar-review-label" style="margin-bottom:5px">ПОКАЗЫВАТЬ НЕДЕЛЮ</div><select id="calendarWeekSelect" aria-label="Период сформированного ПК"></select></div>
+  <button id="calendarReturnBtn" class="calendar-review-btn secondary" type="button" hidden>Вернуть на доработку</button>
+  <button id="calendarLockBtn" class="calendar-review-btn" type="button" hidden>Зафиксировать ПК</button>
+ </div>
+</section>
+<dialog id="calendarConfirmDialog" aria-labelledby="calendarConfirmTitle">
+ <div class="calendar-dialog-head"><h2 id="calendarConfirmTitle">Зафиксировать согласованный ПК</h2>
+ <button type="button" class="calendar-review-btn secondary" id="calendarConfirmClose" aria-label="Закрыть">×</button></div>
+ <form id="calendarConfirmForm" class="calendar-dialog-body">
+  <p>Подтверди, что сформированный ПК действительно согласован ФД и уполномоченными руководителями <b>вне BAZA</b>. После фиксации менять эту версию нельзя. Лидерам ничего нажимать не требуется.</p>
+  <label for="calendarApprovalNote">Где, когда и кем согласован ПК</label>
+  <textarea id="calendarApprovalNote" required minlength="8" placeholder="Например: ФД и руководители, согласование 26.10.2026 в 11:45"></textarea>
+  <label class="check"><input id="calendarApprovalConfirm" type="checkbox" required><span>Подтверждаю получение согласований и неизменность версии ПК</span></label>
+  <div class="dialog-actions"><button type="button" class="calendar-review-btn secondary" id="calendarConfirmCancel">Отмена</button>
+  <button type="submit" class="calendar-review-btn" id="calendarConfirmSubmit">Зафиксировать</button></div>
+ </form>
+</dialog>
 <section class="cards"><div class="metric total"><label>ПЕРЕЧИСЛЕНИЯ ВНЕ ГК</label><strong id="kpiTotal">—</strong><small>по выбранным фильтрам</small></div><div class="metric own" data-dash-field="source" data-dash-value="Собственные" role="button" tabindex="0" aria-label="Фильтр: собственные средства"><label>СОБСТВЕННЫЕ · ВНЕ ГК</label><strong id="kpiOwn">—</strong><small>красный — собственные средства</small></div><div class="metric credit" data-dash-field="source" data-dash-value="Кредит" role="button" tabindex="0" aria-label="Фильтр: кредитные средства"><label>КРЕДИТНЫЕ · ВНЕ ГК</label><strong id="kpiCredit">—</strong><small>синий — кредитные средства</small></div><div class="metric"><label>ДОЛЯ КРЕДИТА</label><strong id="kpiShare">—</strong><small>от общей суммы платежей</small></div></section>
 
 <section class="section"><div class="section-head"><h2>Структура платежей</h2><span id="dashboardTotal">—</span></div><div id="activeFilters" class="active-filters" aria-live="polite"></div><div class="kpi-board"><div class="board"><div class="board-title"><h3>Платежи вне ГК по направлениям</h3><span>ТОП-8</span></div><div id="directionRank" class="rank-wrap"></div></div><div class="board"><div class="board-title"><h3>Источники финансирования</h3><span>структура</span></div><div class="source-board"><div id="sourceDonut" class="donut"></div><div id="sourceLegend" class="legend"></div></div></div><div class="board"><div class="board-title"><h3>Статусы</h3><span>по количеству</span></div><div id="statusBoard" class="rank-wrap"></div></div></div><div class="board project-board">
@@ -631,7 +692,112 @@ body.auth-ready .auth-screen{display:none}.auth-guard-note{font-size:9px;color:#
   async function getUser(){if(!session.token()&&!session.refreshToken())return null;const res=await session.fetch(SUPABASE_URL+'/auth/v1/user',{headers:authHeaders()});if(res.status===401)return null;if(!res.ok)throw new Error('Не удаётся проверить сессию: HTTP '+res.status);return res.json();}
   async function getProfile(user){const res=await session.fetch(SUPABASE_URL+'/rest/v1/user_profiles?select=id,email,full_name,role,is_active&id=eq.'+encodeURIComponent(user.id),{headers:authHeaders()});if(!res.ok)throw new Error('Не удалось проверить профиль: HTTP '+res.status);const rows=await res.json();return rows[0]||null;}
   async function login(email,password){const res=await fetch(SUPABASE_URL+'/auth/v1/token?grant_type=password',{method:'POST',headers:{apikey:SUPABASE_KEY,'Content-Type':'application/json'},body:JSON.stringify({email,password})});const data=await res.json().catch(()=>({}));if(!res.ok)throw new Error(data.error_description||data.msg||'Не удалось войти');setTokens(data);return boot();}
+  let activeCalendar=null;
+  let availableCalendarWeeks=[];
+  const formatCalendarDate=x=>new Intl.DateTimeFormat('ru-RU',{day:'2-digit',month:'long'}).format(new Date(x+'T12:00:00Z'));
+  const addCalendarDays=(date,n)=>{const d=new Date(date+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10);};
+  function syncCalendarReview(){
+    const banner=document.getElementById('calendarReviewBanner');
+    if(!activeCalendar){banner.hidden=true;document.body.classList.remove('calendar-review-mode');return;}
+    document.body.classList.add('calendar-review-mode');
+    banner.hidden=false;
+    const week=activeCalendar.week_start;
+    document.getElementById('calendarReviewWeek').textContent=
+      formatCalendarDate(week)+' — '+formatCalendarDate(addCalendarDays(week,6))+' · версия '+activeCalendar.formation_version;
+    const badge=document.getElementById('calendarReviewStatus');
+    badge.textContent=activeCalendar.status==='locked'?'Утверждён':'На рассмотрении';
+    badge.className=activeCalendar.status==='locked'?'locked':'';
+    document.getElementById('calendarReviewNote').textContent=
+      activeCalendar.status==='formed'
+       ?'Сформированный ПК опубликован для рассмотрения Лидерами. Согласование происходит вне BAZA. После получения согласований администратор фиксирует эту версию.'
+       :'Зафиксированный ПК: '+(activeCalendar.approval_note||'внешнее согласование подтверждено')+'. Изменения запрещены.';
+    const select=document.getElementById('calendarWeekSelect');
+    select.replaceChildren(...availableCalendarWeeks.map(w=>{
+      const o=new Option(formatCalendarDate(w.week_start)+' · '+(w.status==='locked'?'утверждён':'на рассмотрении')+' · v'+w.formation_version,w.week_start);
+      return o;
+    }));
+    select.value=week;
+    const canFix=activeCalendar.status==='formed'&&currentProfile?.role==='admin';
+    document.getElementById('calendarLockBtn').hidden=!canFix;
+    document.getElementById('calendarReturnBtn').hidden=!canFix;
+    const period=document.querySelector('.topbar .period');
+    if(period)period.textContent=formatCalendarDate(week).toUpperCase()+' — '+formatCalendarDate(addCalendarDays(week,6)).toUpperCase()+' · '+(activeCalendar.status==='formed'?'ПК НА РАССМОТРЕНИИ':'ПК УТВЕРЖДЁН');
+  }
+  async function calendarPaymentsIfPublished(){
+    const list=await session.fetch(SUPABASE_URL+'/rest/v1/calendar_weeks?select=week_start,status,formation_version,approval_note,locked_at&status=in.(formed,locked)&order=week_start.desc&limit=40',{headers:authHeaders()});
+    if(!list.ok)throw Error('Не удалось получить сформированные ПК: HTTP '+list.status);
+    availableCalendarWeeks=await list.json();
+    if(!availableCalendarWeeks.length){activeCalendar=null;syncCalendarReview();return null;}
+    const preferred=new URLSearchParams(location.search).get('week');
+    activeCalendar=availableCalendarWeeks.find(w=>w.week_start===preferred)||availableCalendarWeeks[0];
+    const response=await session.fetch(SUPABASE_URL+'/rest/v1/calendar_items?select=id,origin,payer,counterparty,amount,project,direction,subcategory,funding_source,flow_type,due_date,source_ref&week_start=eq.'+encodeURIComponent(activeCalendar.week_start)+'&order=due_date.asc,created_at.asc&limit=3000',{headers:authHeaders()});
+    if(!response.ok)throw Error('Не удалось загрузить ПК: HTTP '+response.status);
+    const data=await response.json();
+    if(data.length>=3000)throw Error('Слишком большой ПК. Нельзя показывать неполную выборку.');
+    if(!data.length)throw Error('Сформированный ПК не содержит позиций — проверьте данные.');
+    const result=data.map(r=>({
+      id:'calendar:'+r.id,calendarItemId:r.id,entity:r.payer,counterparty:r.counterparty,
+      amount:Number(r.amount),source:r.funding_source,direction:r.direction,
+      project:r.project,subcategory:r.subcategory,isInternal:r.origin==='vgo'||/ВГО/i.test(r.flow_type),
+      isNonExpense:false,origin:r.origin,dueDate:r.due_date,sourceRef:r.source_ref||''
+    }));
+    syncCalendarReview();
+    return result;
+  }
+  async function lockCalendarFromDashboard(ev){
+    ev.preventDefault();
+    const w=activeCalendar;
+    if(!w||w.status!=='formed'||currentProfile?.role!=='admin')return;
+    const btn=document.getElementById('calendarConfirmSubmit');
+    btn.disabled=true;
+    try{
+      const note=document.getElementById('calendarApprovalNote').value.trim();
+      if(note.length<8||!document.getElementById('calendarApprovalConfirm').checked)throw Error('Подтвердите внешнее согласование и укажите его основание.');
+      const response=await session.fetch(SUPABASE_URL+'/rest/v1/rpc/calendar_lock_week',{method:'POST',
+        headers:{...authHeaders(),'Content-Type':'application/json'},
+        body:JSON.stringify({p_week_start:w.week_start,p_approval_note:note,p_confirmed:true})});
+      if(!response.ok){const err=await response.json().catch(()=>({}));throw Error(err.message||'Фиксация не выполнена');}
+      document.getElementById('calendarConfirmDialog').close();
+      location.href='index.html?week='+encodeURIComponent(w.week_start)+'#registry';
+    }catch(error){alert(error.message||'Не удалось зафиксировать ПК');}
+    finally{btn.disabled=false;}
+  }
+  async function returnCalendarToDraft(){
+    const w=activeCalendar;
+    if(!w||w.status!=='formed'||currentProfile?.role!=='admin')return;
+    const reason=prompt('Почему ПК возвращается на доработку? Предыдущая версия сохранится в истории.');
+    if(reason===null)return;
+    if(reason.trim().length<8){alert('Укажите причину не короче 8 символов');return;}
+    const btn=document.getElementById('calendarReturnBtn');btn.disabled=true;
+    try{
+      const response=await session.fetch(SUPABASE_URL+'/rest/v1/rpc/calendar_return_to_draft',{method:'POST',
+        headers:{...authHeaders(),'Content-Type':'application/json'},
+        body:JSON.stringify({p_week_start:w.week_start,p_reason:reason.trim()})});
+      if(!response.ok){const err=await response.json().catch(()=>({}));throw Error(err.message||'Не удалось вернуть ПК');}
+      location.href='calendar.html?week='+encodeURIComponent(w.week_start);
+    }catch(error){alert(error.message||'Не удалось вернуть ПК на доработку')}
+    finally{btn.disabled=false;}
+  }
+  document.getElementById('calendarWeekSelect').addEventListener('change',e=>{
+    location.href='index.html?week='+encodeURIComponent(e.target.value)+'#registry';
+  });
+  document.getElementById('calendarLockBtn').addEventListener('click',()=>{
+    document.getElementById('calendarConfirmForm').reset();
+    document.getElementById('calendarConfirmDialog').showModal();
+  });
+  document.getElementById('calendarReturnBtn').addEventListener('click',returnCalendarToDraft);
+  document.getElementById('calendarConfirmForm').addEventListener('submit',lockCalendarFromDashboard);
+  document.getElementById('calendarConfirmClose').addEventListener('click',()=>document.getElementById('calendarConfirmDialog').close());
+  document.getElementById('calendarConfirmCancel').addEventListener('click',()=>document.getElementById('calendarConfirmDialog').close());
+
   async function loadPayments(){
+  const published=await calendarPaymentsIfPublished();
+  if(published){
+    window.__BAZA_ALL_PAYMENTS=published.slice();
+    window.PAYMENTS=published.slice();
+    PAY.length=0;PAY.push(...published);
+    return;
+  }
   const res=await session.fetch(SUPABASE_URL+'/rest/v1/payments?select=id,entity,source,direction,amount,counterparty,project,subcategory,is_internal,is_non_expense&order=id.asc',{headers:authHeaders()});
   if(!res.ok)throw new Error('Не удалось загрузить платежи: HTTP '+res.status);
   const raw0=(await res.json()).map(r=>({...r,amount:Number(r.amount),isInternal:r.is_internal===true,isNonExpense:r.is_non_expense===true}));
