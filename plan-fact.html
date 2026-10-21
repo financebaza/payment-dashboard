@@ -224,6 +224,11 @@ dialog::backdrop{background:rgba(11,39,64,.45)}
  .pf-money-row{grid-template-columns:95px 1fr 90px;gap:6px}.pf-money-total{font-size:9px}
  .pf-flow-foot{grid-template-columns:1fr}.pf-chart-legend{font-size:9px}}
 
+
+.pf-method-note{border:1px solid #dce7ef;background:#f9fbfd;border-radius:9px;padding:10px 14px;font-size:10px;color:#718ba0;margin:0 0 14px}
+.pf-method-note summary{cursor:pointer;font-weight:800;color:#50738e}
+.pf-method-note div{padding:9px 0 2px;line-height:1.6}
+
 </style>
 </head>
 <body>
@@ -243,7 +248,7 @@ dialog::backdrop{background:rgba(11,39,64,.45)}
  <div><div class="eyebrow">КОНТРОЛЬ ИСПОЛНЕНИЯ</div><h1>План / факт платежей</h1><p>Проверка исполнения заявок по выгрузке 1С: что оплачено, что требует подтверждения и что пока не найдено.</p></div>
  <div class="period-control"><label for="periodSelect">Период</label><select id="periodSelect" disabled><option>Загрузка…</option></select></div>
 </section>
-<div id="notice" class="notice"><span class="symbol">i</span><span><strong>Предварительная сверка, не бухгалтерское закрытие.</strong> Статьи БДДС в исходной выгрузке были заполнены не полностью. Возможные совпадения и частичные оплаты не засчитываются как исполненные до подтверждения.</span></div>
+<details id="notice" class="pf-method-note"><summary>Методика сверки и ограничения данных</summary><div>Данные 1С сверяются с плановыми заявками. Частичные и вероятные совпадения не признаются оплаченными без подтверждения. Депозиты, займы, ВГО и аккредитивное покрытие показываются отдельно от обычных расходов.</div></details>
 <div id="loadState" class="loading-area"><div class="spin"></div>Загружаем защищённые данные из Supabase…</div>
 <div id="app" hidden>
  <div class="tabs" role="tablist" aria-label="Разделы план-факт">
@@ -309,7 +314,7 @@ dialog::backdrop{background:rgba(11,39,64,.45)}
   <div class="surface">
    <div class="tools">
     <input id="planSearch" type="search" placeholder="Контрагент, плательщик, проект, назначение или номер 1С…" aria-label="Поиск по заявкам">
-    <select id="planStatus" aria-label="Фильтр по результату"><option value="">Все результаты</option><option value="confirmed">Подтверждено</option><option value="review">На проверку</option><option value="missing">Не найдено</option></select>
+    <select id="planStatus" aria-label="Фильтр по результату"><option value="">Все результаты</option><option value="confirmed">Подтверждено</option><option value="review">На проверку</option><option value="missing">Не найдено</option><option value="unconfirmed">Не подтверждено</option></select>
     <select id="planDirection" aria-label="Направление"><option value="">Все направления</option></select>
     <select id="planProject" aria-label="Проект"><option value="">Все проекты</option></select>
     <select id="planFlow" aria-label="Тип потока"><option value="">Все типы потоков</option></select>
@@ -352,7 +357,7 @@ dialog::backdrop{background:rgba(11,39,64,.45)}
  const KEY='sb_publishable_WBg9viktHBpz9lw1Nwqtyw_49Src_lU';
  const MAX_ROWS=35;
  const STATUS={confirmed:['Оплачено','Оплачено с расхождением','Группа оплачена','Техпоток исполнен'],review:['Проверить совпадение','Проверить группу оплат','Возможна частичная оплата']};
- const STATUS_TITLE={confirmed:'Подтверждено',review:'На проверку',missing:'Не найдено'};
+ const STATUS_TITLE={confirmed:'Подтверждено',review:'На проверку',missing:'Не найдено',unconfirmed:'Не подтверждено'};
  const LABELS={bucket:'Результат',direction:'Направление',project:'Проект',flow:'Тип потока'};
  const el=id=>document.getElementById(id);
  const esc=value=>String(value==null?'':value).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
@@ -362,14 +367,14 @@ dialog::backdrop{background:rgba(11,39,64,.45)}
  const pct=(a,b)=>b?new Intl.NumberFormat('ru-RU',{maximumFractionDigits:1}).format(100*a/b)+'%':'0%';
  const statusBucket=status=>STATUS.confirmed.includes(status)?'confirmed':status==='Не найден'?'missing':'review';
  const badge=status=>{const type=statusBucket(status);const kind=status==='Техпоток исполнен'?'tech':type==='confirmed'?'paid':type;return '<span class="badge '+kind+'" title="'+esc(status)+'">'+esc(status)+'</span>'};
- const PROJECTS=['ДМД','ДМД-2','ПКП','ДНК','Алиса','Алиса 2','Алиса 3','Бестселлер','Бренд BAZA','Инвест'];
+ // Keep every named project instead of silently omitting Infrastructure / М73.
  const projectBucket=value=>{
    const x=String(value||'').trim();
-   if(!x)return '';
+   if(!x)return 'Без проекта';
    if(x.split(/[,;]/).map(s=>s.trim()).filter(Boolean).length>1)return 'Несколько проектов';
    if(x.toLowerCase()==='бренд')return 'Бренд BAZA';
    if(x.toLowerCase()==='инвест направления')return 'Инвест';
-   return PROJECTS.find(z=>z.toLowerCase()===x.toLowerCase())||'';
+   return x;
  };
  const st={user:null,token:'',periods:[],period:null,plans:[],unlinked:[],outside:[],tab:'overview',bucket:'',direction:'',project:'',query:'',flow:'',planShown:MAX_ROWS,unlinkedShown:MAX_ROWS,unlinkedQuery:''};
  const note=(message,error=false)=>{el('loadState').innerHTML='<div class="notice'+(error?' error':'')+'" style="display:inline-flex;margin:0"><span class="symbol">'+(error?'!':'i')+'</span><span>'+esc(message)+'</span></div>'};
@@ -429,7 +434,7 @@ dialog::backdrop{background:rgba(11,39,64,.45)}
  }
  function group(rows,fn){const m=new Map();rows.forEach(x=>{const k=fn(x);if(!k)return;m.set(k,(m.get(k)||0)+1)});return [...m].sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0],'ru'));}
  function matchPlan(r,{search=true}={}){
-  if(st.bucket&&statusBucket(r.match_status)!==st.bucket)return false;
+  if(st.bucket&&(st.bucket==='unconfirmed'?statusBucket(r.match_status)==='confirmed':statusBucket(r.match_status)!==st.bucket))return false;
   if(st.direction&&r.direction!==st.direction)return false;
   if(st.project&&projectBucket(r.project)!==st.project)return false;
   if(st.flow&&r.flow_type!==st.flow)return false;
@@ -441,6 +446,7 @@ dialog::backdrop{background:rgba(11,39,64,.45)}
  function setFilter(name,value){st[name]=st[name]===value?'':value;st.planShown=MAX_ROWS;renderAll();}
  function selectKpi(key){
   if(key==='unlinked'){chooseTab('unlinked');return;}
+  if(key==='pendingAmount'){st.bucket=st.bucket==='unconfirmed'?'':'unconfirmed';st.flow='';st.planShown=MAX_ROWS;chooseTab('plan');renderAll();return;}
   if(key==='all'||key==='plan'){st.bucket='';st.flow='';if(key==='all'){st.direction='';st.project='';st.query='';el('planSearch').value='';}chooseTab('plan');renderAll();return;}
   if(key==='other'){st.bucket='confirmed';st.flow='Прочие платежи';}
   else if(key==='matched'){st.bucket='confirmed';st.flow='';}
@@ -448,7 +454,7 @@ dialog::backdrop{background:rgba(11,39,64,.45)}
   st.planShown=MAX_ROWS;renderAll();
  }
  function contextRows(exclude=''){
-  return st.plans.filter(r=>(exclude==='bucket'||!st.bucket||statusBucket(r.match_status)===st.bucket)&&
+  return st.plans.filter(r=>(exclude==='bucket'||!st.bucket||(st.bucket==='unconfirmed'?statusBucket(r.match_status)!=='confirmed':statusBucket(r.match_status)===st.bucket))&&
     (exclude==='direction'||!st.direction||r.direction===st.direction)&&
     (exclude==='project'||!st.project||projectBucket(r.project)===st.project)&&
     (!st.flow||r.flow_type===st.flow));
@@ -466,54 +472,94 @@ dialog::backdrop{background:rgba(11,39,64,.45)}
   const selected=[['bucket',st.bucket?STATUS_TITLE[st.bucket]:''],['direction',st.direction],['project',st.project],['flow',st.flow]].filter(x=>x[1]);
   el('chips').innerHTML=selected.length?'<span class="title">Активные фильтры:</span>'+selected.map(([name,value])=>'<button class="chip" data-clear="'+name+'">'+esc(LABELS[name])+': '+esc(value)+' ×</button>').join('')+'<button class="secondary-btn" data-clear="all">Очистить всё</button>':'';
  }
- function barRows(target,items,onKind,options={}){
-  const max=Math.max(items[0]?.[1]||1,1);
-  if(!items.length){el(target).innerHTML='<div class="empty">Для выбранных фильтров данных нет</div>';return;}
-  el(target).innerHTML=items.slice(0,options.limit||10).map(([name,amount])=>{
-   const selected=onKind==='direction'?st.direction===name:st.project===name;
-   return '<button class="barrow'+(selected?' selected':'')+'" data-choose="'+onKind+'" data-value="'+esc(name)+'" aria-pressed="'+selected+'" title="Фильтр: '+esc(name)+'">'+
-    '<span class="barlabel">'+esc(name)+'</span><span class="track"><span class="fill" style="width:'+Math.round(100*amount/max)+'%"></span></span>'+
-    '<span class="barvalue">'+int(amount)+' заяв.</span></button>';
+ function moneyBars(target,items,filterField,options={}){
+  const groups=new Map();
+  for(const r of items){
+    if(r.flow_sign==='+')continue;
+    const name=filterField==='project'?projectBucket(r.project):String(r.direction||'Без направления').trim();
+    const entry=groups.get(name)||{plan:0,confirmed:0,count:0};
+    entry.plan+=Number(r.plan_amount||0);
+    entry.confirmed+=Number(r.confirmed_amount||0);
+    entry.count++;
+    groups.set(name,entry);
+  }
+  const list=[...groups].sort((a,b)=>b[1].plan-a[1].plan||a[0].localeCompare(b[0],'ru'));
+  if(!list.length){el(target).innerHTML='<div class="empty">Для выбранных фильтров нет плановых списаний</div>';return;}
+  const max=Math.max(...list.map(([,v])=>v.plan),1);
+  el(target).innerHTML=list.slice(0,options.limit||30).map(([name,item])=>{
+    const selected=st[filterField]===name;
+    const part=Math.min(Math.max(item.confirmed,0),item.plan);
+    const remaining=Math.max(0,item.plan-part);
+    const width=n=>(100*n/max).toFixed(3)+'%';
+    return '<button type="button" class="pf-money-row'+(selected?' selected':'')+'" data-choose="'+filterField+'" data-value="'+esc(name)+'" aria-pressed="'+selected+'" title="'+esc(name)+' · План '+money(item.plan)+' · Подтверждено '+money(item.confirmed)+'">'+
+      '<span class="pf-money-label">'+esc(name)+'</span>'+
+      '<span><span class="pf-money-track"><span class="pf-money-confirmed" style="width:'+width(part)+'"></span><span class="pf-money-remaining" style="width:'+width(remaining)+'"></span></span>'+
+      '<span class="pf-money-caption">Подтверждено <b>'+pct(item.confirmed,item.plan)+'</b> · '+int(item.count)+' заявок</span></span>'+
+      '<span class="pf-money-total">'+money(item.plan)+'</span></button>';
   }).join('');
  }
  function renderOverview(){
   const summary=st.period.summary||{};
-  const all=st.plans;
-  const list=contextRows('bucket');
-  const counts={confirmed:0,review:0,missing:0};
-  list.forEach(r=>{const b=statusBucket(r.match_status);counts[b]++});
+  const context=contextRows('bucket');
   const filtered=shownPlan();
-  el('metricTotal').textContent=int(list.length);
+  const counts={confirmed:0,review:0,missing:0};
+  context.forEach(r=>{const k=statusBucket(r.match_status);counts[k]++});
+  const sum=(arr,field)=>arr.reduce((total,r)=>total+Number(r[field]||0),0);
+  const hasFilters=Boolean(st.bucket||st.direction||st.project||st.flow||st.query);
+  const planAmount=hasFilters?sum(filtered.filter(r=>r.flow_sign==='-'),'plan_amount'):Number(summary.plan_debits||0);
+  const confirmedAmount=hasFilters?sum(filtered.filter(r=>r.flow_sign==='-'),'confirmed_amount'):Number(summary.confirmed_total||0);
+  const remaining=Math.max(0,planAmount-confirmedAmount);
+  const progress=planAmount?Math.min(100,Math.max(0,100*confirmedAmount/planAmount)):0;
+  const executed=hasFilters?
+    sum(filtered.filter(r=>r.flow_type==='Прочие платежи'&&statusBucket(r.match_status)==='confirmed'),'confirmed_amount'):
+    Number(summary.confirmed_other_plan||0);
+  el('metricPlan').textContent=money(planAmount);
+  el('metricMatched').textContent=money(confirmedAmount);
+  el('metricRemaining').textContent=money(remaining);
+  el('metricCompletion').textContent=pct(confirmedAmount,planAmount);
+  el('metricCompletionBar').style.width=progress.toFixed(2)+'%';
+  el('metricTotal').textContent=int(context.length);
   el('metricConfirmed').textContent=int(counts.confirmed);
   el('metricReview').textContent=int(counts.review);
   el('metricMissing').textContent=int(counts.missing);
-  el('confirmedPct').textContent=pct(counts.confirmed,list.length)+' заявок в выбранном срезе';
-  document.querySelectorAll('.drill-kpi').forEach(card=>card.classList.toggle('selected',card.dataset.kpi===st.bucket));
-  const sliced=Boolean(st.bucket||st.direction||st.project||st.flow||st.query);
-  const amount=arr=>arr.reduce((sum,r)=>sum+Number(r.confirmed_amount||0),0);
-  el('metricPlan').textContent=money(sliced?filtered.filter(r=>r.flow_sign==='-').reduce((sum,r)=>sum+Number(r.plan_amount||0),0):summary.plan_debits);
-  el('metricMatched').textContent=money(sliced?amount(filtered):summary.confirmed_total);
-  el('metricOther').textContent=money(sliced?amount(filtered.filter(r=>r.flow_type==='Прочие платежи'&&statusBucket(r.match_status)==='confirmed')):summary.confirmed_other_plan);
+  el('confirmedPct').textContent=pct(counts.confirmed,context.length)+' от числа заявок';
+  el('metricOther').textContent=money(executed);
   el('metricUnlinked').textContent=money(summary.fact_operational_unlinked);
-  el('filterSummary').hidden=!sliced;
-  el('filterSummary').textContent=sliced?'Активный срез: '+int(filtered.length)+' из '+int(all.length)+' заявок · нажмите повторно для снятия фильтра.':'';
+  document.querySelectorAll('.drill-kpi').forEach(card=>{
+    const selectedKey=card.dataset.kpi==='pendingAmount'?'unconfirmed':card.dataset.kpi;
+    card.classList.toggle('selected',selectedKey===st.bucket);
+  });
+  el('filterSummary').hidden=!hasFilters;
+  el('filterSummary').textContent=hasFilters?'Активный срез: '+int(filtered.length)+' из '+int(st.plans.length)+' заявок':'';
+  el('overviewScope').textContent=hasFilters?'Отобранные платежи · применены фильтры':'Платёжный календарь · текущий период';
   const total=Object.values(counts).reduce((a,b)=>a+b,0)||1;
-  el('statusStack').innerHTML=['confirmed','review','missing'].map(k=>'<button title="'+STATUS_TITLE[k]+': '+int(counts[k])+'" data-choose="bucket" data-value="'+k+'" style="width:'+(100*counts[k]/total).toFixed(1)+'%" aria-label="'+STATUS_TITLE[k]+'"></button>').join('');
-  const colors={confirmed:'#4a936b',review:'#d2a04f',missing:'#c7636b'};
+  const good=100*counts.confirmed/total;
+  const inReview=100*counts.review/total;
+  el('statusStack').style.background='conic-gradient(#287e59 0% '+good.toFixed(3)+'%,#d29d33 '+good.toFixed(3)+'% '+(good+inReview).toFixed(3)+'%,#d65b65 '+(good+inReview).toFixed(3)+'% 100%)';
+  el('statusStack').setAttribute('aria-label',pct(counts.confirmed,total)+' подтверждено, '+int(counts.review)+' на проверке, '+int(counts.missing)+' не найдено');
+  el('statusDonutPct').textContent=pct(counts.confirmed,total);
+  const colors={confirmed:'#287e59',review:'#d29d33',missing:'#d65b65'};
   el('statusLegend').innerHTML=['confirmed','review','missing'].map(k=>
-    '<button data-choose="bucket" data-value="'+k+'" class="'+(st.bucket===k?'selected':'')+'" aria-pressed="'+(st.bucket===k)+'">'+
+    '<button type="button" data-choose="bucket" data-value="'+k+'" class="'+(st.bucket===k?'selected':'')+'" aria-pressed="'+(st.bucket===k)+'">'+
     '<small><i style="background:'+colors[k]+'"></i>'+STATUS_TITLE[k]+'</small><b>'+int(counts[k])+'</b><small>'+pct(counts[k],total)+' заявок</small></button>').join('');
   const flow=Array.isArray(summary.flow_types)?summary.flow_types:[];
-  const max=Math.max(1,...flow.map(x=>Number(x.amount)||0));
+  const maxFlow=Math.max(1,...flow.map(x=>Number(x.amount)||0));
   el('flowChart').innerHTML=flow.map(x=>{
     const amount=Number(x.amount)||0;
-    return '<button type="button" class="barrow flow-button" data-fact-flow="'+esc(x.type)+'" title="Открыть детализацию '+esc(x.type)+'"><span class="barlabel">'+esc(x.type)+'</span><span class="track"><span class="fill sky" style="width:'+Math.max(.4,100*amount/max)+'%"></span></span><span class="barvalue">'+money(amount)+'</span></button>';
+    return '<button type="button" class="barrow flow-button" data-fact-flow="'+esc(x.type)+'" title="Показать сводку · '+esc(x.type)+'">'+
+      '<span class="barlabel">'+esc(x.type)+'</span><span class="track"><span class="fill sky" style="width:'+Math.max(.4,100*amount/maxFlow)+'%"></span></span>'+
+      '<span class="barvalue">'+money(amount)+'</span></button>';
   }).join('');
-    const rows=shownPlan();
-  barRows('directionChart',group(contextRows('direction'),r=>r.direction),'direction',{limit:12});
-  barRows('projectChart',group(contextRows('project'),r=>projectBucket(r.project)),'project',{limit:12});
-  const exceptions=rows.filter(r=>r.flow_sign!=='+'&&statusBucket(r.match_status)!=='confirmed').sort((a,b)=>Number(b.plan_amount)-Number(a.plan_amount)).slice(0,9);
-  el('issuesList').innerHTML=exceptions.map((r,i)=>'<button class="issue" data-open-plan="'+r.plan_row+'"><span class="number">'+(i+1)+'</span><span><span class="name">'+esc(r.counterparty)+'</span><span class="second">'+esc(r.payer)+' · '+esc(r.project||'Без проекта')+'</span></span><span class="amount">'+money(r.plan_amount)+'</span>'+badge(r.match_status)+'</button>').join('')||'<p class="empty">Все заявки в выбранной группе подтверждены</p>';
+  // Each amount row is internally reconciled: green confirmed + pale remaining = plan.
+  moneyBars('directionChart',contextRows('direction'),'direction');
+  moneyBars('projectChart',contextRows('project'),'project');
+  const issues=filtered.filter(r=>r.flow_sign!=='+'&&statusBucket(r.match_status)!=='confirmed')
+    .sort((a,b)=>Number(b.plan_amount)-Number(a.plan_amount)).slice(0,9);
+  el('issuesList').innerHTML=issues.map((r,i)=>
+    '<button type="button" class="issue" data-open-plan="'+r.plan_row+'"><span class="number">'+(i+1)+'</span>'+
+    '<span><span class="name">'+esc(r.counterparty)+'</span><span class="second">'+esc(r.payer)+' · '+esc(projectBucket(r.project))+'</span></span>'+
+    '<span class="amount">'+money(r.plan_amount)+'</span>'+badge(r.match_status)+'</button>'
+  ).join('')||'<p class="empty">По выбранным фильтрам расхождений нет</p>';
  }
  function fillSelections(){
   const defs=[['planDirection',st.plans.map(x=>x.direction)],['planProject',st.plans.map(x=>projectBucket(x.project)).filter(Boolean)],['planFlow',st.plans.map(x=>x.flow_type)]];
