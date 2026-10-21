@@ -701,38 +701,8 @@ function refillColumnFilters(){
    else if(field==='project')show(label,expense().filter(r=>classifyProject(r.project)===value));
    else show(label,expense().filter(r=>String(r[field]??'')===value));
  }
- document.addEventListener('click',e=>{
-   if(!document.body.classList.contains('auth-ready'))return;
-   const metric=e.target.closest('.metric');
-   if(metric&&metric.closest('.cards')){
-     e.preventDefault();e.stopImmediatePropagation();
-     if(metric.querySelector('#kpiTotal')||metric.querySelector('#kpiShare'))show(metric.querySelector('label')?.textContent||'Все расходы',expense(),metric);
-     else if(metric.dataset.dashField)select(metric.dataset.dashField,metric.dataset.dashValue,metric.querySelector('label')?.textContent||metric.dataset.dashValue);
-     return;
-   }
-   const target=e.target.closest('#directionRank [data-dash-field],#projectRank [data-dash-field],#entityRank [data-dash-field],#statusBoard [data-dash-field],#sourceLegend [data-dash-field]');
-   if(target){
-     e.preventDefault();e.stopImmediatePropagation();
-     select(target.dataset.dashField,target.dataset.dashValue,target.querySelector('.rank-name,.project-item-name')?.textContent||target.dataset.dashValue);
-     return;
-   }
-   if(e.target.closest('#sourceDonut')){
-     const node=document.getElementById('sourceDonut'),rect=node.getBoundingClientRect(),x=e.clientX-rect.left-rect.width/2,y=e.clientY-rect.top-rect.height/2;
-     if(Math.hypot(x,y)<rect.width*.17)return;
-     const deg=(Math.atan2(y,x)*180/Math.PI+450)%360,src=deg<(window.__BAZA_SOURCE_PCT||0)*3.6?'Кредит':'Собственные';
-     e.preventDefault();e.stopImmediatePropagation();select('source',src,src==='Кредит'?'Кредитные средства':'Собственные средства');
-     return;
-   }
-   const quick=e.target.closest('[data-quick]');
-   if(quick){e.preventDefault();e.stopImmediatePropagation();select('status',quick.dataset.quick,quick.textContent.trim());return;}
-   const group=e.target.closest('#vgoClearBoard .vgo-flow-group');
-   if(group){
-     const source=group.querySelector('.vgo-flow-source span')?.textContent;
-     if(!source)return;
-     const list=(window.__BAZA_ALL_PAYMENTS||[]).filter(r=>r.isInternal&&!r.isNonExpense&&r.entity===source&&!/(?:^|[^\p{L}\p{N}])[мm]73(?=$|[^\p{L}\p{N}])|пл[еэ]йэстейт|playestate/iu.test(String(r.entity||'')+' '+String(r.counterparty||''))&&matches(r));
-     show('ВГО: '+source,list,group);return;
-   }
- },true);
+ // Dashboard cross-filtering is handled by original chart and KPI listeners.
+ // Keep this detail modal available only for explicitly launched details, not chart clicks.
  backdrop.addEventListener('click',e=>{if(e.target===backdrop)close();});
  document.getElementById('drillClose').addEventListener('click',close);
  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&backdrop.classList.contains('visible')){e.stopPropagation();close();}});
