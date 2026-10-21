@@ -203,19 +203,19 @@ button.project-item.dashboard-clickable.selected{background:#e3f0fc;border-color
 <div class="page">
 <header class="topbar"><div class="brand"><b>BAZA</b><small>ПЛАТЕЖНЫЙ КОНТРОЛЬ</small></div><div class="period">19–25 ОКТЯБРЯ 2026 · ФИНАНСОВЫЙ КОНТРОЛЬ</div><nav class="nav"><a href="#dashboard">Дашборд</a><a href="#registry">Платежный календарь</a><a href="#cashBoard">Остатки</a><a href="plan-fact.html">План / факт</a><a id="adminUsersLink" href="users.html" hidden>Пользователи</a></nav></header>
 <section class="hero" id="dashboard"><div><div class="eyebrow">EXECUTIVE VIEW</div><h1>Платежный контроль</h1><p>Куда уходят деньги, за счёт какого источника и какие платежи требуют решения.</p></div><button class="reset" id="reset">Сбросить фильтры</button></section>
-<section class="cards"><div class="metric total"><label>ВСЕ ПЛАТЕЖИ</label><strong id="kpiTotal">—</strong><small>по выбранным фильтрам</small></div><div class="metric own" data-dash-field="source" data-dash-value="Собственные" role="button" tabindex="0" aria-label="Фильтр: собственные средства"><label>СОБСТВЕННЫЕ</label><strong id="kpiOwn">—</strong><small>красный — собственные средства</small></div><div class="metric credit" data-dash-field="source" data-dash-value="Кредит" role="button" tabindex="0" aria-label="Фильтр: кредитные средства"><label>КРЕДИТНЫЕ</label><strong id="kpiCredit">—</strong><small>синий — кредитные средства</small></div><div class="metric"><label>ДОЛЯ КРЕДИТА</label><strong id="kpiShare">—</strong><small>от общей суммы платежей</small></div></section>
+<section class="cards"><div class="metric total"><label>ПЕРЕЧИСЛЕНИЯ ВНЕ ГК</label><strong id="kpiTotal">—</strong><small>по выбранным фильтрам</small></div><div class="metric own" data-dash-field="source" data-dash-value="Собственные" role="button" tabindex="0" aria-label="Фильтр: собственные средства"><label>СОБСТВЕННЫЕ · ВНЕ ГК</label><strong id="kpiOwn">—</strong><small>красный — собственные средства</small></div><div class="metric credit" data-dash-field="source" data-dash-value="Кредит" role="button" tabindex="0" aria-label="Фильтр: кредитные средства"><label>КРЕДИТНЫЕ · ВНЕ ГК</label><strong id="kpiCredit">—</strong><small>синий — кредитные средства</small></div><div class="metric"><label>ДОЛЯ КРЕДИТА</label><strong id="kpiShare">—</strong><small>от общей суммы платежей</small></div></section>
 
-<section class="section"><div class="section-head"><h2>Структура платежей</h2><span id="dashboardTotal">—</span></div><div id="activeFilters" class="active-filters" aria-live="polite"></div><div class="kpi-board"><div class="board"><div class="board-title"><h3>Расходы по направлениям</h3><span>ТОП-8</span></div><div id="directionRank" class="rank-wrap"></div></div><div class="board"><div class="board-title"><h3>Источники финансирования</h3><span>структура</span></div><div class="source-board"><div id="sourceDonut" class="donut"></div><div id="sourceLegend" class="legend"></div></div></div><div class="board"><div class="board-title"><h3>Статусы</h3><span>по количеству</span></div><div id="statusBoard" class="rank-wrap"></div></div></div><div class="board project-board">
+<section class="section"><div class="section-head"><h2>Структура платежей</h2><span id="dashboardTotal">—</span></div><div id="activeFilters" class="active-filters" aria-live="polite"></div><div class="kpi-board"><div class="board"><div class="board-title"><h3>Платежи вне ГК по направлениям</h3><span>ТОП-8</span></div><div id="directionRank" class="rank-wrap"></div></div><div class="board"><div class="board-title"><h3>Источники финансирования</h3><span>структура</span></div><div class="source-board"><div id="sourceDonut" class="donut"></div><div id="sourceLegend" class="legend"></div></div></div><div class="board"><div class="board-title"><h3>Статусы</h3><span>по количеству</span></div><div id="statusBoard" class="rank-wrap"></div></div></div><div class="board project-board">
   <div class="board-title">
     <div>
-      <h3>Расходы по проектам</h3>
+      <h3>Платежи вне ГК по проектам</h3>
       <span>Показываются только указанные проекты с расходами · совместные платежи — «Несколько проектов» · Инфраструктура и М73 не включены</span>
     </div>
     <span id="projectSummary">—</span>
   </div>
   <div id="projectRank" class="project-rank"></div>
 </div>
-<div class="board entity-board"><div class="board-title"><h3>Расходы по юридическим лицам</h3><span>рейтинг · по сумме платежей</span></div><div id="entityRank" class="entity-list"></div></div></section>
+<div class="board entity-board"><div class="board-title"><h3>Платежи вне ГК по юрлицам</h3><span>рейтинг · по сумме платежей</span></div><div id="entityRank" class="entity-list"></div></div></section>
 <section class="status-strip"><div><b>Согласование</b><small>нажмите на статус для фильтрации реестра</small></div><div class="counts"><span class="count approved" data-quick="approved"><i></i>Согласовано <b id="approvedCount">0</b></span><span class="count rejected" data-quick="rejected"><i></i>Не согласовано <b id="rejectedCount">0</b></span><span class="count pending" data-quick="pending"><i></i>Ожидает <b id="pendingCount">0</b></span></div></section>
 <section class="registry" id="registry"><div class="registry-head"><div><div class="eyebrow">РЕЕСТР</div><h2>Платежи</h2></div><span id="rowsCount">—</span></div><div class="table-card"><div class="table-wrap"><table><thead><tr><th>Юрлицо<select class="column-filter" data-field="entity"><option value="">Все</option></select></th><th>Контрагент<select class="column-filter" data-field="counterparty"><option value="">Все</option></select></th><th>Направление<select class="column-filter" data-field="direction"><option value="">Все</option></select></th><th>Проект<select class="column-filter" data-field="project"><option value="">Все</option></select></th><th>Подстатья<select class="column-filter" data-field="subcategory"><option value="">Все</option></select></th><th>Источник<select class="column-filter" data-field="source"><option value="">Все</option></select></th><th>Сумма</th><th>Статус / действие<select class="column-filter" data-field="status"><option value="">Все</option><option value="pending">Ожидает</option><option value="approved">Согласован</option><option value="rejected">Не согласован</option></select></th><th>Комментарий</th></tr></thead><tbody id="paymentTable"></tbody></table></div></div></section>
 </div>
@@ -259,7 +259,19 @@ function matches(r){if(state.source&&r.source!==state.source||state.direction&&r
   if(v===MULTI_PROJECT_KEY||PROJECT_CATEGORIES.includes(v)){if(classifyProject(r.project)!==v)return false;continue;}
 }
 if((f==='project'?String(r.project??'').trim():String(r[f]??''))!==v)return false;}return true}window.__BAZA_MATCH_PAYMENTS=matches;function rows(){return PAY.filter(matches)}function agg(rs,f){const m={};rs.forEach(r=>m[r[f]]=(m[r[f]]||0)+Number(r.amount||0));return Object.entries(m).sort((a,b)=>b[1]-a[1])}
-function expenseRows(){return PAY.filter(r=>matches(r)&&!r.isNonExpense&&!r.isInternal&&!/(?:^|[^\p{L}\p{N}])[мm]73(?=$|[^\p{L}\p{N}])|пл[еэ]йэстейт|playestate/iu.test(String(r.entity||''))&&!/(?:^|[^\p{L}\p{N}])[мm]73(?=$|[^\p{L}\p{N}])|пл[еэ]йэстейт|playestate/iu.test(String(r.counterparty||'')));}
+/* BAZA_CASH_PERIMETER_V1: М73 and PlayEstate are OUTSIDE the BAZA group. */
+const isOutsideGroupPayee=name=>{
+  const normalized=String(name||'').toLocaleLowerCase('ru-RU').replace(/[«»"'\s.\-–—]/g,'');
+  return normalized==='м73'||normalized==='m73'||normalized.startsWith('плейэстейт')||normalized.startsWith('playestate');
+};
+function isExternalCashPayment(r){
+  // Incoming bank disbursements and mirrored receipts are not payments.
+  // Ordinary outward transfers are counted once; internal transfers count only
+  // when their recipient is explicitly outside the consolidated group.
+  return !r.isNonExpense && (!r.isInternal || isOutsideGroupPayee(r.counterparty));
+}
+window.__BAZA_IS_EXTERNAL_CASH_PAYMENT=isExternalCashPayment;
+function expenseRows(){return PAY.filter(r=>matches(r)&&isExternalCashPayment(r));}
 function renderKpi(){const rs=expenseRows(),t=rs.reduce((s,r)=>s+r.amount,0),o=rs.filter(r=>r.source==='Собственные').reduce((s,r)=>s+r.amount,0),c=rs.filter(r=>r.source==='Кредит').reduce((s,r)=>s+r.amount,0);kpiTotal.textContent=money(t);kpiOwn.textContent=money(o);kpiCredit.textContent=money(c);kpiShare.textContent=(t?c/t*100:0).toFixed(1)+'%';dashboardTotal.textContent=money(t)}
 function sourceAmounts(rs){let credit=0,own=0;for(const r of rs){if(r.source==='Кредит')credit+=Number(r.amount||0);else if(r.source==='Собственные')own+=Number(r.amount||0);}return {credit,own,total:credit+own};}
 function sourceBar(v,max){const denom=Math.max(max,1);return '<span class="track split-track" aria-label="Кредит '+money(v.credit)+', собственные '+money(v.own)+'"><i class="split-credit" style="width:'+Math.max(0,100*v.credit/denom)+'%"></i><i class="split-own" style="width:'+Math.max(0,100*v.own/denom)+'%"></i></span>';}
@@ -462,7 +474,7 @@ render();
 <div class="cash-wrap"><table class="cash-table"><colgroup><col style="width:29%"><col style="width:12%"><col style="width:12%"><col style="width:12%"><col style="width:15%"><col style="width:12%"><col style="width:8%"></colgroup><thead><tr><th>Юридическое лицо</th><th>На начало</th><th>Приход (план)</th><th>Расход (план)</th><th>На конец</th><th>Изменение</th><th></th></tr></thead><tbody id="cashRows"><tr><td colspan="7">Загрузка…</td></tr></tbody></table></div>
 <p id="cashNote">Начальные остатки: исходный Excel, лист «Остатки», на 19.10.2026. Прогноз, не банковский факт.</p><div class="cash-reconciliation" id="cashReconciliation" aria-live="polite"></div></section>
 <section class="vgo-section" id="vgo"><div class="vgo-head"><div><div class="eyebrow">ВГО · ВНУТРИГРУППОВЫЕ ДВИЖЕНИЯ</div><h2>ВГО / внутренние перечисления</h2><div class="vgo-note">Не входят в реальные расходы и не попадают в реестр согласования.</div></div></div><div class="vgo-cards"><div class="vgo-card"><label>ВСЕ ВГО / ВНУТРЕННИЕ</label><strong id="vgoTotal">—</strong></div><div class="vgo-card"><label>КОЛИЧЕСТВО ОПЕРАЦИЙ</label><strong id="vgoCount">—</strong></div><div class="vgo-card"><label>КРУПНЕЙШИЙ ПРОЕКТ</label><strong id="vgoTop">—</strong></div></div><div class="vgo-tools"><input id="vgoSearch" placeholder="Юрлицо, контрагент, проект…"><select id="vgoEntity"><option value="">Все юрлица</option></select><select id="vgoProject"><option value="">Все проекты</option></select></div><div class="table-card"><div class="table-wrap"><table><thead><tr><th>Откуда</th><th>Куда</th><th>Проект</th><th>Направление</th><th>Подстатья</th><th>Сумма</th></tr></thead><tbody id="vgoTable"></tbody></table></div></div></section>`);
-  const vgoRows=()=>window.__BAZA_ALL_PAYMENTS.filter(r=>r.isInternal&&!r.isNonExpense);
+  const vgoRows=()=>window.__BAZA_ALL_PAYMENTS.filter(r=>r.isInternal&&!r.isNonExpense&&!(window.__BAZA_IS_EXTERNAL_CASH_PAYMENT?.(r)));
   const fmt=n=>new Intl.NumberFormat('ru-RU',{maximumFractionDigits:0}).format(Math.round(Number(n)||0))+' ₽';
   const esc2=s=>String(s??'—').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
   const fill=(id,arr)=>arr.forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;document.getElementById(id).appendChild(o)});
@@ -485,7 +497,7 @@ render();
   if(window.__BAZA_VGO_V2)return; window.__BAZA_VGO_V2=true;
   const esc=s=>String(s??'—').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
   const fmt=n=>new Intl.NumberFormat('ru-RU',{maximumFractionDigits:0}).format(Math.round(Number(n)||0))+' ₽';
-  const base=()=>window.__BAZA_ALL_PAYMENTS.filter(r=>r.isInternal&&!r.isNonExpense);
+  const base=()=>window.__BAZA_ALL_PAYMENTS.filter(r=>r.isInternal&&!r.isNonExpense&&!(window.__BAZA_IS_EXTERNAL_CASH_PAYMENT?.(r)));
   const section=document.getElementById('vgo'); if(!section)return;
   const table=section.querySelector('table');
   const thead=table.querySelector('thead');
