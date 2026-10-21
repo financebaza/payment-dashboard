@@ -21,6 +21,18 @@ button:hover{background:#174c77}button:disabled{opacity:.6;cursor:wait}
 .note{padding:12px 15px;border-radius:9px;background:#f0f5f9;color:#55748d;margin:16px 0;font-size:13px}
 .success{background:#e9f6ed;color:#1f683c}.error{background:#fff0f0;color:#9a2430}
 [hidden]{display:none!important}.small{margin-top:17px;color:#6b8296;font-size:11px}
+
+.preset-panel{border-top:1px solid #e0eaf2;margin-top:25px;padding-top:20px}
+.preset-panel h2{font-size:18px;margin:0 0 5px}
+.preset-panel p{font-size:12px;color:#70879a;margin:0 0 12px}
+.preset-row{display:flex;justify-content:space-between;align-items:center;gap:12px;border:1px solid #d9e6ee;border-radius:10px;padding:13px;margin:9px 0}
+.preset-row strong{display:block;font-size:13px}.preset-row small{display:block;color:#6c8194;font-size:11px;margin:5px 0}
+.preset-row .preset-state{display:block;color:#55768e;font-size:11px}
+.preset-row .preset-state.sent{color:#1e7546}.preset-row .preset-state.failed{color:#a51f31}
+.preset-row button{width:auto;margin:0;flex:none;padding:9px 14px}
+#inviteBoth{margin-top:11px;background:#e51d2a}
+@media(max-width:620px){.preset-row{align-items:stretch;flex-direction:column}.preset-row button{width:100%}}
+
 </style>
 </head>
 <body>
@@ -32,9 +44,9 @@ button:hover{background:#174c77}button:disabled{opacity:.6;cursor:wait}
   <div class="note" id="state" role="status">Проверяем права администратора…</div>
   <form id="userForm" hidden>
    <label for="fullName">Имя и фамилия</label>
-   <input id="fullName" name="fullName" type="text" value="Полина Шмакова" required minlength="3" maxlength="140" autocomplete="name">
+   <input id="fullName" name="fullName" type="text" placeholder="Имя и фамилия" required minlength="3" maxlength="140" autocomplete="name">
    <label for="email">Корпоративная почта</label>
-   <input id="email" name="email" type="email" value="p.shmakova@baza.bz" required autocomplete="email">
+   <input id="email" name="email" type="email" placeholder="user@baza.bz" required autocomplete="email">
    <label for="role">Роль</label>
    <select id="role" name="role">
     <option value="approver" selected>Согласующий — просмотр и согласование платежей</option>
@@ -42,6 +54,20 @@ button:hover{background:#174c77}button:disabled{opacity:.6;cursor:wait}
    </select>
    <button id="sendInvite" type="submit">Создать пользователя и отправить приглашение</button>
   </form>
+
+ <div class="preset-panel" id="presetInvites" hidden>
+  <h2>Новые сотрудники</h2>
+  <p>Отправьте приглашения на рабочую почту. Пароль сотрудники зададут по ссылке из письма.</p>
+  <div class="preset-row" data-preset="mukina">
+    <div><strong>Светлана Мукина</strong><small>s.mukina@baza.bz · Просмотр: дашборды и реестр без права согласования</small><span class="preset-state" id="statusMukina">Ожидает приглашения</span></div>
+    <button type="button" data-invite="mukina">Пригласить</button>
+  </div>
+  <div class="preset-row" data-preset="reshetova">
+    <div><strong>Ольга Решетова</strong><small>o.reshetova@baza.bz · Согласователь: просмотр и согласование платежей</small><span class="preset-state" id="statusReshetova">Ожидает приглашения</span></div>
+    <button type="button" data-invite="reshetova">Пригласить</button>
+  </div>
+  <button type="button" id="inviteBoth">Отправить оба приглашения</button>
+ </div>
   <div class="small">Добавлять сотрудников может только активный администратор. Права проверяются на сервере Supabase.</div>
  </section>
 </main>
@@ -86,8 +112,9 @@ button:hover{background:#174c77}button:disabled{opacity:.6;cursor:wait}
  async function init(){
   try{
    if(!(await adminToken())){show('Для приглашения сотрудников войдите в дашборд под учётной записью администратора.', 'error');return;}
-   show('Права администратора подтверждены. Проверьте данные Полины и отправьте приглашение.','success');
+   show('Права администратора подтверждены. Можно отправить подготовленные приглашения или добавить другого сотрудника.','success');
    form.hidden=false;
+   document.getElementById('presetInvites').hidden=false;
   }catch(err){show('Не удалось проверить сессию: '+(err.message||'ошибка соединения'), 'error');}
  }
  form.addEventListener('submit',async event=>{
@@ -111,6 +138,49 @@ button:hover{background:#174c77}button:disabled{opacity:.6;cursor:wait}
    show(err.message||'Ошибка отправки приглашения','error');
   }finally{submit.disabled=false;submit.textContent='Создать пользователя и отправить приглашение';}
  });
+
+ const presets={
+  mukina:{full_name:'Светлана Мукина',email:'s.mukina@baza.bz',role:'viewer',status:'statusMukina'},
+  reshetova:{full_name:'Ольга Решетова',email:'o.reshetova@baza.bz',role:'approver',status:'statusReshetova'}
+ };
+ const successfullyInvited=new Set();
+ async function sendPreset(code){
+  const p=presets[code];if(!p||successfullyInvited.has(code))return true;
+  const button=document.querySelector('[data-invite="'+code+'"]');
+  const message=document.getElementById(p.status);
+  button.disabled=true;button.textContent='Отправляем…';
+  message.className='preset-state';message.textContent='Отправка приглашения…';
+  try{
+   const token=await adminToken();
+   if(!token)throw new Error('Войдите в систему под администратором.');
+   const res=await fetch(SUPABASE_URL+'/functions/v1/baza-invite-user',{
+    method:'POST',headers:{...authHeaders(token),'Content-Type':'application/json'},
+    body:JSON.stringify({full_name:p.full_name,email:p.email,role:p.role})
+   });
+   const result=await res.json().catch(()=>({}));
+   if(!res.ok||result.ok!==true)throw new Error(result.error||'Приглашение не подтверждено (HTTP '+res.status+')');
+   successfullyInvited.add(code);
+   button.textContent='Отправлено';
+   message.textContent='Приглашение принято Supabase; проверьте доставку письма.';
+   message.className='preset-state sent';
+   return true;
+  }catch(err){
+   message.textContent=err.message||'Ошибка отправки';
+   message.className='preset-state failed';
+   button.disabled=false;button.textContent='Повторить';
+   return false;
+  }
+ }
+ document.querySelectorAll('[data-invite]').forEach(btn=>btn.addEventListener('click',()=>sendPreset(btn.dataset.invite)));
+ document.getElementById('inviteBoth').addEventListener('click',async e=>{
+  const btn=e.currentTarget;btn.disabled=true;btn.textContent='Отправляем…';
+  try{
+   await sendPreset('mukina');
+   await sendPreset('reshetova');
+   btn.textContent=successfullyInvited.size===2?'Оба приглашения отправлены':'Повторить неотправленные';
+  }finally{btn.disabled=false;}
+ });
+
  init();
 })();
 </script>
