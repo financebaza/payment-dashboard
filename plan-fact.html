@@ -390,11 +390,14 @@ dialog::backdrop{background:rgba(11,39,64,.45)}
  <div class="dialog-header"><h2 id="detailTitle">Карточка сверки</h2><button class="close" id="closeDetail" aria-label="Закрыть">×</button></div>
  <div class="dialog-body" id="detailBody"></div>
 </dialog>
+<script src="auth-session.js?v=3"></script>
 <script>
 (function(){
  'use strict';
  const BASE='https://duvdlpzwxtuwbwyggpla.supabase.co';
  const KEY='sb_publishable_WBg9viktHBpz9lw1Nwqtyw_49Src_lU';
+ const session=window.BazaSession;
+ session.configure({url:BASE,key:KEY});session.start();
  const MAX_ROWS=35;
  const STATUS={confirmed:['Оплачено','Оплачено с расхождением','Группа оплачена','Техпоток исполнен'],review:['Проверить совпадение','Проверить группу оплат','Возможна частичная оплата','Частично подтверждено по 1С']};
  const STATUS_TITLE={confirmed:'Подтверждено',review:'На проверку',missing:'Не найдено',unconfirmed:'Не подтверждено'};
@@ -419,35 +422,24 @@ dialog::backdrop{background:rgba(11,39,64,.45)}
  const st={user:null,token:'',periods:[],period:null,plans:[],unlinked:[],outside:[],tab:'overview',bucket:'',direction:'',project:'',query:'',flow:'',planShown:MAX_ROWS,unlinkedShown:MAX_ROWS,unlinkedQuery:''};
  const note=(message,error=false)=>{el('loadState').innerHTML='<div class="notice'+(error?' error':'')+'" style="display:inline-flex;margin:0"><span class="symbol">'+(error?'!':'i')+'</span><span>'+esc(message)+'</span></div>'};
  function authHeaders(token){return {apikey:KEY,Authorization:'Bearer '+token,Accept:'application/json'};}
- async function refresh(){
-  const old=localStorage.getItem('baza_refresh_token');
-  if(!old)return null;
-  const res=await fetch(BASE+'/auth/v1/token?grant_type=refresh_token',{method:'POST',headers:{apikey:KEY,'Content-Type':'application/json'},body:JSON.stringify({refresh_token:old})});
-  if(!res.ok)return null;
-  const d=await res.json();
-  if(!d.access_token)return null;
-  localStorage.setItem('baza_access_token',d.access_token);
-  if(d.refresh_token)localStorage.setItem('baza_refresh_token',d.refresh_token);
-  return d.access_token;
- }
+ async function refresh(){return session.refresh({force:true,previousToken:st.token});}
  async function identify(){
-  let token=localStorage.getItem('baza_access_token');
-  if(!token)return null;
-  let res=await fetch(BASE+'/auth/v1/user',{headers:authHeaders(token)});
-  if(res.status===401){token=await refresh();if(!token)return null;res=await fetch(BASE+'/auth/v1/user',{headers:authHeaders(token)})}
-  if(!res.ok)return null;
-  const user=await res.json();
-  const profileRes=await fetch(BASE+'/rest/v1/user_profiles?select=role,is_active,full_name,email&id=eq.'+encodeURIComponent(user.id),{headers:authHeaders(token)});
-  if(!profileRes.ok)return null;
+  if(!session.token()&&!session.refreshToken())return null;
+  const response=await session.fetch(BASE+'/auth/v1/user',{headers:authHeaders(session.token())});
+  if(response.status===401)return null;
+  if(!response.ok)throw Error('Ошибка авторизации Supabase: '+response.status);
+  const user=await response.json();
+  const profileRes=await session.fetch(BASE+'/rest/v1/user_profiles?select=role,is_active,full_name,email&id=eq.'+encodeURIComponent(user.id),{headers:authHeaders(session.token())});
+  if(!profileRes.ok)throw Error('Не удалось проверить права: HTTP '+profileRes.status);
   const profiles=await profileRes.json();
-  const p=profiles[0];
-  if(!p||p.is_active!==true||!['admin','approver','viewer'].includes(p.role))return null;
-  return {token,user,profile:p};
+  const profile=profiles[0];
+  if(!profile||profile.is_active!==true||!['admin','approver','viewer'].includes(profile.role))return null;
+  return {token:session.token(),user,profile};
  }
  async function rest(table,search){
-  let response=await fetch(BASE+'/rest/v1/'+table+'?'+search,{headers:{...authHeaders(st.token),Prefer:'count=exact'}});
-  if(response.status===401){const fresh=await refresh();if(!fresh)throw Error('Сессия истекла. Войдите снова.');st.token=fresh;response=await fetch(BASE+'/rest/v1/'+table+'?'+search,{headers:authHeaders(fresh)})}
+  const response=await session.fetch(BASE+'/rest/v1/'+table+'?'+search,{headers:{...authHeaders(session.token()),Prefer:'count=exact'}});
   if(!response.ok){const error=await response.json().catch(()=>({}));throw Error('Supabase: '+(error.message||'HTTP '+response.status))}
+  st.token=session.token();
   return response.json();
  }
  async function loadPeriod(){
@@ -706,13 +698,11 @@ dialog::backdrop{background:rgba(11,39,64,.45)}
  let matcherPreview=null;
  const canConfirmMatches=()=>['admin','approver'].includes(st.user?.role);
  async function matcherRequest(action,selectedIds=[]){
-  const run=async token=>{
-   return fetch(BASE+'/functions/v1/baza-reconcile',{method:'POST',headers:{...authHeaders(token),'Content-Type':'application/json'},
+  const response=await session.fetch(BASE+'/functions/v1/baza-reconcile',{method:'POST',
+    headers:{...authHeaders(session.token()),'Content-Type':'application/json'},
     body:JSON.stringify({period_id:st.period.period_id,action,selected_ids:selectedIds})});
-  };
-  let response=await run(st.token);
-  if(response.status===401){const token=await refresh();if(!token)throw Error('Сессия истекла. Войдите повторно.');st.token=token;response=await run(token);}
   const data=await response.json().catch(()=>({}));
+  st.token=session.token();
   if(!response.ok||!data.ok)throw Error(data.error||'Ошибка сервиса сверки: HTTP '+response.status);
   return data;
  }
