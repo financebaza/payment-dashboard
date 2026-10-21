@@ -243,24 +243,25 @@ async function saveApproval(id,status,comment=getComment(id)){
     if(modalPayment)openModal(modalPayment);
   }catch(e){alert(e.message||'Ошибка сохранения. Попробуйте ещё раз.');}
 }
+/* BAZA_PROJECT_ACTUAL_NAMES_V1: one project group for every outgoing payment. */
 const UNASSIGNED_PROJECT='__BAZA_UNASSIGNED_PROJECT__';
-const PROJECT_CATEGORIES=['ДМД','ДМД-2','ПКП','ДНК','Алиса','Алиса 2','Алиса 3','Бестселлер','Бренд BAZA','Инвест'];
 const MULTI_PROJECT_KEY='__BAZA_MULTI_PROJECT__';
-const OTHER_PROJECT_KEY='__BAZA_OTHER_PROJECT__';
 function classifyProject(raw){
   const name=String(raw??'').trim();
   if(!name)return null;
   if(name.split(/[,;]/).map(p=>p.trim()).filter(Boolean).length>1)return MULTI_PROJECT_KEY;
-  return PROJECT_CATEGORIES.find(p=>p.toLocaleLowerCase('ru-RU')===name.toLocaleLowerCase('ru-RU'))||null;
+  // Preserve actual project names from the payment, including М73 and Инфраструктура.
+  return name;
 }
-// Every payment must belong to exactly one project bar; unknown or empty categories go to “Иное”.
-const projectGroupKey=raw=>classifyProject(raw)||OTHER_PROJECT_KEY;
-const PROJECT_DISPLAY_NAME=key=>key===MULTI_PROJECT_KEY?'Несколько проектов':key===OTHER_PROJECT_KEY?'Иное':key===UNASSIGNED_PROJECT?'Без проекта':key;
+const projectGroupKey=raw=>classifyProject(raw)||UNASSIGNED_PROJECT;
+const PROJECT_DISPLAY_NAME=key=>key===MULTI_PROJECT_KEY?'Несколько проектов':key===UNASSIGNED_PROJECT?'Без проекта':key;
 
 function matches(r){if(state.source&&r.source!==state.source||state.direction&&r.direction!==state.direction||state.entity&&r.entity!==state.entity||state.status&&getStatus(r.id)!==state.status)return false;if(state.search&&![r.counterparty,r.entity,r.direction,r.project,r.subcategory,r.source].join(' ').toLowerCase().includes(state.search.toLowerCase()))return false;for(const[f,v]of Object.entries(state.column)){if(!v)continue;if(f==='project'){
   if(v===UNASSIGNED_PROJECT){if(String(r.project??'').trim())return false;continue;}
-  if(v===OTHER_PROJECT_KEY){if(projectGroupKey(r.project)!==OTHER_PROJECT_KEY)return false;continue;}
-  if(v===MULTI_PROJECT_KEY||PROJECT_CATEGORIES.includes(v)){if(projectGroupKey(r.project)!==v)return false;continue;}
+  if(v===MULTI_PROJECT_KEY){if(projectGroupKey(r.project)!==MULTI_PROJECT_KEY)return false;continue;}
+  // Ordinary project filters match actual project names, even if not on a preset list.
+  if(String(r.project??'').trim()!==v)return false;
+  continue;
 }
 if((f==='project'?String(r.project??'').trim():String(r[f]??''))!==v)return false;}return true}window.__BAZA_MATCH_PAYMENTS=matches;function rows(){return PAY.filter(matches)}function agg(rs,f){const m={};rs.forEach(r=>m[r[f]]=(m[r[f]]||0)+Number(r.amount||0));return Object.entries(m).sort((a,b)=>b[1]-a[1])}
 /* BAZA_CASH_PERIMETER_V1: М73 and PlayEstate are OUTSIDE the BAZA group. */
@@ -664,11 +665,9 @@ function refillColumnFilters(){
       const values=[...new Set(PAY.map(r=>String(r[field]??'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ru'));
       const hasUnassigned=field==='project'&&PAY.some(r=>!String(r.project??'').trim());
       const hasMulti=field==='project'&&PAY.some(r=>projectGroupKey(r.project)===MULTI_PROJECT_KEY);
-      const hasOther=field==='project'&&PAY.some(r=>isExternalCashPayment(r)&&projectGroupKey(r.project)===OTHER_PROJECT_KEY);
       const available=[...values];
       const opts=[new Option('Все',''),...values.map(v=>new Option(v,v))];
       if(hasMulti){opts.push(new Option('Несколько проектов',MULTI_PROJECT_KEY));available.push(MULTI_PROJECT_KEY);}
-      if(hasOther){opts.push(new Option('Иное',OTHER_PROJECT_KEY));available.push(OTHER_PROJECT_KEY);}
       if(hasUnassigned){opts.push(new Option('Без проекта',UNASSIGNED_PROJECT));available.push(UNASSIGNED_PROJECT);}
       sel.replaceChildren(...opts);
       sel.value=available.includes(previous)?previous:'';
