@@ -132,16 +132,109 @@ dialog::backdrop{background:rgba(11,39,64,.45)}
 @media(max-width:520px){.kpis{gap:8px}.kpi{padding:13px 12px}.kpi .value{font-size:23px}.kpi.money .value{font-size:19px}.tabs .right-label{display:none}.board{padding:14px 12px}.legend-status{grid-template-columns:1fr}.barrow{grid-template-columns:minmax(100px,125px) minmax(30px,1fr) 75px;gap:6px}.barlabel,.barvalue{font-size:9px}.detail-grid{grid-template-columns:1fr}}
 
 .drill-kpi{cursor:pointer;transition:transform .13s,box-shadow .13s}.drill-kpi:hover{transform:translateY(-2px);box-shadow:0 9px 20px #0b36501a}.drill-kpi:focus-visible{outline:3px solid #6ea5cf;outline-offset:2px}.drill-kpi.selected{outline:2px solid #4c94c5}.flow-button{cursor:pointer!important}.flow-button:hover,.flow-button.selected{background:#e8f3fc;border-color:#afcde2}.filter-summary{color:#728ba2;font-size:10px;margin:0 0 12px}
+
+/* BAZA_PLAN_FACT_EXECUTIVE_V2 */
+:root{--navy:#123b67;--red:#e51d2a;--ink:#0a3155;--border:#d9e5ef}
+.page{max-width:1500px;padding:0 24px 44px}
+.topbar{height:auto;min-height:78px;position:sticky;top:0;z-index:35;padding:11px 18px;
+  background:#e51d2a;border:1px solid #c31826;border-top:0;border-radius:0 0 12px 12px;
+  box-shadow:0 7px 22px rgba(102,15,27,.23);gap:18px}
+.brand{flex:none;min-width:140px}
+.brand b{font-size:29px;letter-spacing:-1.6px;color:#fff}
+.brand small{margin-top:4px;color:#fff;opacity:.88;font-size:8px}
+.period{color:#fff;font-size:10px;opacity:.94;flex:1}
+.nav{display:flex;align-items:center;gap:5px;flex-wrap:nowrap;background:rgba(102,0,15,.20);padding:6px;border-radius:11px}
+.nav a{display:inline-flex;justify-content:center;align-items:center;min-height:39px;margin:0;padding:10px 14px;
+  color:#fff;background:rgba(130,0,17,.15);border:1px solid rgba(255,255,255,.38);
+  border-radius:8px;font-size:12px;font-weight:800;white-space:nowrap}
+.nav a:hover{background:rgba(255,255,255,.2);color:#fff}
+.nav a.active,.nav a[aria-current=page]{background:#fff;color:#c41628;border-color:#fff;box-shadow:inset 0 -3px 0 #a90d1f}
+.hero{padding:26px 0 16px;align-items:center}
+.hero h1{font-size:30px;margin:6px 0}
+.hero p{display:none}
+.eyebrow{letter-spacing:1.5px}
+.period-control{gap:10px}.period-control label{color:#6b8298;font-size:10px;font-weight:800}
+.tabs{margin:2px 0 16px;gap:7px}.tab{font-size:11px;padding:10px 13px}
+.tab.active{background:var(--navy);border-color:var(--navy)}
+.pf-kpi-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:0 0 12px}
+.kpi{padding:17px 18px;min-height:105px;border-radius:12px}
+.kpi .heading{font-size:9px;letter-spacing:1.15px;font-weight:900}
+.kpi .value{font-size:25px;line-height:1.15;margin:12px 0 3px}
+.kpi .sub{margin-top:6px;font-size:9px;color:#879cae}
+.kpi.emphasis{background:#0d3153;border-color:#0d3153}
+.kpi.emphasis .value{color:white}
+.kpi.pf-confirmed{border-top:3px solid #287e59}
+.kpi.pf-pending{border-top:3px solid #d99c22}
+.kpi.pf-percent{border-top:3px solid var(--navy)}
+.kpi.pf-confirmed .value,.kpi.pf-pending .value,.kpi.pf-percent .value{font-size:25px;color:var(--ink)}
+.pf-progress{height:5px;margin:12px 0 0;background:#e8eff4;border-radius:5px;overflow:hidden}
+.pf-progress span{display:block;height:100%;background:#287e59;width:0;border-radius:5px;transition:width .2s}
+.pf-secondary .kpi{min-height:87px;padding:13px 16px}
+.pf-secondary .kpi .value{font-size:24px;margin-top:9px}
+.pf-status-good{border-top:3px solid #287e59}.pf-status-review{border-top:3px solid #d59a24}.pf-status-missing{border-top:3px solid var(--red)}
+.pf-section-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:23px 0 10px}
+.pf-section-head h2{font-size:17px;margin:0}
+.pf-section-head span{color:#7b94a8;font-size:10px}
+.pf-overview-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.pf-overview-grid .board,.pf-money-grid .board{border-radius:13px;padding:17px 18px}
+.pf-board-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+.pf-board-head h3{font-size:13px;margin:0}
+.pf-board-head span{font-size:9px;color:#88a0b2}
+.pf-status-content{display:flex;align-items:center;gap:20px;min-height:228px}
+.pf-status-donut{flex:none;width:170px;height:170px;margin:0;position:relative;border-radius:50%;background:#e9eff4}
+.pf-status-donut::after{content:"";position:absolute;inset:27px;background:#fff;border-radius:50%}
+.pf-donut-core{position:absolute;inset:0;z-index:1;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.pf-donut-core strong{font-size:22px;letter-spacing:-.5px}.pf-donut-core small{font-size:9px;color:#7990a3}
+.legend-status{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
+.legend-status button{padding:9px 11px;display:flex;align-items:center;gap:8px}
+.legend-status button b{font-size:14px;margin:0 0 0 auto}
+.legend-status button small{font-size:10px}.legend-status button small:last-child{display:none}
+.legend-status i{margin-right:4px}
+.pf-flow-board #flowChart{display:flex;flex-direction:column;gap:5px;min-height:190px}
+.pf-flow-board .barrow{padding:6px 3px;grid-template-columns:minmax(110px,175px) 1fr 106px}
+.pf-flow-foot{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:11px}
+.pf-flow-stat{background:#f3f8fc;border:1px solid #e0eaf1;border-radius:8px;padding:10px;text-align:left;color:#123b67}
+.pf-flow-stat span{display:block;color:#738fa4;font-size:9px;margin-bottom:6px}
+.pf-flow-stat b{font-size:14px}
+.pf-chart-legend{display:flex;align-items:center;gap:8px;color:#748ca0;font-size:10px}
+.pf-chart-legend i{height:8px;width:8px;background:#277e58;border-radius:2px;display:inline-block}
+.pf-chart-legend i:nth-of-type(2){background:#dfe7ee}
+.pf-money-grid{grid-template-columns:1fr 1fr}
+.pf-money-row{display:grid;width:100%;grid-template-columns:minmax(110px,155px) minmax(50px,1fr) 125px;gap:10px;align-items:center;
+ padding:10px 6px;border:1px solid transparent;border-radius:8px;background:transparent;text-align:left;color:var(--ink)}
+.pf-money-row:hover,.pf-money-row:focus-visible{background:#f0f6fc;border-color:#d4e4ef}
+.pf-money-row.selected{background:#e7f2fc;border-color:#aacde5}
+.pf-money-label{min-width:0;font-size:10px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pf-money-track{height:10px;background:#e7eef4;display:flex;overflow:hidden;border-radius:8px}
+.pf-money-confirmed{height:100%;background:#287e59;display:block}
+.pf-money-remaining{height:100%;background:#dce5ed;display:block}
+.pf-money-total{text-align:right;font-size:11px;font-weight:800;white-space:nowrap}
+.pf-money-caption{display:block;font-size:9px;color:#8ba1b1;margin-top:3px}
+.pf-money-caption b{color:#277e58}
+.pf-money-grid .board{min-height:285px}
+#issuesList .issue{padding:10px 4px}
+.pf-section-head .secondary-btn{padding:8px 11px}
+.notice{margin-bottom:12px}
+#filterSummary,.board .hint,.inline-caption{display:none}
+@media(max-width:1100px){.topbar{flex-wrap:wrap}.period{flex:1}.nav{width:100%;overflow-x:auto}
+ .pf-overview-grid,.pf-money-grid{grid-template-columns:1fr}}
+@media(max-width:860px){.page{padding:0 16px 36px}.pf-kpi-row{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:530px){.pf-kpi-row{gap:8px}.kpi{padding:12px}.kpi .value,.kpi.pf-confirmed .value,.kpi.pf-pending .value{font-size:19px}
+ .pf-status-content{flex-direction:column}.pf-status-donut{width:150px;height:150px}
+ .pf-money-row{grid-template-columns:95px 1fr 90px;gap:6px}.pf-money-total{font-size:9px}
+ .pf-flow-foot{grid-template-columns:1fr}.pf-chart-legend{font-size:9px}}
+
 </style>
 </head>
 <body>
 <div class="page">
 <header class="topbar">
- <a href="dashboard-20261020.html" class="brand" aria-label="BAZA, платёжный контроль"><b>BAZA</b><small>ПЛАТЕЖНЫЙ КОНТРОЛЬ</small></a>
- <span class="period">ФИНАНСЫ · ПЛАН / ФАКТ · 2026</span>
+ <a href="index.html#dashboard" class="brand" aria-label="BAZA, платёжный контроль"><b>BAZA</b><small>ПЛАТЕЖНЫЙ КОНТРОЛЬ</small></a>
+ <span class="period">ФИНАНСОВЫЙ КОНТРОЛЬ · ПЛАН / ФАКТ</span>
  <nav class="nav">
-  <a href="dashboard-20261020.html#dashboard">Дашборд</a>
-  <a href="dashboard-20261020.html#registry">Платежи</a>
+  <a href="index.html#dashboard">Дашборд</a>
+  <a href="index.html#registry">Платёжный календарь</a>
+  <a href="index.html#cashBoard">Остатки</a>
   <a href="plan-fact.html" class="active" aria-current="page">План / факт</a>
   <a href="users.html" id="usersLink" hidden>Пользователи</a>
  </nav>
@@ -162,32 +255,54 @@ dialog::backdrop{background:rgba(11,39,64,.45)}
  </div>
  <div id="chips" class="chips"></div><div id="filterSummary" class="filter-summary" hidden></div>
  <section id="overviewSection">
-   <div class="kpis">
-    <div class="kpi emphasis drill-kpi" data-kpi="all" tabindex="0" role="button" aria-label="Открыть срез"><div class="heading">ЗАЯВОК В ПЛАНЕ</div><div class="value" id="metricTotal">—</div><div class="sub">Недельный платёжный календарь</div></div>
-    <div class="kpi good drill-kpi" data-kpi="confirmed" tabindex="0" role="button" aria-label="Открыть срез"><div class="heading">ПОДТВЕРЖДЕНО ПО 1С</div><div class="value" id="metricConfirmed">—</div><div class="sub" id="confirmedPct">Точные / групповые совпадения</div></div>
-    <div class="kpi warn drill-kpi" data-kpi="review" tabindex="0" role="button" aria-label="Открыть срез"><div class="heading">ТРЕБУЕТ ПРОВЕРКИ</div><div class="value" id="metricReview">—</div><div class="sub">Возможное / частичное совпадение</div></div>
-    <div class="kpi bad drill-kpi" data-kpi="missing" tabindex="0" role="button" aria-label="Открыть срез"><div class="heading">НЕ НАЙДЕНО В ВЫГРУЗКЕ</div><div class="value" id="metricMissing">—</div><div class="sub">Не означает доказанное отсутствие оплаты</div></div>
+   <div class="pf-kpi-row pf-primary">
+     <div class="kpi emphasis drill-kpi" data-kpi="plan" role="button" tabindex="0" aria-label="Открыть реестр плановых платежей">
+       <div class="heading">ПЛАН СПИСАНИЙ</div><div class="value" id="metricPlan">—</div><div class="sub">Заявки по текущему платёжному календарю</div>
+     </div>
+     <div class="kpi pf-confirmed drill-kpi" data-kpi="matched" role="button" tabindex="0" aria-label="Показать подтверждённые платежи">
+       <div class="heading">ПОДТВЕРЖДЕНО ПО 1С</div><div class="value" id="metricMatched">—</div><div class="sub">Сопоставлено с фактическими операциями</div>
+     </div>
+     <div class="kpi pf-pending drill-kpi" data-kpi="pendingAmount" role="button" tabindex="0" aria-label="Перейти к неподтверждённым платежам">
+       <div class="heading">ОСТАЛОСЬ ПОДТВЕРДИТЬ</div><div class="value" id="metricRemaining">—</div><div class="sub">Разница плана и подтверждённого факта</div>
+     </div>
+     <div class="kpi pf-percent" aria-label="Процент подтверждения плана">
+       <div class="heading">ИСПОЛНЕНИЕ ПЛАНА</div><div class="value" id="metricCompletion">—</div><div class="sub">По сумме списаний, а не по количеству заявок</div>
+       <div class="pf-progress" aria-hidden="true"><span id="metricCompletionBar"></span></div>
+     </div>
    </div>
-   <div class="kpis">
-    <div class="kpi money drill-kpi" data-kpi="plan" tabindex="0" role="button" aria-label="Открыть срез"><div class="heading">ПЛАН СПИСАНИЙ</div><div class="value" id="metricPlan">—</div><div class="sub">По сводке исходного календаря</div></div>
-    <div class="kpi money drill-kpi" data-kpi="matched" tabindex="0" role="button" aria-label="Открыть срез"><div class="heading">ПОДТВЕРЖДЕНО ПО ПЛАНУ</div><div class="value" id="metricMatched">—</div><div class="sub">Включая займы, ВГО и покрытие аккредитивов</div></div>
-    <div class="kpi money drill-kpi" data-kpi="other" tabindex="0" role="button" aria-label="Открыть срез"><div class="heading">ПЛАНОВЫЕ «ПРОЧИЕ» ОПЛАТЫ</div><div class="value" id="metricOther">—</div><div class="sub">Подтверждённые; отдельно от финансирования</div></div>
-    <div class="kpi money drill-kpi" data-kpi="unlinked" tabindex="0" role="button" aria-label="Открыть срез"><div class="heading">ФАКТ БЕЗ ДОСТОВЕРНОЙ СВЯЗИ</div><div class="value" id="metricUnlinked">—</div><div class="sub">Прочие списания 1С · нужна проверка</div></div>
+   <div class="pf-kpi-row pf-secondary">
+     <div class="kpi drill-kpi" data-kpi="all" role="button" tabindex="0"><div class="heading">ЗАЯВОК В ПЛАНЕ</div><div class="value" id="metricTotal">—</div><div class="sub">Всего в выбранном срезе</div></div>
+     <div class="kpi drill-kpi pf-status-good" data-kpi="confirmed" role="button" tabindex="0"><div class="heading">ПОДТВЕРЖДЕНО ЗАЯВОК</div><div class="value" id="metricConfirmed">—</div><div class="sub" id="confirmedPct">—</div></div>
+     <div class="kpi drill-kpi pf-status-review" data-kpi="review" role="button" tabindex="0"><div class="heading">НА ПРОВЕРКЕ</div><div class="value" id="metricReview">—</div><div class="sub">Требуется подтвердить совпадение</div></div>
+     <div class="kpi drill-kpi pf-status-missing" data-kpi="missing" role="button" tabindex="0"><div class="heading">НЕ НАЙДЕНО В 1С</div><div class="value" id="metricMissing">—</div><div class="sub">По данным загруженной сверки</div></div>
    </div>
-   <div class="divider-head"><h2>Исполнение платёжного календаря</h2><small>Нажимайте на элементы диаграмм для фильтрации</small></div>
-   <div class="grid">
-    <div class="board"><h3>Статусы заявок</h3><div class="hint">Распределение по количеству, независимо от размера платежа</div>
-      <div id="statusStack" class="stacked"></div><div id="statusLegend" class="legend-status"></div>
-      <p class="inline-caption">Четыре разновидности подтверждённых платежей сведены в одну группу. Неопределённые совпадения не считаются оплачеными.</p>
-    </div>
-    <div class="board"><h3>Структура фактических списаний 1С</h3><div class="hint">Брутто-обороты за неделю, раздельно по характеру движения денег</div><div id="flowChart"></div>
-      <p class="inline-caption">Депозиты, займы, ВГО, межсчётные переводы и аккредитивное покрытие не смешиваем с обычными расходами.</p>
-    </div>
-    <div class="board"><h3>Заявки по направлениям</h3><div class="hint">Количество платежей по направлениям; нажатие отфильтрует план и остальные графики</div><div id="directionChart"></div></div>
-    <div class="board"><h3>Заявки по проектам</h3><div class="hint">Только проекты, указанные для управленческого дашборда; совместные платежи объединены</div><div id="projectChart"></div></div>
+   <div class="pf-section-head"><h2>Структура исполнения</h2><span id="overviewScope">План / факт · текущий период</span></div>
+   <div class="pf-overview-grid">
+     <div class="board pf-status-board">
+       <div class="pf-board-head"><h3>Статусы заявок</h3><span>по количеству</span></div>
+       <div class="pf-status-content">
+         <div class="pf-status-donut" id="statusStack" role="img" aria-label="Распределение статусов">
+           <div class="pf-donut-core"><strong id="statusDonutPct">—</strong><small>подтверждено</small></div>
+         </div>
+         <div id="statusLegend" class="legend-status"></div>
+       </div>
+     </div>
+     <div class="board pf-flow-board">
+       <div class="pf-board-head"><h3>Движения по 1С</h3><span>валовые списания</span></div>
+       <div id="flowChart"></div>
+       <div class="pf-flow-foot">
+         <button type="button" data-kpi="other" class="pf-flow-stat"><span>Подтверждено «Прочих»</span><b id="metricOther">—</b></button>
+         <button type="button" data-kpi="unlinked" class="pf-flow-stat"><span>Факт без связи с планом</span><b id="metricUnlinked">—</b></button>
+       </div>
+     </div>
    </div>
-   <div class="divider-head"><h2>Приоритетные расхождения</h2><small>Крупнейшие неподтверждённые списания из недельного плана</small></div>
-   <div class="board topissues"><div id="issuesList"></div><div class="table-footer"><span>Открытие строки показывает основание сверки и кандидатов из 1С</span><button class="secondary-btn" id="showAllIssues">Показать весь план / факт →</button></div></div>
+   <div class="pf-section-head"><h2>Исполнение по направлениям и проектам</h2><div class="pf-chart-legend"><i></i>Подтверждено <i></i>Осталось по плану</div></div>
+   <div class="grid pf-money-grid">
+     <div class="board"><div class="pf-board-head"><h3>По направлениям</h3><span>план / подтверждено</span></div><div id="directionChart"></div></div>
+     <div class="board"><div class="pf-board-head"><h3>По проектам</h3><span>план / подтверждено</span></div><div id="projectChart"></div></div>
+   </div>
+   <div class="pf-section-head"><h2>Приоритетные расхождения</h2><button class="secondary-btn" id="showAllIssues">Открыть полный реестр →</button></div>
+   <div class="board topissues"><div id="issuesList"></div></div>
  </section>
  <section id="planSection" hidden>
   <div class="divider-head"><h2>План / факт по заявкам</h2><small>122 строки · ссылки на операции 1С и основания сверки</small></div>
