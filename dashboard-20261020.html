@@ -866,6 +866,29 @@ body.auth-locked #cashBoard{display:none!important}.cash-board{width:100%;max-wi
 .cash-table .cash-change{font-size:10px}
 .cash-table button{padding:4px 8px!important;font-size:10px;line-height:1.2;white-space:nowrap}
 
+
+/* BAZA_CASH_DETAILS_V1 */
+.cash-table .cash-detail-link{display:inline-block;border:0;background:transparent;padding:2px 3px!important;color:#0d5f99;text-decoration:underline;text-decoration-color:#bfd7ea;text-underline-offset:3px;font-size:inherit;font-weight:700;cursor:pointer;white-space:nowrap}
+.cash-table .cash-detail-link:hover{background:#e9f3fb;text-decoration-color:#0d5f99}
+.cash-table .cash-detail-link:focus-visible{outline:2px solid #2772aa}
+.cash-detail-overlay{position:fixed;inset:0;z-index:9200;background:rgba(6,32,53,.65);display:none;align-items:center;justify-content:center;padding:18px}
+.cash-detail-overlay.visible{display:flex}
+.cash-detail-dialog{background:#fff;width:min(1090px,100%);max-height:90vh;border-radius:15px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 22px 65px #061c3359}
+.cash-detail-top{display:flex;justify-content:space-between;gap:12px;align-items:start;padding:18px 22px;border-bottom:1px solid #dce7f0}
+.cash-detail-top h3{margin:0;font-size:18px;color:#113b60}
+.cash-detail-top p{margin:6px 0 0;color:#7890a7;font-size:11px}
+.cash-detail-close{border:1px solid #cee0ed;border-radius:8px;background:#f2f7fb;padding:7px 12px;cursor:pointer;font-size:19px;color:#21476b}
+.cash-detail-summary{display:flex;align-items:center;justify-content:space-between;background:#f3f8fc;padding:11px 22px;border-bottom:1px solid #e4edf4}
+.cash-detail-summary strong{font-size:20px;color:#103e67}
+.cash-detail-summary span{color:#6887a1;font-size:11px}
+.cash-detail-scroll{overflow:auto;padding:0 20px 20px}
+.cash-detail-table{width:100%;table-layout:auto;min-width:770px;border-collapse:collapse;font-size:11px}
+.cash-detail-table th{padding:11px 8px;position:sticky;top:0;background:#eaf2f8;color:#68849a;text-align:left}
+.cash-detail-table td{padding:10px 8px;border-bottom:1px solid #e5edf3;white-space:normal}
+.cash-detail-table td:last-child,.cash-detail-table th:last-child{text-align:right;white-space:nowrap;font-weight:700}
+.cash-detail-table .cash-unmatched td{background:#fff8ec;color:#925d12}
+.cash-detail-footnote{padding:10px 22px;color:#8194a6;font-size:10px;line-height:1.5;border-top:1px solid #e2eaf1}
+
 </style>
 
 <script>
@@ -927,9 +950,9 @@ function renderCash(){
   if(hasInflow)inflow+=Number(r.planned_receipts);
   outflow+=debit;if(valid){closing+=close;closingChange+=close-Number(r.opening_balance);}
   const canEdit=['admin','approver'].includes(window.__BAZA_AUTH_ROLE||'')&&!r.entity_key.startsWith('other:');
-  return '<tr><td>'+escapeHtml(r.entity_name)+'</td><td>'+(hasOpening?fmt(r.opening_balance):'<span class="unknown">Нет данных</span>')+'</td><td>'+(hasInflow?fmt(r.planned_receipts):'<span class="unknown">Не заполнен</span>')+'</td><td>'+fmt(debit)+'</td><td class="'+(valid&&close<0?'negative':'')+'">'+(valid?fmt(close):'—')+'</td><td>'+(valid?cashChange(close-Number(r.opening_balance)):'—')+'</td><td>'+(canEdit?'<button data-cash-key="'+escapeHtml(r.entity_key)+'">Изменить</button>':'—')+'</td></tr>';
+  return '<tr><td>'+escapeHtml(r.entity_name)+'</td><td>'+(hasOpening?fmt(r.opening_balance):'<span class="unknown">Нет данных</span>')+'</td><td>'+(hasInflow?cashDrillButton('income',r.entity_key,r.planned_receipts):'<span class="unknown">Не заполнен</span>')+'</td><td>'+cashDrillButton('expense',r.entity_key,debit)+'</td><td class="'+(valid&&close<0?'negative':'')+'">'+(valid?fmt(close):'—')+'</td><td>'+(valid?cashChange(close-Number(r.opening_balance)):'—')+'</td><td>'+(canEdit?'<button data-cash-key="'+escapeHtml(r.entity_key)+'">Изменить</button>':'—')+'</td></tr>';
  });
- html.push('<tr><td>ИТОГО'+(complete?'':' (по рассчитанным остаткам)')+'</td><td>'+fmt(opening)+'</td><td>'+fmt(inflow)+'</td><td>'+fmt(outflow)+'</td><td>'+fmt(closing)+(complete?'':' *')+'</td><td>'+cashChange(closingChange)+'</td><td></td></tr>');
+ html.push('<tr><td>ИТОГО'+(complete?'':' (по рассчитанным остаткам)')+'</td><td>'+fmt(opening)+'</td><td>'+cashDrillButton('income','__TOTAL__',inflow)+'</td><td>'+cashDrillButton('expense','__TOTAL__',outflow)+'</td><td>'+fmt(closing)+(complete?'':' *')+'</td><td>'+cashChange(closingChange)+'</td><td></td></tr>');
  document.getElementById('cashRows').innerHTML=html.join('');
  document.getElementById('cashNote').textContent='Начальные остатки на 19.10.2026 из Excel. Поступления: кредитные выгрузки и перечисления от компаний группы по исходному платежному календарю. Внутренние перечисления учитываются как расход отправителя и приход получателя; зеркальные строки не задваиваются. М73 исключена. '+(complete?'Все строки заполнены.':'* Итог на конец — сумма рассчитанных остатков. Для '+missing+' строк отсутствует начальный остаток и/или план поступлений; окончательный полный итог пока неизвестен.');
 }
@@ -947,7 +970,7 @@ async function edit(key){
  Object.assign(r,payload);renderCash();
  }catch(e){alert(e.message);}
 }
-document.getElementById('cashRows').addEventListener('click',e=>{const b=e.target.closest('[data-cash-key]');if(b)edit(b.dataset.cashKey);});
+document.getElementById('cashRows').addEventListener('click',e=>{const drill=e.target.closest('[data-cash-detail]');if(drill){openCashDetails(drill.dataset.cashSide,drill.dataset.cashDetail);return;}const b=e.target.closest('[data-cash-key]');if(b)edit(b.dataset.cashKey);});
 window.__BAZA_REFRESH_CASH=renderCash;
 new MutationObserver(()=>{if(document.body.classList.contains('auth-ready'))load();else loaded=false;}).observe(document.body,{attributes:true,attributeFilter:['class']});
 if(document.body.classList.contains('auth-ready'))load();
