@@ -80,9 +80,11 @@ fieldset{border:none;padding:0;margin:0}dialog{border:1px solid #cfdeea;border-r
  <label class="check"><input type="checkbox" id="approvalAttestation" required><span>Подтверждаю, что календарь действительно согласован согласно действующему регламенту</span></label>
  <div class="dialog-actions"><button type="button" class="btn" data-close="lockDialog">Отмена</button><button type="submit" class="btn warn" id="lockConfirm">Зафиксировать ПК</button></div></form></div>
 </dialog>
+<script src="auth-session.js?v=3"></script>
 <script>
 (()=>{'use strict';
 const BASE='https://duvdlpzwxtuwbwyggpla.supabase.co',KEY='sb_publishable_WBg9viktHBpz9lw1Nwqtyw_49Src_lU';
+const session=window.BazaSession;session.configure({url:BASE,key:KEY});session.start();
 const $=id=>document.getElementById(id);
 const money=n=>new Intl.NumberFormat('ru-RU',{maximumFractionDigits:2}).format(Number(n)||0)+' ₽';
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -93,27 +95,23 @@ const mondayUTC=ymd=>{const d=new Date(ymd+'T12:00:00Z');const day=d.getUTCDay()
 const shift=(ymd,days)=>{const d=new Date(ymd+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+days);return d.toISOString().slice(0,10)};
 const today=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Yekaterinburg',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
 function inform(msg,type=''){const e=$('loadMessage');e.hidden=false;e.className='notice '+type;e.textContent=msg}
-async function refresh(){
- const stored=localStorage.getItem('baza_refresh_token');if(!stored)return null;
- const r=await fetch(BASE+'/auth/v1/token?grant_type=refresh_token',{method:'POST',headers:{apikey:KEY,'Content-Type':'application/json'},body:JSON.stringify({refresh_token:stored})});
- if(!r.ok)return null;const d=await r.json();if(!d.access_token)return null;
- localStorage.setItem('baza_access_token',d.access_token);
- if(d.refresh_token)localStorage.setItem('baza_refresh_token',d.refresh_token);
- return d.access_token;
-}
-const authHeaders=()=>({apikey:KEY,Authorization:'Bearer '+token});
+const authHeaders=()=>({apikey:KEY,Authorization:'Bearer '+session.token()});
 async function request(path,{method='GET',body}={}){
- const req=()=>fetch(BASE+'/rest/v1/'+path,{method,headers:{...authHeaders(),...(body?{'Content-Type':'application/json'}:{}),Prefer:method==='POST'?'return=representation':'return=minimal'},body:body?JSON.stringify(body):undefined});
- let r=await req();if(r.status===401){const next=await refresh();if(!next)throw Error('Сессия истекла, войдите через главную страницу BAZA');token=next;r=await req();}
+ const r=await session.fetch(BASE+'/rest/v1/'+path,{method,
+  headers:{...authHeaders(),...(body?{'Content-Type':'application/json'}:{}),
+   Prefer:method==='POST'?'return=representation':'return=minimal'},
+  body:body?JSON.stringify(body):undefined});
+ token=session.token();
  if(!r.ok){const e=await r.json().catch(()=>({}));throw Error(e.message||e.hint||'Ошибка Supabase '+r.status)}
  if(r.status===204)return null;const content=await r.text();return content?JSON.parse(content):null;
 }
 async function authenticate(){
- token=localStorage.getItem('baza_access_token')||'';
- if(!token)throw Error('Сначала войдите в BAZA на главной странице');
- let r=await fetch(BASE+'/auth/v1/user',{headers:authHeaders()});
- if(r.status===401){token=await refresh();if(!token)throw Error('Необходимо войти в систему');r=await fetch(BASE+'/auth/v1/user',{headers:authHeaders()})}
- if(!r.ok)throw Error('Не удалось проверить сессию пользователя');
+ token=session.token();
+ if(!token&&!session.refreshToken())throw Error('Сначала войдите в BAZA на главной странице');
+ const r=await session.fetch(BASE+'/auth/v1/user',{headers:authHeaders()});
+ if(r.status===401)throw Error('Сессия истекла. Войдите в BAZA на главной странице');
+ if(!r.ok)throw Error('Не удалось проверить сессию: '+r.status);
+ token=session.token();
  user=await r.json();
  const profiles=await request('user_profiles?select=role,is_active&id=eq.'+encodeURIComponent(user.id));
  if(!profiles?.[0]?.is_active||!['admin','approver','viewer'].includes(profiles[0].role))throw Error('Нет прав доступа к финансовому блоку');
