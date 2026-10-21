@@ -447,7 +447,7 @@ render();
   const page=document.querySelector('.page');if(!page)return;
   page.insertAdjacentHTML('beforeend',`<section class="cash-board" id="cashBoard"><h3>Прогноз остатков по юридическим лицам</h3>
 <p>19–25 октября 2026 · Остаток на начало + приход − расход = остаток на конец недели</p>
-<div class="cash-wrap"><table class="cash-table"><thead><tr><th>Юридическое лицо</th><th>На начало</th><th>Приход (план)</th><th>Расход (план)</th><th>На конец</th><th></th></tr></thead><tbody id="cashRows"><tr><td colspan="6">Загрузка…</td></tr></tbody></table></div>
+<div class="cash-wrap"><table class="cash-table"><colgroup><col style="width:29%"><col style="width:12%"><col style="width:12%"><col style="width:12%"><col style="width:15%"><col style="width:12%"><col style="width:8%"></colgroup><thead><tr><th>Юридическое лицо</th><th>На начало</th><th>Приход (план)</th><th>Расход (план)</th><th>На конец</th><th>Изменение</th><th></th></tr></thead><tbody id="cashRows"><tr><td colspan="7">Загрузка…</td></tr></tbody></table></div>
 <p id="cashNote">Начальные остатки: исходный Excel, лист «Остатки», на 19.10.2026. Прогноз, не банковский факт.</p></section>
 <section class="vgo-section" id="vgo"><div class="vgo-head"><div><div class="eyebrow">ВГО · ВНУТРИГРУППОВЫЕ ДВИЖЕНИЯ</div><h2>ВГО / внутренние перечисления</h2><div class="vgo-note">Не входят в реальные расходы и не попадают в реестр согласования.</div></div></div><div class="vgo-cards"><div class="vgo-card"><label>ВСЕ ВГО / ВНУТРЕННИЕ</label><strong id="vgoTotal">—</strong></div><div class="vgo-card"><label>КОЛИЧЕСТВО ОПЕРАЦИЙ</label><strong id="vgoCount">—</strong></div><div class="vgo-card"><label>КРУПНЕЙШИЙ ПРОЕКТ</label><strong id="vgoTop">—</strong></div></div><div class="vgo-tools"><input id="vgoSearch" placeholder="Юрлицо, контрагент, проект…"><select id="vgoEntity"><option value="">Все юрлица</option></select><select id="vgoProject"><option value="">Все проекты</option></select></div><div class="table-card"><div class="table-wrap"><table><thead><tr><th>Откуда</th><th>Куда</th><th>Проект</th><th>Направление</th><th>Подстатья</th><th>Сумма</th></tr></thead><tbody id="vgoTable"></tbody></table></div></div></section>`);
   const vgoRows=()=>window.__BAZA_ALL_PAYMENTS.filter(r=>r.isInternal&&!r.isNonExpense);
@@ -856,6 +856,16 @@ body.auth-locked #cashBoard{display:none!important}.cash-board{width:100%;max-wi
 .cash-change.decrease{color:#c32130}
 .cash-change.unchanged{color:#8495a4}
 
+
+/* BAZA_CASH_COMPACT_ALIGNED_V1 */
+.cash-table{width:100%;min-width:1060px;table-layout:fixed}
+.cash-table th{width:auto!important;min-width:0!important;padding:8px 9px!important;line-height:1.2}
+.cash-table td{padding:5px 9px!important;line-height:1.2;font-size:11px;font-variant-numeric:tabular-nums}
+.cash-table th:nth-child(5),.cash-table td:nth-child(5){min-width:0!important}
+.cash-table td:nth-child(6){font-variant-numeric:tabular-nums}
+.cash-table .cash-change{font-size:10px}
+.cash-table button{padding:4px 8px!important;font-size:10px;line-height:1.2;white-space:nowrap}
+
 </style>
 
 <script>
@@ -890,7 +900,7 @@ async function load(){
  const response=await fetch(SUPABASE_URL+'/rest/v1/weekly_cash_balances?select=entity_key,entity_name,opening_balance,planned_receipts&week_start=eq.2026-10-19&order=entity_name.asc',{headers:window.bazaAuthHeaders()});
  if(!response.ok)throw Error('Не удалось получить остатки: '+response.status);
  balances=await response.json();loaded=true;renderCash();
- }catch(err){document.getElementById('cashRows').innerHTML='<tr><td colspan="6">'+escapeHtml(err.message)+'</td></tr>';}
+ }catch(err){document.getElementById('cashRows').innerHTML='<tr><td colspan="7">'+escapeHtml(err.message)+'</td></tr>';}
  finally{loading=false;}
 }
 function renderCash(){
@@ -917,9 +927,9 @@ function renderCash(){
   if(hasInflow)inflow+=Number(r.planned_receipts);
   outflow+=debit;if(valid){closing+=close;closingChange+=close-Number(r.opening_balance);}
   const canEdit=['admin','approver'].includes(window.__BAZA_AUTH_ROLE||'')&&!r.entity_key.startsWith('other:');
-  return '<tr><td>'+escapeHtml(r.entity_name)+'</td><td>'+(hasOpening?fmt(r.opening_balance):'<span class="unknown">Нет данных</span>')+'</td><td>'+(hasInflow?fmt(r.planned_receipts):'<span class="unknown">Не заполнен</span>')+'</td><td>'+fmt(debit)+'</td><td class="'+(valid&&close<0?'negative':'')+'">'+(valid?cashClosing(fmt(close),close-Number(r.opening_balance)):'—')+'</td><td>'+(canEdit?'<button data-cash-key="'+escapeHtml(r.entity_key)+'">Изменить</button>':'—')+'</td></tr>';
+  return '<tr><td>'+escapeHtml(r.entity_name)+'</td><td>'+(hasOpening?fmt(r.opening_balance):'<span class="unknown">Нет данных</span>')+'</td><td>'+(hasInflow?fmt(r.planned_receipts):'<span class="unknown">Не заполнен</span>')+'</td><td>'+fmt(debit)+'</td><td class="'+(valid&&close<0?'negative':'')+'">'+(valid?fmt(close):'—')+'</td><td>'+(valid?cashChange(close-Number(r.opening_balance)):'—')+'</td><td>'+(canEdit?'<button data-cash-key="'+escapeHtml(r.entity_key)+'">Изменить</button>':'—')+'</td></tr>';
  });
- html.push('<tr><td>ИТОГО'+(complete?'':' (по рассчитанным остаткам)')+'</td><td>'+fmt(opening)+'</td><td>'+fmt(inflow)+'</td><td>'+fmt(outflow)+'</td><td>'+cashClosing(fmt(closing)+(complete?'':' *'),closingChange)+'</td><td></td></tr>');
+ html.push('<tr><td>ИТОГО'+(complete?'':' (по рассчитанным остаткам)')+'</td><td>'+fmt(opening)+'</td><td>'+fmt(inflow)+'</td><td>'+fmt(outflow)+'</td><td>'+fmt(closing)+(complete?'':' *')+'</td><td>'+cashChange(closingChange)+'</td><td></td></tr>');
  document.getElementById('cashRows').innerHTML=html.join('');
  document.getElementById('cashNote').textContent='Начальные остатки на 19.10.2026 из Excel. Поступления: кредитные выгрузки и перечисления от компаний группы по исходному платежному календарю. Внутренние перечисления учитываются как расход отправителя и приход получателя; зеркальные строки не задваиваются. М73 исключена. '+(complete?'Все строки заполнены.':'* Итог на конец — сумма рассчитанных остатков. Для '+missing+' строк отсутствует начальный остаток и/или план поступлений; окончательный полный итог пока неизвестен.');
 }
