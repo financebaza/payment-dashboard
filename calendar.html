@@ -53,12 +53,13 @@ fieldset{border:none;padding:0;margin:0}dialog{border:1px solid #cfdeea;border-r
  <aside>
   <div class="sidebar-box"><h3>Подключение Битрикс24</h3><p>Автоматически будем забирать заявки смарт-процесса «Согласование платежей NEW» на нужном этапе формирования ПК. После утверждения план не изменяем.</p>
     <div class="inset"><b>Ожидает подключения API</b><p>Для безопасной интеграции понадобится адрес вашего Битрикс24 и доступ только для чтения заявок. Секрет хранится на сервере, не в браузере.</p></div></div>
-  <div class="sidebar-box"><h3>Фиксация ПК</h3><p>Когда ФД и остальные уполномоченные руководители утвердили календарь, зафиксируйте контрольную версию. После этого новые оплаты в черновик не добавляются.</p>
-    <button id="lockWeek" type="button" class="btn primary">Зафиксировать утверждённый ПК</button>
-    <p id="lockedInfo" style="margin-top:10px"></p></div>
+  <div class="sidebar-box"><h3>Формирование ПК</h3><p>Когда все заявки из Битрикса, ВГО и прочие платежи собраны, сформируйте версию для рассмотрения руководителями на основном дашборде. Это <b>не фиксация</b> и не согласование.</p>
+    <button id="formWeek" type="button" class="btn primary">Сформировать ПК</button>
+    <a id="reviewOnDashboard" href="index.html#registry" class="btn" style="display:block;text-align:center;text-decoration:none;margin-top:9px">Посмотреть на дашборде →</a>
+    <p id="formedInfo" style="margin-top:10px"></p></div>
   <div class="sidebar-box"><div class="section-head"><h3>История действий</h3><button id="historyReload" type="button" class="btn">Обновить</button></div><div id="history" class="audit muted">Нет действий</div></div>
  </aside></div>
- <p class="footer">Новая система формирования ПК не изменяет исторический реестр платежей и предыдущую сверку 1С. Для новой недели сначала создаётся черновик, затем импортируются заявки Битрикс24 и добавляются ВГО.</p>
+ <p class="footer">Новая система формирования ПК не изменяет исторический реестр платежей и предыдущую сверку 1С. Для новой недели создаётся черновик, затем собираются заявки из Битрикс24, добавляются ВГО и формируется версия для рассмотрения на главном дашборде.</p>
 </div></div>
 <dialog id="itemDialog" aria-labelledby="itemTitle"><div class="dialog-head"><h2 id="itemTitle">Добавить платёж</h2><button class="close" type="button" data-close="itemDialog">×</button></div>
  <div class="dialog-body"><form id="itemForm"><div class="form-grid">
@@ -73,12 +74,6 @@ fieldset{border:none;padding:0;margin:0}dialog{border:1px solid #cfdeea;border-r
  <div class="field wide"><label for="itemSubcategory">Подстатья</label><input id="itemSubcategory" maxlength="200"></div>
  <div class="field wide"><label for="itemMemo">Комментарий / основание</label><textarea id="itemMemo" maxlength="1500"></textarea></div>
  </div><div class="dialog-actions"><button type="button" class="btn" data-close="itemDialog">Отмена</button><button class="btn primary" type="submit" id="itemSave">Добавить в ПК</button></div></form></div>
-</dialog>
-<dialog id="lockDialog" aria-labelledby="lockTitle"><div class="dialog-head"><h2 id="lockTitle">Зафиксировать согласованный ПК</h2><button class="close" type="button" data-close="lockDialog">×</button></div>
- <div class="dialog-body"><form id="lockForm"><p>Действие необратимо: все позиции выбранной недели станут доступны только для просмотра. Фиксация отражает подтверждённое согласование календаря руководителями, но не заменяет его.</p>
- <div class="field"><label for="approvalNote">Кем и когда утверждён ПК</label><textarea id="approvalNote" required minlength="8" placeholder="Например: ФД и уполномоченные руководители, 26.10.2026, 11:50"></textarea></div>
- <label class="check"><input type="checkbox" id="approvalAttestation" required><span>Подтверждаю, что календарь действительно согласован согласно действующему регламенту</span></label>
- <div class="dialog-actions"><button type="button" class="btn" data-close="lockDialog">Отмена</button><button type="submit" class="btn warn" id="lockConfirm">Зафиксировать ПК</button></div></form></div>
 </dialog>
 <script src="auth-session.js?v=3"></script>
 <script>
@@ -120,14 +115,16 @@ async function authenticate(){
 function draw(){
  const isLocked=week?.status==='locked';
  $('weekTitle').textContent='Неделя '+formatDate(currentWeek)+' — '+formatDate(shift(currentWeek,6));
- $('weekSubtitle').textContent=!week?'Черновик ещё не создан':isLocked?'Контрольная версия утверждённого ПК · только просмотр':'Черновик · можно добавлять и исправлять позиции до утверждения';
- $('weekStatus').textContent=!week?'Нет черновика':isLocked?'Утверждён':'Черновик';
+ $('weekSubtitle').textContent=!week?'Черновик ещё не создан':isLocked?'Контрольная версия утверждённого ПК · только просмотр':week.status==='formed'?'Версия ПК на рассмотрении руководителей на главном дашборде; строки временно защищены от правок':'Черновик · можно добавлять и исправлять позиции до формирования';
+ $('weekStatus').textContent=!week?'Нет черновика':isLocked?'Утверждён':week.status==='formed'?'На рассмотрении':'Черновик';
  $('weekStatus').className='status'+(isLocked?' locked':'');
  $('createWeek').hidden=!!week||!['admin','approver'].includes(role);
  $('addVgo').disabled=!editable();$('addOther').disabled=!editable();
- $('lockWeek').disabled=!editable()||!items.length;
- $('lockedInfo').textContent=isLocked?'Зафиксировано: '+new Date(week.locked_at).toLocaleString('ru-RU')+' · '+week.approval_note:
-  'Черновик можно зафиксировать только после фактического утверждения ПК.';
+ $('formWeek').disabled=!editable()||!items.length;
+ $('formWeek').hidden=isLocked||week?.status==='formed';
+ $('formedInfo').textContent=isLocked?'ПК №'+week.formation_version+' утверждён и зафиксирован: '+new Date(week.locked_at).toLocaleString('ru-RU'):
+   week?.status==='formed'?'Версия №'+week.formation_version+' сформирована · готова для внешнего согласования. Фиксация доступна на главном дашборде.':
+   'После формирования ПК появится на основном дашборде; руководители рассматривают его без обязательных нажатий.';
  const totals={all:0,bitrix:0,vgo:0,other:0};items.forEach(r=>{const x=Number(r.amount||0);totals.all+=x;totals[r.origin]+=x});
  $('kpiAll').textContent=money(totals.all);$('kpiBitrix').textContent=money(totals.bitrix);
  $('kpiVgo').textContent=money(totals.vgo);$('kpiOther').textContent=money(totals.other);$('kpiCount').textContent=items.length+' платежей';
@@ -145,7 +142,7 @@ function drawTable(){
  '<tr><td colspan="7" class="muted" style="text-align:center;padding:25px">Нет платежей в выбранном срезе</td></tr>';
 }
 function drawHistory(){
- const names={item_added:'Добавлена позиция',item_updated:'Изменена позиция',item_deleted:'Удалена позиция',week_locked:'ПК зафиксирован'};
+ const names={item_added:'Добавлена позиция',item_updated:'Изменена позиция',item_deleted:'Удалена позиция',week_formed:'Сформирована версия для рассмотрения',week_returned_to_draft:'Возврат на доработку',week_locked:'ПК зафиксирован'};
  $('history').innerHTML=events.slice(0,15).map(e=>'<div><strong>'+esc(names[e.event]||e.event)+'</strong><small>'+esc(new Date(e.occurred_at).toLocaleString('ru-RU'))+
  (e.details?.counterparty?' · '+esc(e.details.counterparty):'')+'</small></div>').join('')||'<div>Пока без изменений</div>';
 }
@@ -158,7 +155,7 @@ async function loadWeek(){
  ]);
  if(currentWeek!==start)return;
  week=weeks?.[0]||null;items=rows||[];events=audit||[];
- inform(!week?'Выберите «Создать черновик», чтобы начать формирование ПК на эту неделю.':week.status==='locked'?'Утверждённый ПК сохранён и защищён от изменений.':'Черновик открыт. Добавьте ВГО и прочие платежи; заявки Битрикс24 появятся после подключения API.',week?.status==='locked'?'success':'');
+ inform(!week?'Выберите «Создать черновик», чтобы начать формирование ПК на эту неделю.':week.status==='locked'?'Утверждённый ПК сохранён и защищён от изменений.':week.status==='formed'?'ПК сформирован и опубликован на главном дашборде для рассмотрения. После внешнего согласования администратор фиксирует его на главной странице.':'Черновик открыт. Добавьте ВГО и прочие платежи; заявки Битрикс24 появятся после подключения API.',week?.status==='locked'?'success':'');
  draw();
 }
 async function openWeek(){
@@ -202,14 +199,14 @@ async function deleteItem(id){
  if(!confirm('Удалить позицию из черновика ПК? Действие сохранится в истории.'))return;
  try{await request('calendar_items?id=eq.'+encodeURIComponent(id),{method:'DELETE'});await loadWeek()}catch(e){inform(e.message,'error')}
 }
-async function lockWeek(ev){
- ev.preventDefault();if(!editable())return;
- const btn=$('lockConfirm');btn.disabled=true;
+async function formWeek(){
+ if(!editable()||!items.length)return;
+ if(!confirm('Сформировать ПК на неделю '+currentWeek+' для рассмотрения на главном дашборде? Состав будет защищён от изменений до возврата на доработку.'))return;
+ const btn=$('formWeek');btn.disabled=true;
  try{
-  if(!$('approvalAttestation').checked)throw Error('Подтвердите фактическое согласование календаря');
-  const note=$('approvalNote').value.trim();if(note.length<8)throw Error('Укажите основание согласования');
-  await request('rpc/calendar_lock_week',{method:'POST',body:{p_week_start:currentWeek,p_approval_note:note,p_confirmed:true}});
-  $('lockDialog').close();await loadWeek();
+  const data=await request('rpc/calendar_form_week',{method:'POST',body:{p_week_start:currentWeek}});
+  await loadWeek();
+  inform('ПК версии №'+data.version+' сформирован: '+data.items+' позиций. Руководители могут просмотреть его на главном дашборде.','success');
  }catch(e){inform(e.message,'error')}finally{btn.disabled=false}
 }
 $('openWeek').addEventListener('click',openWeek);
@@ -220,11 +217,10 @@ $('addOther').addEventListener('click',()=>openNew('other'));
 $('itemForm').addEventListener('submit',saveItem);
 $('originFilter').addEventListener('change',drawTable);$('search').addEventListener('input',drawTable);
 $('itemsBody').addEventListener('click',e=>{const b=e.target.closest('[data-del]');if(b)deleteItem(b.dataset.del)});
-$('lockWeek').addEventListener('click',()=>{$('approvalNote').value='';$('approvalAttestation').checked=false;$('lockDialog').showModal()});
-$('lockForm').addEventListener('submit',lockWeek);
+$('formWeek').addEventListener('click',formWeek);
 $('historyReload').addEventListener('click',()=>loadWeek().catch(e=>inform(e.message,'error')));
 document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',()=>$(b.dataset.close).close()));
-for(const id of ['itemDialog','lockDialog'])$(id).addEventListener('click',e=>{if(e.target===$(id))$(id).close()});
+for(const id of ['itemDialog'])$(id).addEventListener('click',e=>{if(e.target===$(id))$(id).close()});
 (async()=>{
  try{await authenticate();currentWeek=mondayUTC(today());$('weekDate').value=currentWeek;await loadWeek()}
  catch(e){inform(e.message,'error')}
