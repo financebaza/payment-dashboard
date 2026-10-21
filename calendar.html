@@ -51,8 +51,11 @@ fieldset{border:none;padding:0;margin:0}dialog{border:1px solid #cfdeea;border-r
   <div class="tablewrap"><table><thead><tr><th>Дата</th><th>Плательщик / получатель</th><th>Проект / направление</th><th>Источник</th><th>Средства</th><th style="text-align:right">Сумма</th><th></th></tr></thead><tbody id="itemsBody"><tr><td colspan="7">Нет платежей</td></tr></tbody></table></div>
  </main>
  <aside>
-  <div class="sidebar-box"><h3>Подключение Битрикс24</h3><p>Автоматически будем забирать заявки смарт-процесса «Согласование платежей NEW» на нужном этапе формирования ПК. После утверждения план не изменяем.</p>
-    <div class="inset"><b>Ожидает подключения API</b><p>Для безопасной интеграции понадобится адрес вашего Битрикс24 и доступ только для чтения заявок. Секрет хранится на сервере, не в браузере.</p></div></div>
+  <div class="sidebar-box"><h3>Подключение Битрикс24</h3><p>Портал: <b>crm.baza.bz</b><br>Смарт-процесс: <b>185</b> · воронка: <b>19</b>. Коды стадий и поля определим после проверки REST API.</p>
+    <div class="inset"><b id="bitrixStatus">Ожидает проверки API</b><p>Для первого подключения нужен входящий вебхук с правами чтения CRM. Ключ не сохраняем, заявки не изменяем.</p></div>
+    <button class="btn primary" type="button" id="bitrixTestButton" style="margin-top:10px">Проверить подключение к Битриксу</button>
+    <p style="font-size:10px;margin-top:9px">Проверка доступна администратору. Постоянную автоматическую загрузку настроим после определения полей и правил отбора.</p>
+   </div>
   <div class="sidebar-box"><h3>Формирование ПК</h3><p>Когда все заявки из Битрикса, ВГО и прочие платежи собраны, сформируйте версию для рассмотрения руководителями на основном дашборде. Это <b>не фиксация</b> и не согласование.</p>
     <button id="formWeek" type="button" class="btn primary">Сформировать ПК</button>
     <a id="reviewOnDashboard" href="index.html#registry" class="btn" style="display:block;text-align:center;text-decoration:none;margin-top:9px">Посмотреть на дашборде →</a>
@@ -61,6 +64,16 @@ fieldset{border:none;padding:0;margin:0}dialog{border:1px solid #cfdeea;border-r
  </aside></div>
  <p class="footer">Новая система формирования ПК не изменяет исторический реестр платежей и предыдущую сверку 1С. Для новой недели создаётся черновик, затем собираются заявки из Битрикс24, добавляются ВГО и формируется версия для рассмотрения на главном дашборде.</p>
 </div></div>
+<dialog id="bitrixDialog" aria-labelledby="bitrixDialogTitle"><div class="dialog-head"><h2 id="bitrixDialogTitle">Проверка REST API Битрикс24</h2><button type="button" class="close" id="bitrixDialogClose">×</button></div>
+<div class="dialog-body">
+ <div class="inset"><b>https://crm.baza.bz</b><p>Тип смарт-процесса 185, воронка 19. Входящий вебхук создаётся в Битрикс24 в разделе «Приложения → Разработчикам → Входящий вебхук». Нужна область прав CRM и доступ на чтение заявок.</p></div>
+ <form id="bitrixTestForm" autocomplete="off">
+ <div class="field" style="margin-top:15px"><label for="bitrixWebhookInput">Полный URL входящего вебхука</label><input id="bitrixWebhookInput" type="password" required spellcheck="false" autocomplete="off" placeholder="https://crm.baza.bz/rest/ID/СЕКРЕТ/"></div>
+ <div class="dialog-actions"><button class="btn" type="button" id="bitrixTestCancel">Закрыть</button><button type="submit" class="btn primary" id="bitrixTestSubmit">Проверить права и поля</button></div>
+ </form>
+ <div id="bitrixTestResult" class="inset" aria-live="polite" style="margin-top:15px" hidden></div>
+ <p class="muted" style="margin-top:15px;font-size:10px">Это разовая проверка: ссылка отправляется только в защищённую серверную функцию BAZA и не записывается в базу или на странице. Не присылай URL вебхука в чат.</p>
+</div></dialog>
 <dialog id="itemDialog" aria-labelledby="itemTitle"><div class="dialog-head"><h2 id="itemTitle">Добавить платёж</h2><button class="close" type="button" data-close="itemDialog">×</button></div>
  <div class="dialog-body"><form id="itemForm"><div class="form-grid">
  <div class="field"><label for="itemDue">Крайняя дата оплаты</label><input id="itemDue" type="date" required></div>
@@ -211,6 +224,50 @@ async function formWeek(){
   inform('ПК версии №'+data.version+' сформирован: '+data.items+' позиций. Руководители могут просмотреть его на главном дашборде.','success');
  }catch(e){inform(e.message,'error')}finally{btn.disabled=false}
 }
+
+function openBitrixDialog(){
+ if(role!=='admin'){inform('Проверить вебхук может только администратор BAZA','error');return;}
+ $('bitrixTestResult').hidden=true;
+ $('bitrixWebhookInput').value='';
+ $('bitrixDialog').showModal();
+}
+async function testBitrix(event){
+ event.preventDefault();
+ if(role!=='admin')return;
+ const btn=$('bitrixTestSubmit'),result=$('bitrixTestResult');
+ btn.disabled=true;result.hidden=false;result.textContent='Проверяем права и читаем поля и стадии смарт-процесса…';
+ const secret=$('bitrixWebhookInput').value.trim();
+ try{
+  // Do not pass the URL in query string, URL fragments, localStorage, or browser logs.
+  const response=await session.fetch(BASE+'/functions/v1/baza-bitrix-probe',{
+   method:'POST',headers:{apikey:KEY,Authorization:'Bearer '+session.token(),'Content-Type':'application/json'},
+   body:JSON.stringify({webhook_url:secret})
+  });
+  $('bitrixWebhookInput').value='';
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok||!data.ok)throw Error(data.error||'Проверка Битрикса не выполнена');
+  $('bitrixStatus').textContent='API отвечает · поля определены';
+  const makeList=entries=>entries.map(x=>'<li>'+esc(x.title)+' <small class="muted">('+esc(x.code||x.key)+')</small></li>').join('');
+  const stages=Array.isArray(data.stages)?data.stages:[];
+  const fields=Array.isArray(data.fields)?data.fields:[];
+  const sample=Array.isArray(data.sample)?data.sample:[];
+  result.innerHTML='<b>Подключение успешно · '+esc(data.smart_process_title)+'</b>'+
+   '<p>Тип: '+esc(data.entity_type_id)+' · воронка: '+esc(data.category_id)+
+   ' · полей: '+fields.length+' · стадий: '+stages.length+'</p>'+
+   '<div style="margin-top:10px"><b>Стадии</b><ul style="padding-left:17px;max-height:200px;overflow:auto">'+makeList(stages)+'</ul></div>'+
+   '<div style="margin-top:10px"><b>Поля</b><ul style="padding-left:17px;max-height:210px;overflow:auto">'+makeList(fields)+'</ul></div>'+
+   '<p>Карточек в первой выборке: '+sample.length+'. Никаких изменений в CRM или ПК не сделано.</p>';
+ }catch(e){
+  $('bitrixWebhookInput').value='';
+  result.textContent=e.message||'Ошибка соединения с Битриксом';
+ }finally{btn.disabled=false;}
+}
+$('bitrixTestButton').addEventListener('click',openBitrixDialog);
+$('bitrixTestForm').addEventListener('submit',testBitrix);
+$('bitrixDialogClose').addEventListener('click',()=>$('bitrixDialog').close());
+$('bitrixTestCancel').addEventListener('click',()=>$('bitrixDialog').close());
+$('bitrixDialog').addEventListener('close',()=>{$('bitrixWebhookInput').value='';});
+
 $('openWeek').addEventListener('click',openWeek);
 $('createWeek').addEventListener('click',createWeek);
 $('weekDate').addEventListener('change',()=>{if($('weekDate').value){$('weekDate').value=mondayUTC($('weekDate').value)}});
@@ -222,7 +279,7 @@ $('itemsBody').addEventListener('click',e=>{const b=e.target.closest('[data-del]
 $('formWeek').addEventListener('click',formWeek);
 $('historyReload').addEventListener('click',()=>loadWeek().catch(e=>inform(e.message,'error')));
 document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',()=>$(b.dataset.close).close()));
-for(const id of ['itemDialog'])$(id).addEventListener('click',e=>{if(e.target===$(id))$(id).close()});
+for(const id of ['itemDialog','bitrixDialog'])$(id).addEventListener('click',e=>{if(e.target===$(id))$(id).close()});
 (async()=>{
  try{
   await authenticate();
