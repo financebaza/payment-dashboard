@@ -448,7 +448,7 @@ render();
   page.insertAdjacentHTML('beforeend',`<section class="cash-board" id="cashBoard"><h3>Прогноз остатков по юридическим лицам</h3>
 <p>19–25 октября 2026 · Остаток на начало + приход − расход = остаток на конец недели</p>
 <div class="cash-wrap"><table class="cash-table"><colgroup><col style="width:29%"><col style="width:12%"><col style="width:12%"><col style="width:12%"><col style="width:15%"><col style="width:12%"><col style="width:8%"></colgroup><thead><tr><th>Юридическое лицо</th><th>На начало</th><th>Приход (план)</th><th>Расход (план)</th><th>На конец</th><th>Изменение</th><th></th></tr></thead><tbody id="cashRows"><tr><td colspan="7">Загрузка…</td></tr></tbody></table></div>
-<p id="cashNote">Начальные остатки: исходный Excel, лист «Остатки», на 19.10.2026. Прогноз, не банковский факт.</p></section>
+<p id="cashNote">Начальные остатки: исходный Excel, лист «Остатки», на 19.10.2026. Прогноз, не банковский факт.</p><div class="cash-reconciliation" id="cashReconciliation" aria-live="polite"></div></section>
 <section class="vgo-section" id="vgo"><div class="vgo-head"><div><div class="eyebrow">ВГО · ВНУТРИГРУППОВЫЕ ДВИЖЕНИЯ</div><h2>ВГО / внутренние перечисления</h2><div class="vgo-note">Не входят в реальные расходы и не попадают в реестр согласования.</div></div></div><div class="vgo-cards"><div class="vgo-card"><label>ВСЕ ВГО / ВНУТРЕННИЕ</label><strong id="vgoTotal">—</strong></div><div class="vgo-card"><label>КОЛИЧЕСТВО ОПЕРАЦИЙ</label><strong id="vgoCount">—</strong></div><div class="vgo-card"><label>КРУПНЕЙШИЙ ПРОЕКТ</label><strong id="vgoTop">—</strong></div></div><div class="vgo-tools"><input id="vgoSearch" placeholder="Юрлицо, контрагент, проект…"><select id="vgoEntity"><option value="">Все юрлица</option></select><select id="vgoProject"><option value="">Все проекты</option></select></div><div class="table-card"><div class="table-wrap"><table><thead><tr><th>Откуда</th><th>Куда</th><th>Проект</th><th>Направление</th><th>Подстатья</th><th>Сумма</th></tr></thead><tbody id="vgoTable"></tbody></table></div></div></section>`);
   const vgoRows=()=>window.__BAZA_ALL_PAYMENTS.filter(r=>r.isInternal&&!r.isNonExpense);
   const fmt=n=>new Intl.NumberFormat('ru-RU',{maximumFractionDigits:0}).format(Math.round(Number(n)||0))+' ₽';
@@ -867,6 +867,12 @@ body.auth-locked #cashBoard{display:none!important}.cash-board{width:100%;max-wi
 .cash-table button{padding:4px 8px!important;font-size:10px;line-height:1.2;white-space:nowrap}
 
 
+
+.cash-reconciliation{margin:12px 0 0;padding:11px 12px;background:#f1f7fb;border:1px solid #dce9f2;border-radius:8px;display:flex;align-items:center;gap:9px 20px;flex-wrap:wrap;font-size:10px;line-height:1.5}
+.cash-reconciliation b{color:#173d60}
+.cash-reconciliation .cash-recon-net{font-weight:800;color:#c32130}
+.cash-reconciliation .cash-recon-note{flex-basis:100%;font-size:9px;color:#66819a}
+
 /* BAZA_CASH_DETAILS_V1 */
 .cash-table .cash-detail-link{display:inline-block;border:0;background:transparent;padding:2px 3px!important;color:#0d5f99;text-decoration:underline;text-decoration-color:#bfd7ea;text-underline-offset:3px;font-size:inherit;font-weight:700;cursor:pointer;white-space:nowrap}
 .cash-table .cash-detail-link:hover{background:#e9f3fb;text-decoration-color:#0d5f99}
@@ -1021,6 +1027,30 @@ function renderCash(){
  });
  html.push('<tr><td>ИТОГО'+(complete?'':' (по рассчитанным остаткам)')+'</td><td>'+fmt(opening)+'</td><td>'+cashDrillButton('income','__TOTAL__',inflow)+'</td><td>'+cashDrillButton('expense','__TOTAL__',outflow)+'</td><td>'+fmt(closing)+(complete?'':' *')+'</td><td>'+cashChange(closingChange)+'</td><td></td></tr>');
  document.getElementById('cashRows').innerHTML=html.join('');
+
+ const sourcePayments=(window.__BAZA_ALL_PAYMENTS||PAY||[]);
+ const inScope=new Set(balances.map(item=>item.entity_key));
+ let creditDisbursements=0,externalPayments=0,transfersOutside=0;
+ for(const payment of sourcePayments){
+  const sender=getKey(payment.entity);
+  if(!inScope.has(sender))continue;
+  const value=Number(payment.amount||0);
+  if(payment.isNonExpense){
+   if(/выгрузка кредитных средств/i.test(String(payment.subcategory||'')))creditDisbursements+=value;
+  }else if(!payment.isInternal)externalPayments+=value;
+  else if(!inScope.has(getKey(payment.counterparty)))transfersOutside+=value;
+ }
+ const netFlow=inflow-outflow;
+ const incompleteDelta=netFlow-closingChange;
+ const signed=n=>(n<0?'−':n>0?'+':'')+fmt(Math.abs(n));
+ document.getElementById('cashReconciliation').innerHTML=
+  '<span>Выгрузка кредита: <b>'+fmt(creditDisbursements)+'</b></span>'+
+  '<span>Внешние платежи: <b>−'+fmt(externalPayments)+'</b></span>'+
+  '<span>Переводы вне контура остатков: <b>−'+fmt(transfersOutside)+'</b></span>'+
+  '<span>Чистое движение группы: <b class="cash-recon-net">'+signed(netFlow)+'</b></span>'+
+  (Math.abs(incompleteDelta)>.01?'<span class="cash-recon-note">В строке «ИТОГО» изменение учитывает только юрлица с известным начальным остатком. Неучтённое движение: '+signed(incompleteDelta)+'. Общий конечный остаток пока неполный.</span>':'')+
+  (Math.abs(netFlow-(creditDisbursements-externalPayments-transfersOutside))>.01?'<span class="cash-recon-note">ВНИМАНИЕ: движение и аналитическая сверка расходятся. Требуется проверка.</span>':'');
+
  document.getElementById('cashNote').textContent='Начальные остатки на 19.10.2026 из Excel. Поступления: кредитные выгрузки и перечисления от компаний группы по исходному платежному календарю. Внутренние перечисления учитываются как расход отправителя и приход получателя; зеркальные строки не задваиваются. М73 исключена. '+(complete?'Все строки заполнены.':'* Итог на конец — сумма рассчитанных остатков. Для '+missing+' строк отсутствует начальный остаток и/или план поступлений; окончательный полный итог пока неизвестен.');
 }
 async function edit(key){
