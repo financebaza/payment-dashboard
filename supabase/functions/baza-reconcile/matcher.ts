@@ -63,7 +63,7 @@ export function suggestMatches(plansInput,factsInput,options={}){
  const mirroredWithLinked=f=>linked.some(g=>Math.sign(Number(g.amount_signed))!==Math.sign(Number(f.amount_signed))&&
    cents(g.amount_signed)===cents(f.amount_signed)&&
    partyKey(g.payer)===partyKey(f.counterparty)&&partyKey(g.counterparty)===partyKey(f.payer)&&
-   (!f.operation_date||!g.operation_date||Math.abs(new Date(f.operation_date)-new Date(g.operation_date))<=259200000));
+   (!f.operation_date||!g.operation_date||Math.abs(new Date(f.operation_date).getTime()-new Date(g.operation_date).getTime())<=259200000));
  const facts=factsInput.filter(f=>!String(f.plan_refs||'').trim()&&!String(f.suspected_duplicate||'').trim()&&
   !mirroredWithLinked(f)&&cents(f.amount_signed)>0&&
   (!f.operation_date||(f.operation_date>=from&&f.operation_date<=to))).sort((a,b)=>a.fact_row-b.fact_row);
