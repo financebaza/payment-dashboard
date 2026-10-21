@@ -213,10 +213,10 @@ button.project-item.dashboard-clickable.selected{background:#e3f0fc;border-color
 #calendarReviewStatus.locked{background:#e8f4ee;border-color:#c6e2d1;color:#286c49}
 body.calendar-review-mode .status-strip,
 body.calendar-review-mode .kpi-board>.board:nth-child(3),
-body.calendar-review-mode #registry thead th:nth-child(8),
 body.calendar-review-mode #registry thead th:nth-child(9),
-body.calendar-review-mode #paymentTable td:nth-child(8),
+body.calendar-review-mode #registry thead th:nth-child(10),
 body.calendar-review-mode #paymentTable td:nth-child(9),
+body.calendar-review-mode #paymentTable td:nth-child(10),
 body.calendar-review-mode #cashBoard,
 body.calendar-review-mode .modal-actions,
 body.calendar-review-mode #modalStatus,
@@ -235,6 +235,36 @@ body.calendar-review-mode .kpi-board{grid-template-columns:1.5fr 1fr}
 #calendarConfirmDialog .check input{width:18px;height:18px;flex:none}
 #calendarConfirmDialog .dialog-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:18px}
 @media(max-width:850px){body.calendar-review-mode .kpi-board{grid-template-columns:1fr}#calendarReviewBanner{align-items:start}}
+
+
+/* BAZA_REGISTRY_MULTISELECT_AND_SUMS_V1 */
+#registry .registry-sums{display:flex;align-items:stretch;gap:10px;flex-wrap:wrap;margin:0 0 12px}
+#registry .registry-sum{display:flex;gap:4px;flex-direction:column;justify-content:center;min-width:210px;flex:1;background:#fff;border:1px solid #d9e5ef;border-radius:11px;padding:12px 16px}
+#registry .registry-sum>span{font-size:9px;letter-spacing:.09em;font-weight:800;color:#7890a7}
+#registry .registry-sum strong{font-size:22px;color:#143c61;font-weight:900;letter-spacing:-.5px;font-variant-numeric:tabular-nums;line-height:1.3}
+#registry .registry-sum small{font-size:10px;color:#849bb0}
+#registry .registry-sum-selected{border-left:4px solid #e51d2a;background:#fffafa}
+#registry .registry-sum-selected strong{color:#c81c2b}
+#registry .registry-select-help{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;flex-direction:column;gap:6px;min-width:185px;padding:9px 13px;background:#f8fbff;border:1px solid #dbe7f0;border-radius:11px;text-align:center}
+#registry .registry-select-help span{font-size:10px;color:#7890a7}
+#registry .registry-select-help button{background:white;border:1px solid #ccdaea;border-radius:7px;color:#365c79;padding:8px 12px;font-size:10px;font-weight:800;cursor:pointer}
+#registry .registry-select-help button:disabled{opacity:.5;cursor:default}
+#registry .registry-select-help button:not(:disabled):hover{background:#eaf1f7}
+#registry .registry-checkbox-head,#registry .registry-checkbox-cell{width:38px!important;min-width:38px!important;max-width:38px!important;text-align:center!important;padding:8px 4px!important}
+#registry .registry-checkbox-head input,#registry .registry-checkbox-cell input{width:16px;height:16px;accent-color:#e51d2a;cursor:pointer;vertical-align:middle}
+#registry #paymentTable tr.registry-row-selected{background:#fff0f1}
+#registry #paymentTable tr.registry-row-selected:hover{background:#ffe6e9}
+#registry th:nth-child(1){width:38px}
+#registry th:nth-child(2){width:14%}
+#registry th:nth-child(3){width:12%}
+#registry th:nth-child(4){width:11%}
+#registry th:nth-child(5){width:11%}
+#registry th:nth-child(6){width:13%}
+#registry th:nth-child(7){width:8%}
+#registry th:nth-child(8){width:8%}
+#registry th:nth-child(9){width:13%}
+#registry th:nth-child(10){width:10%}
+@media(max-width:650px){#registry .registry-sum{min-width:155px}#registry .registry-sum strong{font-size:18px}#registry .registry-select-help{flex-basis:100%}}
 
 </style>
 </head>
@@ -278,7 +308,11 @@ body.calendar-review-mode .kpi-board{grid-template-columns:1.5fr 1fr}
 </div>
 <div class="board entity-board"><div class="board-title"><h3>Платежи вне ГК по юрлицам</h3><span>рейтинг · по сумме платежей</span></div><div id="entityRank" class="entity-list"></div></div></section>
 <section class="status-strip"><div><b>Согласование</b><small>нажмите на статус для фильтрации реестра</small></div><div class="counts"><span class="count approved" data-quick="approved"><i></i>Согласовано <b id="approvedCount">0</b></span><span class="count rejected" data-quick="rejected"><i></i>Не согласовано <b id="rejectedCount">0</b></span><span class="count pending" data-quick="pending"><i></i>Ожидает <b id="pendingCount">0</b></span></div></section>
-<section class="registry" id="registry"><div class="registry-head"><div><div class="eyebrow">РЕЕСТР</div><h2>Платежи</h2></div><span id="rowsCount">—</span></div><div class="table-card"><div class="table-wrap"><table><thead><tr><th>Юрлицо<select class="column-filter" data-field="entity"><option value="">Все</option></select></th><th>Контрагент<select class="column-filter" data-field="counterparty"><option value="">Все</option></select></th><th>Направление<select class="column-filter" data-field="direction"><option value="">Все</option></select></th><th>Проект<select class="column-filter" data-field="project"><option value="">Все</option></select></th><th>Подстатья<select class="column-filter" data-field="subcategory"><option value="">Все</option></select></th><th>Источник<select class="column-filter" data-field="source"><option value="">Все</option></select></th><th>Сумма</th><th>Статус / действие<select class="column-filter" data-field="status"><option value="">Все</option><option value="pending">Ожидает</option><option value="approved">Согласован</option><option value="rejected">Не согласован</option></select></th><th>Комментарий</th></tr></thead><tbody id="paymentTable"></tbody></table></div></div></section>
+<section class="registry" id="registry"><div class="registry-head"><div><div class="eyebrow">РЕЕСТР</div><h2>Платежи</h2></div><span id="rowsCount">—</span></div><div class="registry-sums" aria-live="polite">
+ <div class="registry-sum registry-sum-filter"><span>СУММА ПО ТЕКУЩИМ ФИЛЬТРАМ</span><strong id="registryFilteredSum">0,00 ₽</strong><small id="registryFilteredCount">0 платежей</small></div>
+ <div class="registry-sum registry-sum-selected"><span>СУММА ВЫДЕЛЕННЫХ ПЛАТЕЖЕЙ</span><strong id="registrySelectedSum">0,00 ₽</strong><small id="registrySelectedCount">Выбрано: 0</small></div>
+ <div class="registry-select-help"><span>Выбирай строки галочками. Shift + клик — диапазон.</span><button type="button" id="registryClearSelection" disabled>Снять выделение</button></div>
+</div><div class="table-card"><div class="table-wrap"><table><thead><tr><th class="registry-checkbox-head"><input type="checkbox" id="registrySelectAll" aria-label="Выделить все платежи текущего фильтра" title="Выбрать все показанные платежи"></th><th>Юрлицо<select class="column-filter" data-field="entity"><option value="">Все</option></select></th><th>Контрагент<select class="column-filter" data-field="counterparty"><option value="">Все</option></select></th><th>Направление<select class="column-filter" data-field="direction"><option value="">Все</option></select></th><th>Проект<select class="column-filter" data-field="project"><option value="">Все</option></select></th><th>Подстатья<select class="column-filter" data-field="subcategory"><option value="">Все</option></select></th><th>Источник<select class="column-filter" data-field="source"><option value="">Все</option></select></th><th>Сумма</th><th>Статус / действие<select class="column-filter" data-field="status"><option value="">Все</option><option value="pending">Ожидает</option><option value="approved">Согласован</option><option value="rejected">Не согласован</option></select></th><th>Комментарий</th></tr></thead><tbody id="paymentTable"></tbody></table></div></div></section>
 </div>
 <div id="modal" class="modal hidden"><div class="backdrop"></div><div class="modal-card"><button class="close" id="modalClose">×</button><div class="eyebrow">КАРТОЧКА ПЛАТЕЖА</div><h2 id="modalCounterparty">—</h2><div id="modalAmount" class="amount">—</div><div id="modalStatus"></div><div id="modalDetails" class="details"></div><div class="comment"><label>Комментарий</label><textarea id="modalComment" placeholder="Причина отказа или дополнительный комментарий…"></textarea></div><div class="modal-actions"><button id="modalApprove" class="approve">✓ Согласовать</button><button id="modalReject" class="reject">✕ Отклонить</button><button id="modalSaveComment">Сохранить комментарий</button></div></div></div>
 <script>
@@ -426,7 +460,89 @@ function renderDash(){
       '<span class="rank-value">'+counts[key]+'</span></button>';
   }).join('');
 }
-function renderTable(){const rs=rows();paymentTable.innerHTML=rs.map(r=>{const s=getStatus(r.id),c=getComment(r.id);return `<tr data-open="${esc(r.id)}"><td class="counterparty" title="${esc(r.entity)}">${esc(r.entity)}</td><td title="${esc(r.counterparty)}">${esc(r.counterparty)}</td><td>${esc(r.direction)}</td><td>${esc(r.project)}</td><td>${esc(r.subcategory)}</td><td><span class="badge ${r.source==='Кредит'?'credit':'own'}">${esc(r.source)}</span></td><td class="num"><b>${money(r.amount)}</b></td><td><div class="status-actions"><span class="pill ${s}">${s==='approved'?'Согласован':s==='rejected'?'Не согласован':'Ожидает'}</span><button class="approve ${s==='approved'?'active':''}" data-action="approve" data-id="${esc(r.id)}">✓</button><button class="reject ${s==='rejected'?'active':''}" data-action="reject" data-id="${esc(r.id)}">✕</button></div></td><td>${c?`<div class="comment-view" title="${esc(c)}"><span class="comment-text">${esc(c)}</span><button class="comment-add" data-edit="${esc(r.id)}">изменить</button></div>`:`<button class="comment-add" data-add="${esc(r.id)}">+ Добавить</button>`}</td></tr>`}).join('');rowsCount.textContent=`Показаны ${rs.length} из ${PAY.length} платежей`;document.querySelectorAll('[data-action]').forEach(b=>b.onclick=e=>{e.stopPropagation();saveApproval(b.dataset.id,b.dataset.action==='approve'?'approved':'rejected')});document.querySelectorAll('[data-add],[data-edit]').forEach(b=>b.onclick=e=>{e.stopPropagation();const id=b.dataset.add||b.dataset.edit;openModal(PAY.find(x=>x.id===id))});document.querySelectorAll('#paymentTable tr').forEach(tr=>tr.onclick=()=>openModal(PAY.find(x=>x.id===tr.dataset.open)))}
+/* Multi-selection and filtered totals are based on the same rows() as the registry. */
+const registrySelectedIds=new Set();
+let registryVisibleRows=[],registryLastAnchor=-1;
+const registryExactMoneyCents=cents=>new Intl.NumberFormat('ru-RU',{minimumFractionDigits:2,maximumFractionDigits:2}).format(cents/100)+' ₽';
+const registryCents=rs=>rs.reduce((sum,r)=>sum+Math.round((Number(r.amount)||0)*100),0);
+function updateRegistrySums(){
+ const visibleIds=new Set(registryVisibleRows.map(r=>String(r.id)));
+ for(const id of registrySelectedIds){if(!visibleIds.has(id))registrySelectedIds.delete(id)}
+ const selectedRows=registryVisibleRows.filter(r=>registrySelectedIds.has(String(r.id)));
+ document.getElementById('registryFilteredSum').textContent=registryExactMoneyCents(registryCents(registryVisibleRows));
+ document.getElementById('registryFilteredCount').textContent=registryVisibleRows.length+' платежей по фильтру';
+ document.getElementById('registrySelectedSum').textContent=registryExactMoneyCents(registryCents(selectedRows));
+ document.getElementById('registrySelectedCount').textContent='Выбрано: '+selectedRows.length;
+ document.getElementById('registryClearSelection').disabled=selectedRows.length===0;
+ const master=document.getElementById('registrySelectAll');
+ master.disabled=registryVisibleRows.length===0;
+ master.checked=registryVisibleRows.length>0&&selectedRows.length===registryVisibleRows.length;
+ master.indeterminate=selectedRows.length>0&&selectedRows.length<registryVisibleRows.length;
+ document.querySelectorAll('#paymentTable input[data-registry-select]').forEach(box=>{
+  const r=registryVisibleRows[Number(box.dataset.registrySelect)];
+  const marked=!!r&&registrySelectedIds.has(String(r.id));
+  box.checked=marked;
+  box.closest('tr')?.classList.toggle('registry-row-selected',marked);
+ });
+}
+function renderTable(){
+ const rs=rows();
+ registryVisibleRows=rs;
+ const visibleIds=new Set(rs.map(r=>String(r.id)));
+ for(const id of registrySelectedIds)if(!visibleIds.has(id))registrySelectedIds.delete(id);
+ registryLastAnchor=-1;
+ paymentTable.innerHTML=rs.map((r,i)=>{
+  const s=getStatus(r.id),c=getComment(r.id),selected=registrySelectedIds.has(String(r.id));
+  const checkbox='<td class="registry-checkbox-cell"><input type="checkbox" data-registry-select="'+i+'" '+(selected?'checked':'')+' aria-label="Выбрать платёж '+esc(r.counterparty)+' на '+esc(String(r.amount))+' рублей"></td>';
+  const details='<td class="counterparty" title="'+esc(r.entity)+'">'+esc(r.entity)+'</td><td title="'+esc(r.counterparty)+'">'+esc(r.counterparty)+'</td>'+
+   '<td>'+esc(r.direction)+'</td><td>'+esc(r.project)+'</td><td>'+esc(r.subcategory)+'</td>'+
+   '<td><span class="badge '+(r.source==='Кредит'?'credit':'own')+'">'+esc(r.source)+'</span></td><td class="num"><b>'+money(r.amount)+'</b></td>';
+  const status='<td><div class="status-actions"><span class="pill '+s+'">'+(s==='approved'?'Согласован':s==='rejected'?'Не согласован':'Ожидает')+'</span>'+
+   '<button class="approve '+(s==='approved'?'active':'')+'" data-action="approve" data-id="'+esc(r.id)+'">✓</button>'+
+   '<button class="reject '+(s==='rejected'?'active':'')+'" data-action="reject" data-id="'+esc(r.id)+'">✕</button></div></td>';
+  const comment='<td>'+(c?'<div class="comment-view" title="'+esc(c)+'"><span class="comment-text">'+esc(c)+'</span><button class="comment-add" data-edit="'+esc(r.id)+'">изменить</button></div>':'<button class="comment-add" data-add="'+esc(r.id)+'">+ Добавить</button>')+'</td>';
+  return '<tr data-open="'+esc(r.id)+'" class="'+(selected?'registry-row-selected':'')+'">'+checkbox+details+status+comment+'</tr>';
+ }).join('');
+ rowsCount.textContent='Показаны '+rs.length+' из '+PAY.length+' платежей';
+ document.querySelectorAll('[data-action]').forEach(b=>b.onclick=e=>{e.stopPropagation();saveApproval(b.dataset.id,b.dataset.action==='approve'?'approved':'rejected')});
+ document.querySelectorAll('[data-add],[data-edit]').forEach(b=>b.onclick=e=>{
+  e.stopPropagation();const id=b.dataset.add||b.dataset.edit;openModal(PAY.find(x=>x.id===id));
+ });
+ document.querySelectorAll('#paymentTable tr').forEach(tr=>tr.onclick=()=>openModal(PAY.find(x=>x.id===tr.dataset.open)));
+ updateRegistrySums();
+}
+document.getElementById('registrySelectAll').addEventListener('change',e=>{
+ const checked=e.target.checked;
+ for(const r of registryVisibleRows){
+  if(checked)registrySelectedIds.add(String(r.id));
+  else registrySelectedIds.delete(String(r.id));
+ }
+ registryLastAnchor=-1;
+ updateRegistrySums();
+});
+paymentTable.addEventListener('click',e=>{
+ const box=e.target.closest('input[data-registry-select]');
+ if(!box)return;
+ e.stopPropagation();
+ const current=Number(box.dataset.registrySelect),checked=box.checked;
+ if(e.shiftKey&&registryLastAnchor>=0&&registryLastAnchor<registryVisibleRows.length){
+  const low=Math.min(current,registryLastAnchor),high=Math.max(current,registryLastAnchor);
+  for(let i=low;i<=high;i++){
+   const row=registryVisibleRows[i];
+   if(!row)continue;
+   if(checked)registrySelectedIds.add(String(row.id));
+   else registrySelectedIds.delete(String(row.id));
+  }
+ }else{
+  const row=registryVisibleRows[current];
+  if(row){if(checked)registrySelectedIds.add(String(row.id));else registrySelectedIds.delete(String(row.id))}
+ }
+ registryLastAnchor=current;
+ updateRegistrySums();
+});
+document.getElementById('registryClearSelection').addEventListener('click',()=>{
+ registrySelectedIds.clear();registryLastAnchor=-1;updateRegistrySums();
+});
 const DASHBOARD_LABELS={counterparty:'Контрагент',entity:'Юрлицо',direction:'Направление',project:'Проект',subcategory:'Подстатья',source:'Источник',status:'Статус'};
 const STATUS_LABELS={pending:'Ожидает',approved:'Согласован',rejected:'Не согласован'};
 function syncDashboardSelectors(){
