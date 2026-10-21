@@ -308,7 +308,7 @@ body.calendar-review-mode .kpi-board{grid-template-columns:1.5fr 1fr}
 </div>
 <div class="board entity-board"><div class="board-title"><h3>Платежи вне ГК по юрлицам</h3><span>рейтинг · по сумме платежей</span></div><div id="entityRank" class="entity-list"></div></div></section>
 <section class="status-strip"><div><b>Согласование</b><small>нажмите на статус для фильтрации реестра</small></div><div class="counts"><span class="count approved" data-quick="approved"><i></i>Согласовано <b id="approvedCount">0</b></span><span class="count rejected" data-quick="rejected"><i></i>Не согласовано <b id="rejectedCount">0</b></span><span class="count pending" data-quick="pending"><i></i>Ожидает <b id="pendingCount">0</b></span></div></section>
-<section class="registry" id="registry"><div class="registry-head"><div><div class="eyebrow">РЕЕСТР</div><h2>Платежи</h2></div><span id="rowsCount">—</span></div><div class="registry-sums" aria-live="polite">
+<section class="registry" id="registry"><div class="registry-head"><div><div class="eyebrow">РЕЕСТР · ТОЛЬКО РАСХОДНЫЕ ОПЕРАЦИИ</div><h2>Платежи к согласованию</h2></div><span id="rowsCount">—</span></div><div class="registry-sums" aria-live="polite">
  <div class="registry-sum registry-sum-filter"><span>СУММА ПО ТЕКУЩИМ ФИЛЬТРАМ</span><strong id="registryFilteredSum">0,00 ₽</strong><small id="registryFilteredCount">0 платежей</small></div>
  <div class="registry-sum registry-sum-selected"><span>СУММА ВЫДЕЛЕННЫХ ПЛАТЕЖЕЙ</span><strong id="registrySelectedSum">0,00 ₽</strong><small id="registrySelectedCount">Выбрано: 0</small></div>
  <div class="registry-select-help"><span>Выбирай строки галочками. Shift + клик — диапазон.</span><button type="button" id="registryClearSelection" disabled>Снять выделение</button></div>
@@ -324,6 +324,11 @@ function fill(id,vals){const e=document.getElementById(id);vals.forEach(v=>{cons
 function getStatus(id){return approvals[id]?.status||'pending'}function getComment(id){return approvals[id]?.comment||''}
 async function loadApprovals(){try{const r=await fetch(SUPABASE_URL+'/rest/v1/payment_approvals?select=payment_id,status,comment,approved_by,updated_at',{headers:{apikey:SUPABASE_KEY,Authorization:'Bearer '+SUPABASE_KEY}});if(r.ok){approvals={};(await r.json()).forEach(x=>approvals[x.payment_id]=x)}}catch(e){}render()}
 async function saveApproval(id,status,comment=getComment(id)){
+  const payment=PAY.find(r=>String(r.id)===String(id));
+  if(!payment||!isRegistryOutgoing(payment)){
+    alert('Входящие операции не являются платежами на согласование.');
+    return;
+  }
   if(!['admin','approver'].includes(window.__BAZA_AUTH_ROLE||'')){alert('Для согласования платежей необходима роль согласующего или администратора.');return;}
   if(typeof window.approvalHeaders!=='function'){alert('Нет активной сессии. Войдите в систему повторно.');return;}
   const p={payment_id:id,status,comment:comment||null,approved_by:window.__BAZA_AUTH_NAME||'',approved_by_user_id:window.__BAZA_AUTH_USER_ID||null,updated_at:new Date().toISOString()};
@@ -358,7 +363,22 @@ function matches(r){if(state.source&&r.source!==state.source||state.direction&&r
   if(String(r.project??'').trim()!==v)return false;
   continue;
 }
-if((f==='project'?String(r.project??'').trim():String(r[f]??''))!==v)return false;}return true}window.__BAZA_MATCH_PAYMENTS=matches;function rows(){return PAY.filter(matches)}function agg(rs,f){const m={};rs.forEach(r=>m[r[f]]=(m[r[f]]||0)+Number(r.amount||0));return Object.entries(m).sort((a,b)=>b[1]-a[1])}
+if((f==='project'?String(r.project??'').trim():String(r[f]??''))!==v)return false;}return true}window.__BAZA_MATCH_PAYMENTS=matches;
+/* BAZA_REGISTRY_OUTGOING_ONLY_V1: receipts are not payment requests to approve.
+   isNonExpense comes from payments.is_non_expense, not from a text label.
+   IMPORTANT: do not exclude a payment merely because its subcategory
+   contains "Поступления от продаж" — such rows can be outgoing fees. */
+function isRegistryIncome(r){
+ if(r.isNonExpense===true||r.isReceipt===true||r.isIncome===true)return true;
+ const flow=String(r.flowDirection||r.flow_direction||r.cashflowDirection||r.cashflow_direction||'').trim().toLowerCase();
+ if(['in','income','receipt','incoming','приход','поступление'].includes(flow))return true;
+ const movement=String(r.direction||r.flow_type||'').trim().toLowerCase();
+ return /^(выгрузка кредитных средств|зачисление кредитных средств|получение кредитных средств)$/.test(movement);
+}
+function isRegistryOutgoing(r){return !isRegistryIncome(r)}
+window.__BAZA_REGISTRY_OUTGOING=isRegistryOutgoing;
+function rows(){return PAY.filter(r=>isRegistryOutgoing(r)&&matches(r))}
+function agg(rs,f){const m={};rs.forEach(r=>m[r[f]]=(m[r[f]]||0)+Number(r.amount||0));return Object.entries(m).sort((a,b)=>b[1]-a[1])}
 /* BAZA_CASH_PERIMETER_V1: М73 and PlayEstate are OUTSIDE the BAZA group. */
 const isOutsideGroupPayee=name=>{
   const normalized=String(name||'').toLocaleLowerCase('ru-RU').replace(/[«»"'\s.\-–—]/g,'');
@@ -503,7 +523,7 @@ function renderTable(){
   const comment='<td>'+(c?'<div class="comment-view" title="'+esc(c)+'"><span class="comment-text">'+esc(c)+'</span><button class="comment-add" data-edit="'+esc(r.id)+'">изменить</button></div>':'<button class="comment-add" data-add="'+esc(r.id)+'">+ Добавить</button>')+'</td>';
   return '<tr data-open="'+esc(r.id)+'" class="'+(selected?'registry-row-selected':'')+'">'+checkbox+details+status+comment+'</tr>';
  }).join('');
- rowsCount.textContent='Показаны '+rs.length+' из '+PAY.length+' платежей';
+ rowsCount.textContent='Показаны '+rs.length+' из '+PAY.filter(isRegistryOutgoing).length+' расходных платежей';
  document.querySelectorAll('[data-action]').forEach(b=>b.onclick=e=>{e.stopPropagation();saveApproval(b.dataset.id,b.dataset.action==='approve'?'approved':'rejected')});
  document.querySelectorAll('[data-add],[data-edit]').forEach(b=>b.onclick=e=>{
   e.stopPropagation();const id=b.dataset.add||b.dataset.edit;openModal(PAY.find(x=>x.id===id));
@@ -944,13 +964,14 @@ body.auth-ready .auth-screen{display:none}.auth-guard-note{font-size:9px;color:#
   PAY.length=0;PAY.push(...window.PAYMENTS);PAY=window.PAYMENTS;
 }
 function refillColumnFilters(){
+    const eligible=PAY.filter(isRegistryOutgoing);
     document.querySelectorAll('.column-filter').forEach(sel=>{
       const field=sel.dataset.field;
       if(field==='status')return;
       const previous=sel.value;
-      const values=[...new Set(PAY.map(r=>String(r[field]??'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ru'));
-      const hasUnassigned=field==='project'&&PAY.some(r=>!String(r.project??'').trim());
-      const hasMulti=field==='project'&&PAY.some(r=>projectGroupKey(r.project)===MULTI_PROJECT_KEY);
+      const values=[...new Set(eligible.map(r=>String(r[field]??'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ru'));
+      const hasUnassigned=field==='project'&&eligible.some(r=>!String(r.project??'').trim());
+      const hasMulti=field==='project'&&eligible.some(r=>projectGroupKey(r.project)===MULTI_PROJECT_KEY);
       const available=[...values];
       const opts=[new Option('Все',''),...values.map(v=>new Option(v,v))];
       if(hasMulti){opts.push(new Option('Несколько проектов',MULTI_PROJECT_KEY));available.push(MULTI_PROJECT_KEY);}
