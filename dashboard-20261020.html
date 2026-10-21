@@ -745,4 +745,97 @@ function refillColumnFilters(){
 })();
 </script>
 
+
+<style>
+.cash-board{background:#fff;border:1px solid #d9e5ef;border-radius:13px;padding:17px;margin:15px 0}
+.cash-board h3{font-size:14px;margin:0 0 5px}.cash-board p{color:#7890a7;font-size:10px;line-height:1.5}
+.cash-wrap{overflow:auto}.cash-table{min-width:850px;width:100%;table-layout:auto;border-collapse:collapse}
+.cash-table th,.cash-table td{padding:11px 10px;border-bottom:1px solid #e2ebf2;font-size:11px;white-space:nowrap}
+.cash-table th:not(:first-child),.cash-table td:not(:first-child){text-align:right}
+.cash-table tbody tr:last-child{font-weight:800;background:#f0f6fa}
+.cash-table .negative{color:#c32130;font-weight:800}.cash-table .unknown{color:#8699aa}
+.cash-table button{background:#eef5fb;color:#215e8d;border:1px solid #c9deee;border-radius:7px;padding:6px 9px;cursor:pointer}
+</style>
+<section class="cash-board" id="cashBoard"><h3>Прогноз остатков по юридическим лицам</h3>
+<p>19–25 октября 2026 · Остаток на начало + приход − расход = остаток на конец недели</p>
+<div class="cash-wrap"><table class="cash-table"><thead><tr><th>Юридическое лицо</th><th>На начало</th><th>Приход (план)</th><th>Расход (план)</th><th>На конец</th><th></th></tr></thead><tbody id="cashRows"><tr><td colspan="6">Загрузка…</td></tr></tbody></table></div>
+<p id="cashNote">Начальные остатки: исходный Excel, лист «Остатки», на 19.10.2026. Прогноз, не банковский факт.</p></section>
+<script>
+/* BAZA_CASH_V1 */
+(function(){
+'use strict';
+const aliases=[
+['ООО "БАЗА"','baza'],['ООО ИНВЕСТИЦИИ В НЕДВИЖИМОСТЬ','investrealty'],['ООО "БАЗА ДЕВЕЛОПМЕНТ"','bazadev'],
+['ООО СК "БАЗА"','bazask'],['ООО "БУП"','bup'],['ООО СЗ "БАЗА-КУЙБЫШЕВА"','kuib'],['ООО СЗ База-Куйбышева','kuib'],
+['ООО СЗ "БАЗА - ПЕРОВСКОЕ"','perovskoe'],['ООО СЗ "База в Сердце Города-1"','serdce'],
+['ООО СЗ "СМАРТ ДЕВЕЛОПМЕНТ"','smart'],['ООО СЗ "СТРОЙКАТЕРИНБУРГ"','stroik'],
+['ООО ТЗ База','tz'],['ИП Басс А.А.','bass'],['ИП Самойлина М.В.','samoilina'],
+['ООО СЗ "База-Подбельского"','podbel'],['М73','m73']
+];
+const normalize=x=>String(x||'').toLocaleLowerCase('ru-RU').replace(/[«»"'\s\-–—.]/g,'');
+const lookup=new Map(aliases.map(pair=>[normalize(pair[0]),pair[1]]));
+const getKey=name=>lookup.get(normalize(name))||'other:'+normalize(name);
+const fmt=n=>new Intl.NumberFormat('ru-RU',{maximumFractionDigits:0}).format(Number(n)||0)+' ₽';
+const escapeHtml=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
+let balances=[],loaded=false,loading=false;
+async function load(){
+ if(loading||!document.body.classList.contains('auth-ready')||!window.bazaAuthHeaders)return;
+ loading=true;
+ try{
+ const response=await fetch(SUPABASE_URL+'/rest/v1/weekly_cash_balances?select=entity_key,entity_name,opening_balance,planned_receipts&week_start=eq.2026-10-19&order=entity_name.asc',{headers:window.bazaAuthHeaders()});
+ if(!response.ok)throw Error('Не удалось получить остатки: '+response.status);
+ balances=await response.json();loaded=true;renderCash();
+ }catch(err){document.getElementById('cashRows').innerHTML='<tr><td colspan="6">'+escapeHtml(err.message)+'</td></tr>';}
+ finally{loading=false;}
+}
+function renderCash(){
+ if(!loaded)return;
+ const debits=new Map(),entities=new Map();
+ for(const payment of (window.__BAZA_ALL_PAYMENTS||PAY||[])){
+  const key=getKey(payment.entity);
+  debits.set(key,(debits.get(key)||0)+Number(payment.amount||0));
+  entities.set(key,payment.entity);
+ }
+ const items=new Map(balances.map(r=>[r.entity_key,r]));
+ for(const [key,name] of entities)if(!items.has(key))items.set(key,{entity_key:key,entity_name:name,opening_balance:null,planned_receipts:null});
+ const list=[...items.values()].sort((a,b)=>a.entity_name.localeCompare(b.entity_name,'ru'));
+ let opening=0,inflow=0,outflow=0,closing=0,complete=true,missing=0;
+ const html=list.map(r=>{
+  const hasOpening=r.opening_balance!==null&&r.opening_balance!==undefined;
+  const hasInflow=r.planned_receipts!==null&&r.planned_receipts!==undefined;
+  const debit=debits.get(r.entity_key)||0;
+  const valid=hasOpening&&hasInflow;
+  const close=Number(r.opening_balance||0)+Number(r.planned_receipts||0)-debit;
+  if(!valid){complete=false;missing++;}
+  if(hasOpening)opening+=Number(r.opening_balance);
+  if(hasInflow)inflow+=Number(r.planned_receipts);
+  outflow+=debit;if(valid)closing+=close;
+  const canEdit=['admin','approver'].includes(window.__BAZA_AUTH_ROLE||'')&&!r.entity_key.startsWith('other:');
+  return '<tr><td>'+escapeHtml(r.entity_name)+'</td><td>'+(hasOpening?fmt(r.opening_balance):'<span class="unknown">Нет данных</span>')+'</td><td>'+(hasInflow?fmt(r.planned_receipts):'<span class="unknown">Не заполнен</span>')+'</td><td>'+fmt(debit)+'</td><td class="'+(valid&&close<0?'negative':'')+'">'+(valid?fmt(close):'—')+'</td><td>'+(canEdit?'<button data-cash-key="'+escapeHtml(r.entity_key)+'">Изменить</button>':'—')+'</td></tr>';
+ });
+ html.push('<tr><td>ИТОГО</td><td>'+fmt(opening)+'</td><td>'+fmt(inflow)+'</td><td>'+fmt(outflow)+'</td><td>'+(complete?fmt(closing):'—')+'</td><td></td></tr>');
+ document.getElementById('cashRows').innerHTML=html.join('');
+ document.getElementById('cashNote').textContent='Начальные остатки на 19.10.2026 из Excel; плановые списания из всего календаря, включая внутренние переводы. Поступления вводятся отдельно. '+(complete?'Все строки заполнены.':'Для '+missing+' строк отсутствует начальный остаток и/или план поступлений; общий конечный остаток пока не рассчитывается.');
+}
+async function edit(key){
+ const r=balances.find(item=>item.entity_key===key);if(!r)return;
+ const start=prompt('Начальный остаток на 19 октября (₽), пусто = неизвестно',r.opening_balance??'');
+ if(start===null)return;
+ const inbound=prompt('План поступлений за неделю (₽), пусто = неизвестно',r.planned_receipts??'');
+ if(inbound===null)return;
+ const parse=v=>{if(!String(v).trim())return null;const n=Number(String(v).replace(/\s/g,'').replace(',','.'));if(!Number.isFinite(n)||n<0)throw Error('Неверная сумма');return n;};
+ try{
+ const payload={opening_balance:parse(start),planned_receipts:parse(inbound)};
+ const response=await fetch(SUPABASE_URL+'/rest/v1/weekly_cash_balances?week_start=eq.2026-10-19&entity_key=eq.'+encodeURIComponent(key),{method:'PATCH',headers:window.bazaAuthHeaders({Prefer:'return=representation'}),body:JSON.stringify(payload)});
+ if(!response.ok)throw Error('Ошибка сохранения: '+response.status);
+ Object.assign(r,payload);renderCash();
+ }catch(e){alert(e.message);}
+}
+document.getElementById('cashRows').addEventListener('click',e=>{const b=e.target.closest('[data-cash-key]');if(b)edit(b.dataset.cashKey);});
+window.__BAZA_REFRESH_CASH=renderCash;
+new MutationObserver(()=>{if(document.body.classList.contains('auth-ready'))load();else loaded=false;}).observe(document.body,{attributes:true,attributeFilter:['class']});
+if(document.body.classList.contains('auth-ready'))load();
+})();
+</script>
+
 </body></html>
