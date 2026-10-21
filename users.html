@@ -71,43 +71,29 @@ button:hover{background:#174c77}button:disabled{opacity:.6;cursor:wait}
   <div class="small">Добавлять сотрудников может только активный администратор. Права проверяются на сервере Supabase.</div>
  </section>
 </main>
+<script src="auth-session.js?v=3"></script>
 <script>
 (function(){
  const SUPABASE_URL="https://duvdlpzwxtuwbwyggpla.supabase.co";
  const PUBLISHABLE_KEY="sb_publishable_WBg9viktHBpz9lw1Nwqtyw_49Src_lU";
+ const session=window.BazaSession;session.configure({url:SUPABASE_URL,key:PUBLISHABLE_KEY});session.start();
  const state=document.getElementById('state'),form=document.getElementById('userForm');
  const submit=document.getElementById('sendInvite');
  const authHeaders=t=>({apikey:PUBLISHABLE_KEY,Authorization:'Bearer '+t});
  function show(message,kind){
   state.textContent=message;state.className='note'+(kind?' '+kind:'');
  }
- async function refresh(){
-  const stored=localStorage.getItem('baza_refresh_token');
-  if(!stored)return null;
-  const res=await fetch(SUPABASE_URL+'/auth/v1/token?grant_type=refresh_token',{method:'POST',headers:{apikey:PUBLISHABLE_KEY,'Content-Type':'application/json'},body:JSON.stringify({refresh_token:stored})});
-  if(!res.ok)return null;
-  const data=await res.json();
-  if(!data.access_token)return null;
-  localStorage.setItem('baza_access_token',data.access_token);
-  if(data.refresh_token)localStorage.setItem('baza_refresh_token',data.refresh_token);
-  return data.access_token;
- }
  async function adminToken(){
-  let token=localStorage.getItem('baza_access_token');
-  if(!token)return null;
-  let res=await fetch(SUPABASE_URL+'/auth/v1/user',{headers:authHeaders(token)});
-  if(res.status===401){
-   token=await refresh();
-   if(!token)return null;
-   res=await fetch(SUPABASE_URL+'/auth/v1/user',{headers:authHeaders(token)});
-  }
-  if(!res.ok)return null;
-  const user=await res.json();
-  const profileRes=await fetch(SUPABASE_URL+'/rest/v1/user_profiles?select=role,is_active&id=eq.'+encodeURIComponent(user.id),{headers:authHeaders(token)});
-  if(!profileRes.ok)return null;
+  if(!session.token()&&!session.refreshToken())return null;
+  const response=await session.fetch(SUPABASE_URL+'/auth/v1/user',{headers:authHeaders(session.token())});
+  if(response.status===401)return null;
+  if(!response.ok)throw Error('Supabase: ошибка подтверждения входа HTTP '+response.status);
+  const user=await response.json();
+  const profileRes=await session.fetch(SUPABASE_URL+'/rest/v1/user_profiles?select=role,is_active&id=eq.'+encodeURIComponent(user.id),{headers:authHeaders(session.token())});
+  if(!profileRes.ok)throw Error('Supabase: ошибка чтения профиля HTTP '+profileRes.status);
   const profiles=await profileRes.json();
   if(profiles[0]?.role!=='admin'||profiles[0]?.is_active!==true)return null;
-  return token;
+  return session.token();
  }
  async function init(){
   try{
@@ -124,7 +110,7 @@ button:hover{background:#174c77}button:disabled{opacity:.6;cursor:wait}
    const token=await adminToken();
    if(!token)throw new Error('Сессия администратора недействительна. Откройте дашборд и войдите снова.');
    const input={full_name:document.getElementById('fullName').value.trim(),email:document.getElementById('email').value.trim(),role:document.getElementById('role').value};
-   const res=await fetch(SUPABASE_URL+'/functions/v1/baza-invite-user',{
+   const res=await session.fetch(SUPABASE_URL+'/functions/v1/baza-invite-user',{
     method:'POST',headers:{...authHeaders(token),'Content-Type':'application/json'},
     body:JSON.stringify(input)
    });
@@ -153,7 +139,7 @@ button:hover{background:#174c77}button:disabled{opacity:.6;cursor:wait}
   try{
    const token=await adminToken();
    if(!token)throw new Error('Войдите в систему под администратором.');
-   const res=await fetch(SUPABASE_URL+'/functions/v1/baza-invite-user',{
+   const res=await session.fetch(SUPABASE_URL+'/functions/v1/baza-invite-user',{
     method:'POST',headers:{...authHeaders(token),'Content-Type':'application/json'},
     body:JSON.stringify({full_name:p.full_name,email:p.email,role:p.role})
    });
