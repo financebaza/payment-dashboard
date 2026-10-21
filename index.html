@@ -330,7 +330,11 @@ render();
   const expenses=all.filter(r=>!r.isInternal&&!r.isNonExpense);
   window.PAYMENTS.splice(0,window.PAYMENTS.length,...expenses);
   const page=document.querySelector('.page');if(!page)return;
-  page.insertAdjacentHTML('beforeend',`<section class="vgo-section" id="vgo"><div class="vgo-head"><div><div class="eyebrow">ВГО · ВНУТРИГРУППОВЫЕ ДВИЖЕНИЯ</div><h2>ВГО / внутренние перечисления</h2><div class="vgo-note">Не входят в реальные расходы и не попадают в реестр согласования.</div></div></div><div class="vgo-cards"><div class="vgo-card"><label>ВСЕ ВГО / ВНУТРЕННИЕ</label><strong id="vgoTotal">—</strong></div><div class="vgo-card"><label>КОЛИЧЕСТВО ОПЕРАЦИЙ</label><strong id="vgoCount">—</strong></div><div class="vgo-card"><label>КРУПНЕЙШИЙ ПРОЕКТ</label><strong id="vgoTop">—</strong></div></div><div class="vgo-tools"><input id="vgoSearch" placeholder="Юрлицо, контрагент, проект…"><select id="vgoEntity"><option value="">Все юрлица</option></select><select id="vgoProject"><option value="">Все проекты</option></select></div><div class="table-card"><div class="table-wrap"><table><thead><tr><th>Откуда</th><th>Куда</th><th>Проект</th><th>Направление</th><th>Подстатья</th><th>Сумма</th></tr></thead><tbody id="vgoTable"></tbody></table></div></div></section>`);
+  page.insertAdjacentHTML('beforeend',`<section class="cash-board" id="cashBoard"><h3>Прогноз остатков по юридическим лицам</h3>
+<p>19–25 октября 2026 · Остаток на начало + приход − расход = остаток на конец недели</p>
+<div class="cash-wrap"><table class="cash-table"><thead><tr><th>Юридическое лицо</th><th>На начало</th><th>Приход (план)</th><th>Расход (план)</th><th>На конец</th><th></th></tr></thead><tbody id="cashRows"><tr><td colspan="6">Загрузка…</td></tr></tbody></table></div>
+<p id="cashNote">Начальные остатки: исходный Excel, лист «Остатки», на 19.10.2026. Прогноз, не банковский факт.</p></section>
+<section class="vgo-section" id="vgo"><div class="vgo-head"><div><div class="eyebrow">ВГО · ВНУТРИГРУППОВЫЕ ДВИЖЕНИЯ</div><h2>ВГО / внутренние перечисления</h2><div class="vgo-note">Не входят в реальные расходы и не попадают в реестр согласования.</div></div></div><div class="vgo-cards"><div class="vgo-card"><label>ВСЕ ВГО / ВНУТРЕННИЕ</label><strong id="vgoTotal">—</strong></div><div class="vgo-card"><label>КОЛИЧЕСТВО ОПЕРАЦИЙ</label><strong id="vgoCount">—</strong></div><div class="vgo-card"><label>КРУПНЕЙШИЙ ПРОЕКТ</label><strong id="vgoTop">—</strong></div></div><div class="vgo-tools"><input id="vgoSearch" placeholder="Юрлицо, контрагент, проект…"><select id="vgoEntity"><option value="">Все юрлица</option></select><select id="vgoProject"><option value="">Все проекты</option></select></div><div class="table-card"><div class="table-wrap"><table><thead><tr><th>Откуда</th><th>Куда</th><th>Проект</th><th>Направление</th><th>Подстатья</th><th>Сумма</th></tr></thead><tbody id="vgoTable"></tbody></table></div></div></section>`);
   const vgoRows=()=>window.__BAZA_ALL_PAYMENTS.filter(r=>r.isInternal&&!r.isNonExpense);
   const fmt=n=>new Intl.NumberFormat('ru-RU',{maximumFractionDigits:0}).format(Math.round(Number(n)||0))+' ₽';
   const esc2=s=>String(s??'—').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
@@ -717,7 +721,7 @@ function refillColumnFilters(){
 
 
 <style>
-body.auth-locked #cashBoard{display:none!important}.cash-board{box-sizing:border-box;max-width:1452px;width:calc(100% - 48px);margin:15px auto;background:#fff;border:1px solid #d9e5ef;border-radius:13px;padding:17px}@media(max-width:700px){.cash-board{width:calc(100% - 24px);margin:15px auto}}
+body.auth-locked #cashBoard{display:none!important}.cash-board{width:100%;max-width:none;margin:18px 0;background:#fff;border:1px solid #d9e5ef;border-radius:13px;padding:17px}
 .cash-board h3{font-size:14px;margin:0 0 5px}.cash-board p{color:#7890a7;font-size:10px;line-height:1.5}
 .cash-wrap{overflow:auto}.cash-table{min-width:850px;width:100%;table-layout:auto;border-collapse:collapse}
 .cash-table th,.cash-table td{padding:11px 10px;border-bottom:1px solid #e2ebf2;font-size:11px;white-space:nowrap}
@@ -726,10 +730,7 @@ body.auth-locked #cashBoard{display:none!important}.cash-board{box-sizing:border
 .cash-table .negative{color:#c32130;font-weight:800}.cash-table .unknown{color:#8699aa}
 .cash-table button{background:#eef5fb;color:#215e8d;border:1px solid #c9deee;border-radius:7px;padding:6px 9px;cursor:pointer}
 </style>
-<section class="cash-board" id="cashBoard"><h3>Прогноз остатков по юридическим лицам</h3>
-<p>19–25 октября 2026 · Остаток на начало + приход − расход = остаток на конец недели</p>
-<div class="cash-wrap"><table class="cash-table"><thead><tr><th>Юридическое лицо</th><th>На начало</th><th>Приход (план)</th><th>Расход (план)</th><th>На конец</th><th></th></tr></thead><tbody id="cashRows"><tr><td colspan="6">Загрузка…</td></tr></tbody></table></div>
-<p id="cashNote">Начальные остатки: исходный Excel, лист «Остатки», на 19.10.2026. Прогноз, не банковский факт.</p></section>
+
 <script>
 /* BAZA_CASH_V1 */
 (function(){
