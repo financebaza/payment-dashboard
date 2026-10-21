@@ -717,7 +717,7 @@ function refillColumnFilters(){
 
 
 <style>
-body.auth-locked #cashBoard{display:none!important}.cash-board{max-width:1452px;margin:15px auto;background:#fff;border:1px solid #d9e5ef;border-radius:13px;padding:17px;margin:15px 0}
+body.auth-locked #cashBoard{display:none!important}.cash-board{max-width:1452px;width:calc(100% - 48px);margin:15px auto;background:#fff;border:1px solid #d9e5ef;border-radius:13px;padding:17px;margin:15px 0}
 .cash-board h3{font-size:14px;margin:0 0 5px}.cash-board p{color:#7890a7;font-size:10px;line-height:1.5}
 .cash-wrap{overflow:auto}.cash-table{min-width:850px;width:100%;table-layout:auto;border-collapse:collapse}
 .cash-table th,.cash-table td{padding:11px 10px;border-bottom:1px solid #e2ebf2;font-size:11px;white-space:nowrap}
@@ -763,12 +763,13 @@ function renderCash(){
  const debits=new Map(),entities=new Map();
  for(const payment of (window.__BAZA_ALL_PAYMENTS||PAY||[])){
   const key=getKey(payment.entity);
+  if(key==='m73'||/выгрузка кредитных средств/i.test(String(payment.subcategory||''))||payment.isNonExpense)continue;
   debits.set(key,(debits.get(key)||0)+Number(payment.amount||0));
   entities.set(key,payment.entity);
  }
  const items=new Map(balances.map(r=>[r.entity_key,r]));
- for(const [key,name] of entities)if(!items.has(key))items.set(key,{entity_key:key,entity_name:name,opening_balance:null,planned_receipts:null});
- const list=[...items.values()].sort((a,b)=>a.entity_name.localeCompare(b.entity_name,'ru'));
+ for(const [key,name] of entities)if(key!=='m73'&&!items.has(key))items.set(key,{entity_key:key,entity_name:name,opening_balance:null,planned_receipts:null});
+ const list=[...items.values()].filter(r=>r.entity_key!=='m73').sort((a,b)=>a.entity_name.localeCompare(b.entity_name,'ru'));
  let opening=0,inflow=0,outflow=0,closing=0,complete=true,missing=0;
  const html=list.map(r=>{
   const hasOpening=r.opening_balance!==null&&r.opening_balance!==undefined;
@@ -785,7 +786,7 @@ function renderCash(){
  });
  html.push('<tr><td>ИТОГО</td><td>'+fmt(opening)+'</td><td>'+fmt(inflow)+'</td><td>'+fmt(outflow)+'</td><td>'+(complete?fmt(closing):'—')+'</td><td></td></tr>');
  document.getElementById('cashRows').innerHTML=html.join('');
- document.getElementById('cashNote').textContent='Начальные остатки на 19.10.2026 из Excel; плановые списания из всего календаря, включая внутренние переводы. Поступления вводятся отдельно. '+(complete?'Все строки заполнены.':'Для '+missing+' строк отсутствует начальный остаток и/или план поступлений; общий конечный остаток пока не рассчитывается.');
+ document.getElementById('cashNote').textContent='Начальные остатки на 19.10.2026 из Excel. Поступления: кредитные выгрузки и перечисления от компаний группы по исходному платежному календарю. Внутренние перечисления учитываются как расход отправителя и приход получателя; зеркальные строки не задваиваются. М73 исключена. '+(complete?'Все строки заполнены.':'Для '+missing+' строк отсутствует начальный остаток и/или план поступлений; общий конечный остаток пока не рассчитывается.');
 }
 async function edit(key){
  const r=balances.find(item=>item.entity_key===key);if(!r)return;
