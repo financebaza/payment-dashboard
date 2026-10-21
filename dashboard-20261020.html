@@ -935,6 +935,7 @@ function cashDrillButton(side,key,value){
 function cashMovementRows(side,key){
  const output=[];
  const payments=(window.__BAZA_ALL_PAYMENTS||PAY||[]);
+ const knownEntityKeys=new Set(balances.map(r=>r.entity_key));
  for(const r of payments){
   const from=getKey(r.entity),to=getKey(r.counterparty);
   if(side==='expense'&&!r.isNonExpense&&from!=='m73'&&(key==='__TOTAL__'||key===from)){
@@ -942,8 +943,8 @@ function cashMovementRows(side,key){
   }
   if(side==='income'&&getKey(r.entity)!=='m73'){
    const credit=r.isNonExpense&&/выгрузка кредитных средств/i.test(String(r.subcategory||''));
-   const transfer=!r.isNonExpense&&to&&to!=='m73'&&to!==from;
-   const dest=credit?from:(transfer?to:null);
+   const transfer=!r.isNonExpense&&knownEntityKeys.has(to)&&to!=='m73'&&to!==from;
+   const dest=credit&&knownEntityKeys.has(from)?from:(transfer?to:null);
    if(dest&&(key==='__TOTAL__'||key===dest)){
     output.push({amount:Number(r.amount||0),kind:credit?'Выгрузка кредита':'Внутреннее поступление',sender:credit?r.counterparty:r.entity,receiver:credit?r.entity:r.counterparty,project:r.project,subcategory:r.subcategory,source:r.source,id:r.id});
    }
