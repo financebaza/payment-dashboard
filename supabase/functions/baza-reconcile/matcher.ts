@@ -58,7 +58,14 @@ function proposal(ps,fs,kind,confidence,reason){
 export function suggestMatches(plansInput,factsInput,options={}){
  const from=options.date_start||'0000-01-01',to=options.date_end||'9999-12-31';
  const plans=plansInput.filter(p=>available(p)>0).sort((a,b)=>a.plan_row-b.plan_row);
- const facts=factsInput.filter(f=>!String(f.plan_refs||'').trim()&&!String(f.suspected_duplicate||'').trim()&&cents(f.amount_signed)>0&&
+ // A receipt mirroring an already-linked debit is not a second payment.
+ const linked=factsInput.filter(f=>String(f.plan_refs||'').trim());
+ const mirroredWithLinked=f=>linked.some(g=>Math.sign(Number(g.amount_signed))!==Math.sign(Number(f.amount_signed))&&
+   cents(g.amount_signed)===cents(f.amount_signed)&&
+   partyKey(g.payer)===partyKey(f.counterparty)&&partyKey(g.counterparty)===partyKey(f.payer)&&
+   (!f.operation_date||!g.operation_date||Math.abs(new Date(f.operation_date)-new Date(g.operation_date))<=259200000));
+ const facts=factsInput.filter(f=>!String(f.plan_refs||'').trim()&&!String(f.suspected_duplicate||'').trim()&&
+  !mirroredWithLinked(f)&&cents(f.amount_signed)>0&&
   (!f.operation_date||(f.operation_date>=from&&f.operation_date<=to))).sort((a,b)=>a.fact_row-b.fact_row);
  const usedP=new Set(),usedF=new Set(),auto=[],review=[];
  const eligible=p=>facts.filter(f=>!usedF.has(f.fact_row)&&compatible(p,f));
