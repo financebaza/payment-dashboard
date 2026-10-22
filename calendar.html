@@ -370,7 +370,8 @@ const money=n=>new Intl.NumberFormat('ru-RU',{maximumFractionDigits:2}).format(N
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const formatDate=s=>s?new Intl.DateTimeFormat('ru-RU',{day:'2-digit',month:'short'}).format(new Date(s+'T12:00:00Z')):'—';
 let token='',role='',week=null,items=[],events=[],currentWeek='',user=null,origin='vgo',editItemId=null;
-let cashTemplates=[],cashBalances=[],cashPreview=[];
+let cashTemplates=[],cashBalances=[],cashPreview=[],receiptRows=[],groupBreakdown={outflows:[],receipts:[],manual_receipts:[]};
+let editingGroupReceipt=null;
 const selectedPayments=new Set();
 let lastPaymentSelectionIndex=null;
 const editable=()=>Boolean(week?.status==='draft'&&(role==='admin'||role==='approver'));
@@ -426,7 +427,7 @@ function draw(){
  const totals={all:0,bitrix:0,vgo:0,other:0};items.forEach(r=>{const x=Number(r.amount||0);totals.all+=x;totals[r.origin]+=x});
  $('kpiAll').textContent=money(totals.all);$('kpiBitrix').textContent=money(totals.bitrix);
  $('kpiVgo').textContent=money(totals.vgo);$('kpiOther').textContent=money(totals.other);$('kpiCount').textContent=items.length+' платежей';
- drawTable();drawHistory();drawCashForecast();
+ drawTable();drawHistory();drawCashForecast();drawGroupLiquidity();drawGroupReceipts();
 }
 
 function filteredCalendarPayments(){
@@ -504,17 +505,20 @@ function drawHistory(){
 }
 async function loadWeek(){
  const start=currentWeek;
- const [weeks,rows,audit,balances,templates,preview]=await Promise.all([
+ const [weeks,rows,audit,balances,templates,preview,receiptData,breakdown]=await Promise.all([
  request('calendar_weeks?select=*&week_start=eq.'+start),
  request('calendar_items?select=*&week_start=eq.'+start+'&order=due_date.asc,created_at.asc&limit=1000'),
  request('calendar_events?select=event,item_id,occurred_at,details&week_start=eq.'+start+'&order=occurred_at.desc&limit=50'),
  request('weekly_cash_balances?select=entity_key,entity_name,opening_balance,planned_receipts&week_start=eq.'+start+'&order=entity_name.asc&limit=150'),
  request('weekly_cash_balances?select=entity_key,entity_name&week_start=eq.2026-10-19&order=entity_name.asc&limit=150'),
- request('rpc/liquidity_preview_week?p_week_start='+start)
+ request('rpc/liquidity_preview_week?p_week_start='+start),
+ request('calendar_receipts?select=*&week_start=eq.'+start+'&order=due_date.asc,created_at.asc&limit=1000'),
+ request('rpc/liquidity_group_breakdown_week?p_week_start='+start)
  ]);
  if(currentWeek!==start)return;
  week=weeks?.[0]||null;items=rows||[];events=audit||[];
  cashBalances=balances||[];cashTemplates=templates||[];cashPreview=preview||[];
+ receiptRows=receiptData||[];groupBreakdown=breakdown||{outflows:[],receipts:[],manual_receipts:[]};
  inform(!week?'Выберите «Создать черновик», чтобы начать формирование ПК на эту неделю.':week.status==='locked'?'Утверждённый ПК сохранён и защищён от изменений.':week.status==='formed'?'ПК сформирован и опубликован на главном дашборде для рассмотрения. После внешнего согласования администратор фиксирует его на главной странице.':'Черновик открыт. Добавьте ВГО и прочие платежи; заявки Битрикс24 появятся после подключения API.',week?.status==='locked'?'success':'');
  draw();
 }
@@ -536,7 +540,7 @@ function drawCashForecast(){
  $('cashForecastMessage').textContent=
    week.status==='locked'?'ПК уже утверждён. Плановые остатки зафиксированы на дату утверждения, дальнейшее редактирование закрыто.':
    week.status==='formed'?'ПК на рассмотрении. Чтобы изменить прогноз, администратор должен вернуть ПК на доработку.':
-   'Заполни остатки и план поступлений по каждому юрлицу, затем нажми «Сохранить все изменения». Чтобы не считать кредитные платежи вручную, выдели их в реестре выше и скопируй сумму. Кредитный транш может отличаться от суммы оплачиваемых из него заявок. Пустое поле — «нет данных», ноль указывай цифрой 0.'; 
+   'В столбце «Приход без расшифровки» оставляй только поступления, которые ещё не отражены отдельными строками выше или автоматическим ВГО. Для кредитного транша используй кнопку «+ Поступление», затем «Сохранить все изменения» для правки остатков. Ноль вводи цифрой 0, пустое поле означает «нет данных».'; 
  const stale1c=cashBalances.filter(r=>{
   const m=String(r.source_note||'').match(/дата отчёта\s+(\d{4}-\d{2}-\d{2})/i);
   return m&&m[1]!==shift(currentWeek,-1);
@@ -553,9 +557,11 @@ function drawCashForecast(){
    (isNewEntity?'<small class="cash-new-entity">Новое юрлицо · код создаётся автоматически</small>':'')+'</td>'+
    '<td><input data-cash-opening value="'+esc(opening)+'" inputmode="decimal" '+disable+' aria-label="Начальный остаток '+esc(r.entity_name)+'"></td>'+
    '<td><input data-cash-income value="'+esc(receipts)+'" inputmode="decimal" '+disable+' aria-label="План поступлений '+esc(r.entity_name)+'"></td>'+
+   '<td class="num">'+displayCashValue(Number(calc?.planned_receipts||0)-Number(r.planned_receipts||0))+'</td>'+
+   '<td class="num" data-cash-income-total="'+i+'">'+(calc?.planned_receipts==null?'—':displayCashValue(calc.planned_receipts))+'</td>'+
    '<td class="num">'+displayCashValue(calc?.planned_payments||0)+'</td>'+
    '<td class="num" data-cash-closing="'+i+'">'+(calc?.is_complete?displayCashValue(calc.planned_closing):'<span class="unknown">Нет полного прогноза</span>')+'</td></tr>';
- }).join('')||'<tr><td colspan="5">Не найдены организации для формирования прогноза</td></tr>';
+ }).join('')||'<tr><td colspan="7">Не найдены организации для формирования прогноза</td></tr>';
  window.__BAZA_CASH_FORM_ROWS=arr;
  updateCashForecastPending();
 }
@@ -594,14 +600,22 @@ function readCashForecastChanges(){
    continue;
   }
   const changed=opening!==oldOpening||receipts!==oldIncome;
-  const payments=Number(cashPreview.find(x=>x.entity_key===r.entity_key)?.planned_payments||0);
+  const previewRow=cashPreview.find(x=>x.entity_key===r.entity_key);
+  const payments=Number(previewRow?.planned_payments||0);
+  const automatic=Number(previewRow?.planned_receipts||0)-Number(oldIncome||0);
   const closing=tr.querySelector('[data-cash-closing]');
+  const incomeTotal=tr.querySelector('[data-cash-income-total]');
+  if(incomeTotal){
+   const known=receipts!==null||Math.abs(automatic)>0.000001;
+   incomeTotal.textContent=known?displayCashValue((receipts||0)+automatic):'—';
+  }
   if(closing){
    const original=cashPreview.find(x=>x.entity_key===r.entity_key);
    if(!changed)closing.innerHTML=original?.is_complete?displayCashValue(original.planned_closing):
     '<span class="unknown">Нет полного прогноза</span>';
    else{
-    const value=opening===null||receipts===null?null:Math.round((opening+receipts-payments)*100)/100;
+    const value=opening===null||(receipts===null&&Math.abs(automatic)<0.000001)?null:
+      Math.round((opening+(receipts||0)+automatic-payments)*100)/100;
     closing.innerHTML=value===null?'<span class="unknown">Нет полного прогноза</span>':
      '<span class="cash-live-preview" title="Предварительный расчёт · не сохранено">'+displayCashValue(value)+' *</span>';
    }
