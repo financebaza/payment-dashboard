@@ -65,6 +65,51 @@ fieldset{border:none;padding:0;margin:0}dialog{border:1px solid #cfdeea;border-r
 
 
 
+
+/* BAZA_GROUP_LIQUIDITY_AND_RECEIPTS_V1 */
+.group-liquidity,.group-receipts{margin-top:16px}
+.group-liquidity .section-head p,.group-receipts .section-head p{font-size:11px;color:#7691a8;line-height:1.6;margin:6px 0}
+.group-coverage{font-size:10px;font-weight:700;color:#728aa0}
+.group-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:12px 0 13px}
+.group-kpi{display:flex;flex-direction:column;text-align:left;gap:7px;border:1px solid #d4e3ed;background:#f9fcff;border-radius:11px;padding:15px 13px;color:#153d5e;cursor:pointer;transition:border-color .2s,background .2s;min-width:0}
+.group-kpi:hover,.group-kpi:focus-visible{border-color:#28618e;background:#edf6ff;outline-offset:2px}
+.group-kpi span{font-size:9px;letter-spacing:.06em;font-weight:900;color:#66849d;display:flex;justify-content:space-between;gap:4px}
+.group-kpi span b{font-size:14px}
+.group-kpi strong{font-size:clamp(15px,1.7vw,23px);white-space:nowrap;letter-spacing:-.45px}
+.group-kpi small{font-size:9px;color:#8198aa;line-height:1.5}
+.group-kpi.income{background:#f1f9f5;border-color:#d0e6d8}
+.group-kpi.income strong{color:#137552}
+.group-kpi.expense{background:#fff6f7;border-color:#f0d5d9}
+.group-kpi.expense strong{color:#b43f4a}
+.group-kpi.ending{background:#133d64;border-color:#133d64;color:white}
+.group-kpi.ending span,.group-kpi.ending small{color:#bdd3e4}
+.group-kpi.ending strong{color:white}
+.group-liquidity-bottom{display:flex;align-items:start;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.group-liquidity-bottom button{font-size:10px;white-space:normal;text-align:left}
+.group-notice{font-size:10px;line-height:1.6;color:#728fa4;max-width:650px;margin:4px 0}
+.group-receipt-hint{font-size:10px;line-height:1.6;color:#6a879f;background:#f4f9fd;border:1px solid #dce9f3;padding:11px 13px;border-radius:8px;margin-bottom:12px}
+.group-receipt-table{min-width:920px}
+.group-receipt-table td{font-size:10px}
+.group-receipt-table .receipt-money{text-align:right;white-space:nowrap;font-weight:900}
+.group-receipt-table td .btn{padding:6px 9px;font-size:10px}
+.group-receipt-dialog{width:min(660px,calc(100vw - 24px))}
+.group-receipt-allocate{display:flex;align-items:start;gap:10px;background:#fff9ed;border:1px solid #e6d4ae;padding:12px;border-radius:9px;margin-top:12px;cursor:pointer}
+.group-receipt-allocate input{margin-top:3px;accent-color:#275e85}
+.group-receipt-allocate b{font-size:11px;display:block;color:#765c29}
+.group-receipt-allocate small{font-size:10px;color:#927a50;display:block;line-height:1.6;margin-top:5px}
+.group-receipt-manual{font-size:10px;color:#738fa3;margin:9px 0}
+.group-detail-dialog{width:min(1200px,calc(100vw - 26px));max-height:90vh}
+.group-detail-dialog .dialog-body{max-height:calc(90vh - 70px);overflow:auto}
+.group-detail-summary{font-size:11px;font-weight:700;background:#f5f9fd;padding:12px;border-radius:8px;color:#285679;margin:0 0 13px}
+.group-detail-table{max-height:520px;overflow:auto}
+.group-detail-table th{position:sticky;top:0;z-index:1}
+.group-detail-table table{min-width:900px}
+.group-detail-table td{font-size:10px}
+.group-detail-table td:last-child{text-align:right;white-space:nowrap;font-weight:800}
+.group-detail-foot{font-size:10px;color:#778da0;line-height:1.7;margin:12px 0 0}
+@media(max-width:1020px){.group-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:480px){.group-kpis{grid-template-columns:1fr}.group-kpi strong{font-size:21px}}
+
 /* BAZA_CASH_ONE_SAVE_V1 */
 .cash-forecast-savebar{position:sticky;bottom:12px;z-index:3;background:#f4faff;border:1px solid #bfd8eb;border-radius:11px;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:13px 16px;margin-top:13px;box-shadow:0 5px 20px rgba(18,57,92,.10)}
 .cash-forecast-savebar strong{font-size:12px;color:#153e62;display:block}
@@ -185,12 +230,37 @@ fieldset{border:none;padding:0;margin:0}dialog{border:1px solid #cfdeea;border-r
     <p id="formedInfo" style="margin-top:10px"></p></div>
   <div class="sidebar-box"><div class="section-head"><h3>История действий</h3><button id="historyReload" type="button" class="btn">Обновить</button></div><div id="history" class="audit muted">Нет действий</div></div>
  </aside></div>
+ 
+<section id="groupLiquiditySection" class="card group-liquidity" hidden>
+ <div class="section-head"><div><h2>Движение денежных средств ГК · за неделю</h2>
+ <p>Кликни на показатель, чтобы увидеть расшифровку по юридическим лицам, проектам и операциям.</p></div>
+ <span id="groupLiquidityCoverage" class="group-coverage">Загрузка…</span></div>
+ <div class="group-kpis">
+  <button type="button" data-group-detail="opening" class="group-kpi"><span>ОСТАТОК НА НАЧАЛО <b>↗</b></span><strong id="groupOpening">—</strong><small>По юрлицам · расшифровать</small></button>
+  <button type="button" data-group-detail="incoming" class="group-kpi income"><span>ПРИХОД В ГК <b>↗</b></span><strong id="groupIncoming">—</strong><small>Внешние и нерасшифрованные поступления</small></button>
+  <button type="button" data-group-detail="outgoing" class="group-kpi expense"><span>РАСХОД ИЗ ГК <b>↗</b></span><strong id="groupOutgoing">—</strong><small>Внешние платежи · без ВГО</small></button>
+  <button type="button" data-group-detail="closing" class="group-kpi ending"><span>ОСТАТОК НА КОНЕЦ <b>↗</b></span><strong id="groupClosing">—</strong><small>Начало + приход − расход</small></button>
+ </div>
+ <div class="group-liquidity-bottom">
+  <button type="button" id="groupTransfersOpen" class="btn">ВГО внутри группы: <b id="groupTransfersTotal">—</b> · Расшифровать</button>
+  <p id="groupLiquidityNotice" class="group-notice">Ожидаем данные.</p>
+ </div>
+</section>
+<section class="card group-receipts" id="groupReceiptsSection" hidden>
+ <div class="section-head"><div><h2>План поступлений · по операциям</h2>
+ <p>Кредитные транши, поступления от продаж и прочие внешние приходы. ВГО от компаний группы учитываются автоматически по исходящему платежу и здесь повторно не создаются.</p></div>
+ <button id="addGroupReceipt" type="button" class="btn primary">+ Поступление</button></div>
+ <div id="groupReceiptHint" class="group-receipt-hint">Детализированные поступления суммируются с остатком нерасшифрованного плана из таблицы ниже.</div>
+ <div class="tablewrap"><table class="group-receipt-table"><thead><tr><th>Дата</th><th>Получатель / отправитель</th><th>Проект / вид поступления</th><th style="text-align:right">Сумма</th><th>Уже было в плане</th><th></th></tr></thead>
+ <tbody id="groupReceiptBody"><tr><td colspan="6">Пока нет детализированных поступлений</td></tr></tbody></table></div>
+</section>
+
  <section id="cashForecastSection" class="card cash-forecast" hidden>
- <div class="section-head"><div><h2>Прогноз остатков на конец недели · по юрлицам</h2><p>Заполни начальные остатки и план поступлений, включая кредитные транши и ВГО. План списаний возьмём из позиций ПК. Значения не по банковским счетам — по каждой организации в целом.</p></div>
+ <div class="section-head"><div><h2>Прогноз остатков на конец недели · по юрлицам</h2><p>Начальный остаток + нерасшифрованные приходы + детализированные внешние поступления + входящие ВГО − расходы по ПК. ВГО автоматически переносятся от отправителя к получателю.</p></div>
  <div class="cash-forecast-buttons"><span class="cash-total" id="cashForecastCount">—</span><button type="button" class="btn" id="importOpeningButton">Импорт начальных остатков · XLSX</button><input id="openingXlsxFile" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden></div></div>
  <div id="cashForecastMessage" role="status">Загружаем прогноз...</div>
- <div class="tablewrap" style="margin-top:12px"><table><thead><tr><th>Наше юрлицо</th><th>Начальный остаток, ₽</th><th>Приходы за неделю, ₽</th><th style="text-align:right">Расходы по ПК, ₽</th><th style="text-align:right">Остаток на конец, ₽</th></tr></thead>
- <tbody id="cashForecastBody"><tr><td colspan="5">Нет данных</td></tr></tbody></table></div>
+ <div class="tablewrap" style="margin-top:12px"><table><thead><tr><th>Наше юрлицо</th><th>Начальный остаток, ₽</th><th>Приход без расшифровки, ₽</th><th style="text-align:right">Поступления по строкам и ВГО</th><th style="text-align:right">Всего приход</th><th style="text-align:right">Расходы по ПК, ₽</th><th style="text-align:right">Остаток на конец, ₽</th></tr></thead>
+ <tbody id="cashForecastBody"><tr><td colspan="7">Нет данных</td></tr></tbody></table></div>
  <div class="cash-forecast-savebar">
   <div>
    <strong id="cashForecastPending">Изменений нет</strong>
@@ -229,6 +299,38 @@ fieldset{border:none;padding:0;margin:0}dialog{border:1px solid #cfdeea;border-r
   <div id="bitrixTestResult" role="status" class="csv-import-message" hidden></div>
  </div>
 </dialog>
+
+<dialog id="groupDetailDialog" class="group-detail-dialog" aria-labelledby="groupDetailTitle">
+ <div class="dialog-head"><h2 id="groupDetailTitle">Расшифровка</h2><button type="button" class="close" id="groupDetailClose">×</button></div>
+ <div class="dialog-body">
+ <p class="group-detail-summary" id="groupDetailSummary">—</p>
+ <div class="tablewrap group-detail-table"><table><thead><tr><th>Дата</th><th>Юрлицо</th><th>Контрагент / источник</th><th>Проект / основание</th><th style="text-align:right">Сумма</th></tr></thead>
+ <tbody id="groupDetailBody"></tbody></table></div>
+ <p class="group-detail-foot" id="groupDetailFoot"></p>
+ </div>
+</dialog>
+<dialog id="groupReceiptDialog" class="group-receipt-dialog" aria-labelledby="groupReceiptTitle">
+ <div class="dialog-head"><h2 id="groupReceiptTitle">Добавить плановое поступление</h2><button type="button" class="close" id="groupReceiptClose">×</button></div>
+ <div class="dialog-body"><form id="groupReceiptForm">
+  <div class="form-grid">
+   <div class="field wide"><label for="groupReceiptEntity">Наше юрлицо — получатель</label><select id="groupReceiptEntity" required></select></div>
+   <div class="field"><label for="groupReceiptDue">Дата поступления</label><input type="date" id="groupReceiptDue" required></div>
+   <div class="field"><label for="groupReceiptAmount">Сумма, ₽</label><input type="number" id="groupReceiptAmount" min=".01" step=".01" required></div>
+   <div class="field wide"><label for="groupReceiptType">Вид поступления</label>
+    <select id="groupReceiptType"><option>Кредитный транш</option><option>Поступления от продаж</option><option>Прочие поступления</option></select></div>
+   <div class="field"><label for="groupReceiptCounterparty">От кого поступают деньги</label><input id="groupReceiptCounterparty" maxlength="240" placeholder="Банк / покупатель / контрагент"></div>
+   <div class="field"><label for="groupReceiptProject">Проект</label><input id="groupReceiptProject" maxlength="200"></div>
+   <div class="field wide"><label for="groupReceiptMemo">Комментарий</label><textarea id="groupReceiptMemo" maxlength="1500"></textarea></div>
+  </div>
+  <label class="group-receipt-allocate"><input type="checkbox" id="groupReceiptFromManual">
+   <span><b>Уже входит в сумму «Приход без расшифровки»</b>
+   <small>Уменьшить нерасшифрованный приход на эту сумму, чтобы не задвоить. Если это новое поступление сверх текущего плана, оставь галочку снятой.</small></span></label>
+  <p id="groupReceiptManualHint" class="group-receipt-manual">—</p>
+  <div class="dialog-actions"><button type="button" class="btn" id="groupReceiptCancel">Отмена</button>
+  <button type="submit" class="btn primary" id="groupReceiptSave">Сохранить поступление</button></div>
+ </form></div>
+</dialog>
+
 <dialog id="openingDialog" class="opening-import-dialog" aria-labelledby="openingDialogTitle">
  <div class="dialog-head"><h2 id="openingDialogTitle">Импорт начальных остатков · 1С XLSX</h2><button type="button" class="close" id="openingDialogClose" aria-label="Закрыть">×</button></div>
  <div class="dialog-body">
