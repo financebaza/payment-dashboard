@@ -499,7 +499,7 @@ function drawTable(){
  drawPaymentSelection();
 }
 function drawHistory(){
- const names={item_added:'Добавлена позиция',item_updated:'Изменена позиция',item_deleted:'Удалена позиция',week_formed:'Сформирована версия для рассмотрения',week_returned_to_draft:'Возврат на доработку',week_locked:'ПК зафиксирован',bitrix_csv_import:'Импорт заявок из CSV Битрикс24',draft_cleared:'Очищен черновик',cash_opening_import:'Загружены начальные остатки 1С'};
+ const names={item_added:'Добавлена позиция',item_updated:'Изменена позиция',item_deleted:'Удалена позиция',week_formed:'Сформирована версия для рассмотрения',week_returned_to_draft:'Возврат на доработку',week_locked:'ПК зафиксирован',bitrix_csv_import:'Импорт заявок из CSV Битрикс24',draft_cleared:'Очищен черновик',cash_opening_import:'Загружены начальные остатки 1С',receipt_added:'Добавлено поступление',receipt_updated:'Изменено поступление',receipt_deleted:'Удалено поступление'};
  $('history').innerHTML=events.slice(0,15).map(e=>'<div><strong>'+esc(names[e.event]||e.event)+'</strong><small>'+esc(new Date(e.occurred_at).toLocaleString('ru-RU'))+
  (e.details?.counterparty?' · '+esc(e.details.counterparty):e.event==='bitrix_csv_import'?' · '+esc(e.details.created||0)+' новых, '+esc(e.details.updated||0)+' обновлено':'')+'</small></div>').join('')||'<div>Пока без изменений</div>';
 }
@@ -522,6 +522,215 @@ async function loadWeek(){
  inform(!week?'Выберите «Создать черновик», чтобы начать формирование ПК на эту неделю.':week.status==='locked'?'Утверждённый ПК сохранён и защищён от изменений.':week.status==='formed'?'ПК сформирован и опубликован на главном дашборде для рассмотрения. После внешнего согласования администратор фиксирует его на главной странице.':'Черновик открыт. Добавьте ВГО и прочие платежи; заявки Битрикс24 появятся после подключения API.',week?.status==='locked'?'success':'');
  draw();
 }
+
+
+/* BAZA_GROUP_LIQUIDITY_DETAILS_V1 */
+const cents=x=>Math.round(Number(x||0)*100);
+const groupMoneyCents=x=>displayCashValue(x/100);
+function groupCashEntries(){
+ const out=groupBreakdown.outflows||[],inc=groupBreakdown.receipts||[],manual=groupBreakdown.manual_receipts||[];
+ const external=out.filter(x=>!x.internal),transfers=out.filter(x=>x.internal);
+ const beginning=cashPreview.reduce((n,r)=>n+(r.opening_balance===null?0:cents(r.opening_balance)),0);
+ const income=inc.reduce((n,r)=>n+cents(r.amount),0)+manual.reduce((n,r)=>n+cents(r.amount),0);
+ const spending=external.reduce((n,r)=>n+cents(r.amount),0);
+ const internal=transfers.reduce((n,r)=>n+cents(r.amount),0);
+ return {out,inc,manual,external,transfers,beginning,income,spending,internal,
+    closing:beginning+income-spending};
+}
+function drawGroupLiquidity(){
+ const sec=$('groupLiquiditySection'),receipts=$('groupReceiptsSection');
+ sec.hidden=!week;receipts.hidden=!week;
+ if(!week)return;
+ const d=groupCashEntries();
+ const incomplete=cashPreview.filter(r=>!r.is_complete);
+ const historical=cashBalances.filter(r=>{
+  const m=String(r.source_note||'').match(/дата отчёта\s+(\d{4}-\d{2}-\d{2})/i);
+  return m&&m[1]!==shift(currentWeek,-1);
+ });
+ $('groupOpening').textContent=groupMoneyCents(d.beginning);
+ $('groupIncoming').textContent=groupMoneyCents(d.income);
+ $('groupOutgoing').textContent=groupMoneyCents(d.spending);
+ $('groupClosing').textContent=groupMoneyCents(d.closing);
+ $('groupClosing').style.color=d.closing<0?'#ffd1d5':'white';
+ $('groupTransfersTotal').textContent=groupMoneyCents(d.internal);
+ $('groupLiquidityCoverage').textContent=(cashPreview.length-incomplete.length)+' из '+cashPreview.length+' юрлиц с полным прогнозом';
+ const uncertifiedVgo=d.external.filter(r=>r.origin==='vgo').length;
+ const notes=[];
+ if(incomplete.length)notes.push('Это предварительный расчёт: по '+incomplete.length+' юрлицам отсутствуют начальные остатки либо сведения о поступлениях. Для неизвестных начальных остатков сумма не подменяется достоверным нулём.');
+ if(historical.length)notes.push('ВНИМАНИЕ: у '+historical.length+' юрлиц начальные остатки перенесены из выгрузки за другую дату, поэтому итоги нельзя использовать как актуальную ликвидность.');
+ if(d.manual.length)notes.push('В приход включены '+d.manual.length+' сумм без расшифровки. Их источник и принадлежность внешнему/внутреннему потоку ещё требуют проверки.');
+ if(uncertifiedVgo)notes.push(uncertifiedVgo+' строк ВГО не удалось надёжно сопоставить с получателем внутри группы; временно они показаны как расход из ГК.');
+ if(!notes.length)notes.push('ВГО между установленными компаниями группы исключены из внешнего оборота, но учитываются в остатках отправителя и получателя.');
+ $('groupLiquidityNotice').textContent=notes.join(' ');
+ $('groupReceiptHint').textContent='Поступления по отдельным операциям: '+d.inc.length+' строк на '+groupMoneyCents(d.inc.reduce((n,r)=>n+cents(r.amount),0))+
+  '. Приход без расшифровки: '+groupMoneyCents(d.manual.reduce((n,r)=>n+cents(r.amount),0))+
+  '. Входящие ВГО поступают автоматически по исходящим позициям ПК и не прибавляются к внешнему приходу группы.';
+ $('addGroupReceipt').disabled=!editable();
+}
+function groupDetailRows(which){
+ const d=groupCashEntries();
+ const row=(date,entity,party,proj,amount)=>({date,entity,party,proj,amount:cents(amount)});
+ if(which==='opening')return cashPreview.map(r=>row(null,r.entity_name,'Начальный остаток по юрлицу',
+   r.opening_balance==null?'Нет данных':'На начало '+formatDate(currentWeek),r.opening_balance)).map((r,i)=>({
+   ...r,missing:cashPreview[i].opening_balance==null
+ }));
+ if(which==='closing')return cashPreview.map((r,i)=>({...row(null,r.entity_name,'Прогноз на конец недели',
+  cashPreview[i].is_complete?'Начало + приход − расход':'Неполные данные',r.planned_closing),
+  missing:!r.is_complete}));
+ if(which==='incoming'){
+  return [
+   ...d.inc.map(r=>row(r.due_date,r.payer,r.counterparty||'Внешнее поступление',
+    [r.project,r.subcategory].filter(Boolean).join(' · '),r.amount)),
+   ...d.manual.map(r=>row(null,r.entity_name,'Поступление общей суммой · нет расшифровки',
+    'Источник не определён',r.amount))
+  ].sort((a,b)=>String(a.date||'9999').localeCompare(String(b.date||'9999')));
+ }
+ if(which==='transfers')return d.transfers.map(r=>row(r.due_date,r.payer,
+  '→ '+r.counterparty,[r.project,'Внутри группы'].filter(Boolean).join(' · '),r.amount));
+ return d.external.map(r=>row(r.due_date,r.payer,r.counterparty,
+  [r.project,r.subcategory,r.funding_source].filter(Boolean).join(' · '),r.amount));
+}
+function openGroupDetail(which){
+ if(!week)return;
+ const label={opening:'Начальные остатки по юрлицам',incoming:'Приход в ГК · расшифровка',
+  outgoing:'Расход из ГК · внешние платежи',closing:'Прогноз остатков на конец',transfers:'ВГО · внутренние переводы'};
+ const rows=groupDetailRows(which);
+ const d=groupCashEntries();
+ const total=which==='opening'?d.beginning:which==='incoming'?d.income:which==='outgoing'?d.spending:
+   which==='transfers'?d.internal:d.closing;
+ $('groupDetailTitle').textContent=label[which]||'Расшифровка';
+ $('groupDetailSummary').textContent=rows.length+' строк · сумма '+groupMoneyCents(total);
+ $('groupDetailBody').innerHTML=rows.map(r=>
+  '<tr><td>'+(r.date?formatDate(r.date):'—')+'</td><td>'+esc(r.entity)+'</td>'+
+  '<td>'+esc(r.party)+'</td><td>'+esc(r.proj||'—')+'</td><td>'+
+  (r.missing?'<span class="unknown">Нет полного прогноза</span>':groupMoneyCents(r.amount))+'</td></tr>'
+ ).join('')||'<tr><td colspan="5">Движений по выбранному показателю нет.</td></tr>';
+ $('groupDetailFoot').textContent=which==='outgoing'?
+  'Платежи между установленными юрлицами ГК исключены, внешние получатели оставлены.':
+  which==='incoming'?'«Поступления общей суммой» не раскрываются до конкретной операции, пока их не внесли в реестр плановых поступлений.':
+  which==='transfers'?'ВГО уменьшают остаток отправителя и увеличивают остаток получателя на ту же сумму; внешний оборот группы не меняется.':
+  'Итоги могут быть предварительными, если начальные остатки или поступления по некоторым юрлицам не заполнены.';
+ $('groupDetailDialog').showModal();
+}
+function drawGroupReceipts(){
+ if(!week)return;
+ $('groupReceiptBody').innerHTML=receiptRows.map(r=>
+  '<tr><td>'+formatDate(r.due_date)+'</td><td><b>'+esc(r.entity_name)+'</b><div class="muted">'+esc(r.counterparty||'—')+'</div></td>'+
+  '<td>'+esc(r.project||'—')+'<div class="muted">'+esc(r.source_type)+'</div></td>'+
+  '<td class="receipt-money">'+displayCashValue(r.amount)+'</td>'+
+  '<td>'+(r.from_manual?'Да, перенесено из общей суммы':'Нет, дополнительные деньги')+'</td>'+
+  '<td>'+(editable()?'<div class="edit-actions"><button type="button" class="btn edit-payment" data-receipt-edit="'+esc(r.id)+'">Изменить</button>'+
+   '<button type="button" class="danger-link" data-receipt-delete="'+esc(r.id)+'">Удалить</button></div>':'')+'</td></tr>'
+ ).join('')||'<tr><td colspan="6" class="muted" style="text-align:center;padding:24px">Нет детализированных поступлений. Добавь кредитный транш или другое внешнее поступление, чтобы увидеть его в расшифровке.</td></tr>';
+}
+function groupReceiptTargets(){
+ const targets=new Map();
+ for(const r of cashTemplates)targets.set(r.entity_key,{key:r.entity_key,name:r.entity_name});
+ for(const r of cashPreview)targets.set(r.entity_key,{key:r.entity_key,name:r.entity_name});
+ for(const r of cashBalances)targets.set(r.entity_key,{key:r.entity_key,name:r.entity_name});
+ return [...targets.values()].sort((a,b)=>a.name.localeCompare(b.name,'ru'));
+}
+function updateGroupReceiptManualHint(){
+ const key=$('groupReceiptEntity').value;
+ const r=cashBalances.find(x=>x.entity_key===key);
+ const existing=Number(r?.planned_receipts||0);
+ const amount=Number($('groupReceiptAmount').value||0);
+ const old=editingGroupReceipt?.from_manual&&editingGroupReceipt.entity_key===key?
+   Number(editingGroupReceipt.amount||0):0;
+ const available=existing+old;
+ $('groupReceiptManualHint').textContent='Нерасшифрованный план по выбранному юрлицу: '+
+  displayCashValue(available)+'. При галочке из него будет перенесено '+displayCashValue(amount)+
+  ' в отдельную строку; общий приход не изменится.';
+ $('groupReceiptFromManual').disabled=amount>available+0.0001;
+ if($('groupReceiptFromManual').disabled)$('groupReceiptFromManual').checked=false;
+}
+function openGroupReceipt(id=null){
+ if(!editable())return;
+ const {changes,errors}=readCashForecastChanges();
+ if(changes.length||errors.length){
+  if(!confirm('В таблице остатков есть несохранённые изменения. Сначала сохрани их общей кнопкой, иначе они будут потеряны после изменения поступлений. Всё равно продолжить?'))return;
+ }
+ editingGroupReceipt=id?receiptRows.find(r=>r.id===id)||null:null;
+ $('groupReceiptForm').reset();
+ const choices=groupReceiptTargets();
+ $('groupReceiptEntity').innerHTML=choices.map(t=>
+  '<option value="'+esc(t.key)+'">'+esc(t.name)+'</option>').join('');
+ const r=editingGroupReceipt;
+ $('groupReceiptEntity').value=r?.entity_key||choices[0]?.key||'';
+ $('groupReceiptDue').value=r?.due_date||shift(currentWeek,1);
+ $('groupReceiptAmount').value=r?.amount||'';
+ $('groupReceiptType').value=r?.source_type||'Кредитный транш';
+ $('groupReceiptCounterparty').value=r?.counterparty||'';
+ $('groupReceiptProject').value=r?.project||'';
+ $('groupReceiptMemo').value=r?.memo||'';
+ $('groupReceiptFromManual').checked=!!r?.from_manual;
+ $('groupReceiptTitle').textContent=r?'Редактировать плановое поступление':'Добавить плановое поступление';
+ $('groupReceiptSave').textContent=r?'Сохранить изменения':'Добавить поступление';
+ updateGroupReceiptManualHint();
+ $('groupReceiptDialog').showModal();
+}
+async function saveGroupReceipt(event){
+ event.preventDefault();
+ if(!editable())return;
+ const target=groupReceiptTargets().find(x=>x.key===$('groupReceiptEntity').value);
+ if(!target){inform('Не определено юрлицо получателя','error');return}
+ const amount=Number($('groupReceiptAmount').value);
+ if(!Number.isFinite(amount)||amount<=0||Math.round(amount*100)/100!==amount){
+  inform('Введите положительную сумму с точностью до копейки','error');return;
+ }
+ const data={
+  entity_key:target.key,entity_name:target.name,
+  due_date:$('groupReceiptDue').value,amount:amount.toFixed(2),
+  source_type:$('groupReceiptType').value,
+  counterparty:$('groupReceiptCounterparty').value.trim(),
+  project:$('groupReceiptProject').value.trim(),
+  memo:$('groupReceiptMemo').value.trim(),
+  from_manual:$('groupReceiptFromManual').checked
+ };
+ if(data.due_date<currentWeek||data.due_date>shift(currentWeek,6)){
+  inform('Дата поступления не входит в выбранную неделю','error');return;
+ }
+ const button=$('groupReceiptSave');button.disabled=true;
+ try{
+  await request('rpc/calendar_mutate_receipt',{method:'POST',body:{
+   p_week_start:currentWeek,p_action:editingGroupReceipt?'update':'create',
+   p_row:data,p_receipt_id:editingGroupReceipt?.id||null
+  }});
+  $('groupReceiptDialog').close();editingGroupReceipt=null;
+  await loadWeek();
+  inform('Плановое поступление сохранено. Пересчитаны итоги и остатки по юрлицам.','success');
+ }catch(error){inform('Не удалось сохранить поступление: '+error.message,'error')}
+ finally{button.disabled=false}
+}
+async function removeGroupReceipt(id){
+ if(!editable())return;
+ const r=receiptRows.find(x=>x.id===id);if(!r)return;
+ if(!confirm('Удалить поступление '+displayCashValue(r.amount)+' по '+r.entity_name+'?'+
+  (r.from_manual?'\nСумма вернётся в нерасшифрованный план поступлений.':'')))return;
+ try{
+  await request('rpc/calendar_mutate_receipt',{method:'POST',body:{
+   p_week_start:currentWeek,p_action:'delete',p_row:{},p_receipt_id:id
+  }});
+  await loadWeek();
+  inform('Строка поступления удалена. Прогноз пересчитан.','success');
+ }catch(error){inform('Не удалось удалить поступление: '+error.message,'error')}
+}
+document.querySelectorAll('[data-group-detail]').forEach(button=>
+ button.addEventListener('click',()=>openGroupDetail(button.dataset.groupDetail)));
+$('groupTransfersOpen').addEventListener('click',()=>openGroupDetail('transfers'));
+$('groupDetailClose').addEventListener('click',()=>$('groupDetailDialog').close());
+$('addGroupReceipt').addEventListener('click',()=>openGroupReceipt());
+$('groupReceiptBody').addEventListener('click',event=>{
+ const edit=event.target.closest('[data-receipt-edit]');
+ if(edit){openGroupReceipt(edit.dataset.receiptEdit);return}
+ const del=event.target.closest('[data-receipt-delete]');
+ if(del)removeGroupReceipt(del.dataset.receiptDelete);
+});
+$('groupReceiptEntity').addEventListener('change',updateGroupReceiptManualHint);
+$('groupReceiptAmount').addEventListener('input',updateGroupReceiptManualHint);
+$('groupReceiptForm').addEventListener('submit',saveGroupReceipt);
+$('groupReceiptClose').addEventListener('click',()=>$('groupReceiptDialog').close());
+$('groupReceiptCancel').addEventListener('click',()=>$('groupReceiptDialog').close());
 
 function displayCashValue(x){return x===null||x===undefined?'—':new Intl.NumberFormat('ru-RU',{minimumFractionDigits:2,maximumFractionDigits:2}).format(Number(x))+' ₽'}
 function drawCashForecast(){
@@ -1120,7 +1329,7 @@ $('clearDraft').addEventListener('click',clearDraft);
 $('formWeek').addEventListener('click',formWeek);
 $('historyReload').addEventListener('click',()=>loadWeek().catch(e=>inform(e.message,'error')));
 document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',()=>$(b.dataset.close).close()));
-for(const id of ['itemDialog','bitrixDialog','openingDialog'])$(id).addEventListener('click',e=>{if(e.target===$(id))$(id).close()});
+for(const id of ['itemDialog','bitrixDialog','openingDialog','groupDetailDialog','groupReceiptDialog'])$(id).addEventListener('click',e=>{if(e.target===$(id))$(id).close()});
 (async()=>{
  try{
   await authenticate();
