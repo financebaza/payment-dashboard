@@ -341,7 +341,11 @@ async function saveApproval(id,status,comment=getComment(id)){
     const saved=await res.json();
     approvals[id]=saved[0]||p;
     render();
-    if(modalPayment)openModal(modalPayment);
+    // Inline approval must never reopen a payment card that was closed earlier.
+    // Refresh only the card currently visible for this exact payment.
+    if(modalPayment&&!modal.classList.contains('hidden')&&String(modalPayment.id)===String(id)){
+      openModal(modalPayment);
+    }
   }catch(e){alert(e.message||'Ошибка сохранения. Попробуйте ещё раз.');}
 }
 /* BAZA_PROJECT_ACTUAL_NAMES_V1: one project group for every outgoing payment. */
@@ -529,7 +533,11 @@ function renderTable(){
  document.querySelectorAll('[data-add],[data-edit]').forEach(b=>b.onclick=e=>{
   e.stopPropagation();const id=b.dataset.add||b.dataset.edit;openModal(PAY.find(x=>x.id===id));
  });
- document.querySelectorAll('#paymentTable tr').forEach(tr=>tr.onclick=()=>openModal(PAY.find(x=>x.id===tr.dataset.open)));
+ document.querySelectorAll('#paymentTable tr').forEach(tr=>tr.onclick=e=>{
+  // Buttons, checkboxes and other controls are not row-opening clicks.
+  if(e.target.closest('button,input,select,textarea,a,[role="button"]'))return;
+  openModal(PAY.find(x=>String(x.id)===String(tr.dataset.open)));
+ });
  updateRegistrySums();
 }
 document.getElementById('registrySelectAll').addEventListener('change',e=>{
@@ -608,7 +616,8 @@ function render(){
   if(typeof window.__BAZA_REFRESH_VGO==='function')window.__BAZA_REFRESH_VGO();
 }
 function openModal(r){if(!r)return;modalPayment=r;const s=getStatus(r.id);modalCounterparty.textContent=r.counterparty;modalAmount.textContent=money(r.amount);modalStatus.textContent=s==='approved'?'Согласован':s==='rejected'?'Не согласован':'Ожидает';modalStatus.className='pill '+s;modalDetails.innerHTML=[['Юрлицо',r.entity],['Источник',r.source],['Направление',r.direction],['Проект',r.project],['Подстатья',r.subcategory],['ID',r.id]].map(x=>`<div class="detail"><label>${esc(x[0])}</label><b>${esc(x[1])}</b></div>`).join('');modalComment.value=getComment(r.id);modal.classList.remove('hidden')}
-modalClose.onclick=()=>modal.classList.add('hidden');document.querySelector('.backdrop').onclick=()=>modal.classList.add('hidden');modalApprove.onclick=()=>saveApproval(modalPayment.id,'approved',modalComment.value.trim());modalReject.onclick=()=>saveApproval(modalPayment.id,'rejected',modalComment.value.trim());modalSaveComment.onclick=()=>saveApproval(modalPayment.id,getStatus(modalPayment.id),modalComment.value.trim());
+function closePaymentModal(){modal.classList.add('hidden');modalPayment=null;}
+modalClose.onclick=closePaymentModal;document.querySelector('.backdrop').onclick=closePaymentModal;modalApprove.onclick=()=>saveApproval(modalPayment.id,'approved',modalComment.value.trim());modalReject.onclick=()=>saveApproval(modalPayment.id,'rejected',modalComment.value.trim());modalSaveComment.onclick=()=>saveApproval(modalPayment.id,getStatus(modalPayment.id),modalComment.value.trim());
 function resetAll(){
   Object.assign(state,{source:'',direction:'',entity:'',search:'',status:'',column:{}});
   document.querySelectorAll('.column-filter').forEach(sel=>sel.value='');
