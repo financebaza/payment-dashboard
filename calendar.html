@@ -63,6 +63,28 @@ fieldset{border:none;padding:0;margin:0}dialog{border:1px solid #cfdeea;border-r
 @media(max-width:740px){.payment-selection-actions strong{flex-basis:100%}.payment-selection-top{align-items:start;flex-direction:column}}
 
 
+
+/* BAZA_1C_XLSX_OPENING_V1 */
+.opening-import-dialog{width:min(1120px,calc(100vw - 28px));max-height:92vh}
+.opening-import-dialog .dialog-body{max-height:calc(92vh - 75px);overflow:auto}
+.opening-info{font-size:11px;color:#365e7e;background:#f2f8fd;border-radius:9px;padding:12px;line-height:1.65;margin:0 0 12px}
+.opening-date-row{display:flex;align-items:end;gap:14px;flex-wrap:wrap;margin-bottom:10px}
+.opening-date-row label{display:grid;gap:5px;color:#456681;font-weight:800;font-size:10px}
+.opening-date-row input{height:36px;border:1px solid #c7d8e8;background:white;border-radius:7px;padding:6px 9px}
+.opening-date-row span{font-size:10px;color:#7791a4;padding-bottom:8px}
+.opening-method{font-size:10px;color:#65829b;line-height:1.7;margin:9px 0 12px}
+.opening-warnings{padding:10px 12px;border:1px solid #ebd3a4;background:#fff8eb;border-radius:8px;color:#805b1f;font-size:10px;line-height:1.7;white-space:pre-line;margin-bottom:12px}
+.opening-table-wrap{border:1px solid #d8e5ee;border-radius:9px;max-height:390px;overflow:auto}
+.opening-table-wrap table{min-width:810px}
+.opening-table-wrap th{position:sticky;top:0;z-index:2}
+.opening-table-wrap td{padding:8px 10px;vertical-align:middle}
+.opening-table-wrap td.opening-amount{text-align:right;font-weight:800;white-space:nowrap}
+.opening-table-wrap select{min-width:180px;max-width:300px;width:100%;height:35px;padding:6px;border:1px solid #c7d8e6;border-radius:7px;background:#fff;font-size:10px}
+.opening-table-wrap .opening-unmatched{background:#fffaf0}
+.opening-table-wrap .opening-info-small{display:block;font-size:9px;color:#7590a5;margin-top:3px}
+.opening-mismatch{margin:15px 0 3px;display:flex;align-items:start;gap:9px;background:#fff6e8;border:1px solid #ecd4a8;border-radius:9px;padding:12px;color:#805b1f;font-size:11px;line-height:1.6}
+.opening-mismatch input{margin-top:4px;accent-color:#b17826}
+
 /* BAZA_ITEM_EDIT_RESET_IMPORT_V1 */
 .edit-actions{display:flex;align-items:center;gap:9px;justify-content:flex-end;white-space:nowrap}
 .edit-actions .edit-payment{padding:6px 8px;background:#f2f7fa;border:1px solid #bbd2e5;border-radius:6px;color:#164569;font-size:10px}
@@ -187,6 +209,20 @@ fieldset{border:none;padding:0;margin:0}dialog{border:1px solid #cfdeea;border-r
    <button class="btn primary" type="button" id="bitrixImportConfirm" disabled>Загрузить в черновик ПК</button>
   </div>
   <div id="bitrixTestResult" role="status" class="csv-import-message" hidden></div>
+ </div>
+</dialog>
+<dialog id="openingDialog" class="opening-import-dialog" aria-labelledby="openingDialogTitle">
+ <div class="dialog-head"><h2 id="openingDialogTitle">Импорт начальных остатков · 1С XLSX</h2><button type="button" class="close" id="openingDialogClose" aria-label="Закрыть">×</button></div>
+ <div class="dialog-body">
+  <p class="opening-info" id="openingFileInfo">Загружаем данные...</p>
+  <div class="opening-date-row"><label for="openingReportDate">Дата остатков в отчёте 1С <input type="date" id="openingReportDate"></label>
+   <span id="openingExpectedDate"></span></div>
+  <p class="opening-method">Для свободных остатков автоматически берём <b>счёт 51 · Расчётные счета · Собственные средства = Да</b> и суммируем по юридическому лицу. Депозиты, касса, 76.05, временные средства и пустые суммы не включаются. При необходимости остаток можно изменить вручную в таблице прогноза после импорта.</p>
+  <div id="openingImportWarnings" class="opening-warnings" hidden></div>
+  <div class="opening-table-wrap"><table><thead><tr><th>Включить</th><th>Юрлицо в 1С</th><th>Юрлицо в BAZA</th><th style="text-align:right">Начальный остаток 1С</th><th style="text-align:right">Сейчас в BAZA</th></tr></thead><tbody id="openingImportBody"></tbody></table></div>
+  <label class="opening-mismatch" id="openingMismatchBlock" hidden><input type="checkbox" id="openingAllowDateMismatch"><span>Я подтверждаю загрузку остатков, хотя дата отчёта 1С отличается от даты перед началом выбранной недели ПК.</span></label>
+  <div class="dialog-actions"><button class="btn" type="button" id="openingImportCancel">Отмена</button><button class="btn primary" type="button" id="openingImportSave" disabled>Импортировать остатки</button></div>
+  <div id="openingImportResult" class="opening-warnings" role="status" hidden></div>
  </div>
 </dialog>
 <dialog id="itemDialog" aria-labelledby="itemTitle"><div class="dialog-head"><h2 id="itemTitle">Добавить платёж</h2><button class="close" type="button" data-close="itemDialog">×</button></div>
