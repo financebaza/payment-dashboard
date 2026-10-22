@@ -413,7 +413,7 @@ function draw(){
  else if(week.status==='locked')$('bitrixStatus').textContent='ПК утверждён · импорт закрыт';
  else if(week.status==='formed')$('bitrixStatus').textContent='ПК на рассмотрении · импорт закрыт';
  else $('bitrixStatus').textContent='Готово к загрузке CSV · неделя '+formatDate(currentWeek)+' — '+formatDate(shift(currentWeek,6));
- $('addVgo').disabled=!editable();$('addOther').disabled=!editable();$('clearDraft').disabled=!editable()||!items.length;
+ $('addVgo').disabled=!editable();$('addOther').disabled=!editable();$('clearDraft').disabled=!editable()||(!items.length&&!receiptRows.length);
  $('importOpeningButton').disabled=!editable();
  $('saveAllCashForecast').disabled=!editable();
  $('formWeek').disabled=!editable()||!items.length;
@@ -1071,16 +1071,16 @@ async function saveItem(ev){
  }catch(e){inform(e.message,'error')}finally{btn.disabled=false}
 }
 async function clearDraft(){
- if(!editable()||!items.length)return;
- const label='ОЧИСТИТЬ',n=items.length;
- const typed=prompt('Будут удалены ВСЕ '+n+' позиции из черновика за неделю '+formatDate(currentWeek)+' — '+formatDate(shift(currentWeek,6))+'.\nПрогноз остатков по юрлицам НЕ удаляется.\nЧтобы продолжить, введи: '+label);
+ if(!editable()||(!items.length&&!receiptRows.length))return;
+ const label='ОЧИСТИТЬ',n=items.length,r=receiptRows.length;
+ const typed=prompt('Будут удалены ВСЕ '+n+' платежей и '+r+' поступлений из черновика за неделю '+formatDate(currentWeek)+' — '+formatDate(shift(currentWeek,6))+'.\nНачальные остатки сохраняются. Поступления, ранее вычтенные из ручного плана при детализации, вернутся обратно в него.\nЧтобы продолжить, введи: '+label);
  if(typed!==label){if(typed!==null)inform('Очистка отменена: неверное подтверждение','error');return}
- if(!confirm('Окончательно удалить '+n+' позиций из черновика? Это действие нельзя отменить.'))return;
+ if(!confirm('Окончательно удалить '+n+' платежей и '+r+' поступлений? Это действие нельзя отменить.'))return;
  const btn=$('clearDraft');btn.disabled=true;
  try{
   const result=await request('rpc/calendar_clear_draft',{method:'POST',body:{p_week_start:currentWeek,p_confirmed:true}});
   selectedPayments.clear();lastPaymentSelectionIndex=null;await loadWeek();
-  inform('Черновик очищен: удалено '+result.deleted+' платежей. Можно заново загрузить CSV. Остатки сохранены.','success');
+  inform('Черновик очищен: удалено '+result.deleted+' платежей и '+result.receipts_deleted+' поступлений. Можно заново загрузить CSV. Начальные остатки сохранены.','success');
  }catch(e){inform('Не удалось очистить черновик: '+e.message,'error')}
  finally{btn.disabled=false}
 }
