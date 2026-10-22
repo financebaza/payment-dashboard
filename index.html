@@ -852,6 +852,8 @@ body.auth-ready .auth-screen{display:none}.auth-guard-note{font-size:9px;color:#
   let availableCalendarWeeks=[];
   const formatCalendarDate=x=>new Intl.DateTimeFormat('ru-RU',{day:'2-digit',month:'long'}).format(new Date(x+'T12:00:00Z'));
   const addCalendarDays=(date,n)=>{const d=new Date(date+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10);};
+  const legacyPaymentWeek='2026-10-19';
+  const isLegacyCalendar=()=>activeCalendar?.status==='legacy';
   function syncCalendarReview(){
     const banner=document.getElementById('calendarReviewBanner');
     if(!activeCalendar){
@@ -860,28 +862,33 @@ body.auth-ready .auth-screen{display:none}.auth-guard-note{font-size:9px;color:#
       window.__BAZA_CALENDAR_DRAFT=false;
       return;
     }
-    document.body.classList.add('calendar-review-mode');
+    // Archival week uses the historic full dashboard; calendar weeks use the weekly-PC review layout.
+    document.body.classList.toggle('calendar-review-mode',!isLegacyCalendar());
     banner.hidden=false;
     const week=activeCalendar.week_start;
     window.__BAZA_ACTIVE_CALENDAR_WEEK=week;
     window.__BAZA_CALENDAR_DRAFT=activeCalendar.status==='draft';
     document.getElementById('calendarReviewWeek').textContent=
       formatCalendarDate(week)+' — '+formatCalendarDate(addCalendarDays(week,6))+
-      (activeCalendar.status==='draft'?' · черновик':' · версия '+activeCalendar.formation_version);
+      (isLegacyCalendar()?' · исторический реестр':
+       activeCalendar.status==='draft'?' · черновик':' · версия '+activeCalendar.formation_version);
     const badge=document.getElementById('calendarReviewStatus');
-    badge.textContent=activeCalendar.status==='locked'?'Утверждён':
+    badge.textContent=isLegacyCalendar()?'История':activeCalendar.status==='locked'?'Утверждён':
       activeCalendar.status==='formed'?'На рассмотрении':'Черновик';
     badge.className=activeCalendar.status==='locked'?'locked':
       activeCalendar.status==='draft'?'draft':'';
     document.getElementById('calendarReviewNote').textContent=
-      activeCalendar.status==='draft'
+      isLegacyCalendar()
+       ?'Это исторический реестр платежей за 19–25 октября 2026 года из предыдущей выгрузки. Он не является черновиком нового ПК. Для новой недели используйте переключатель справа.'
+       :activeCalendar.status==='draft'
        ?'Это ещё не сформированный ПК. На главной показаны ТОЛЬКО позиции черновика выбранной недели. Заявки можно загрузить и отредактировать в разделе «Формирование ПК». До формирования черновик не передаётся на согласование.'
        :activeCalendar.status==='formed'
        ?'Сформированный ПК опубликован для рассмотрения Лидерами. Согласование происходит вне BAZA. После получения согласований администратор фиксирует эту версию.'
        :'Зафиксированный ПК: '+(activeCalendar.approval_note||'внешнее согласование подтверждено')+'. Изменения запрещены.';
     const select=document.getElementById('calendarWeekSelect');
     select.replaceChildren(...availableCalendarWeeks.map(w=>{
-      const label=w.status==='locked'?'утверждён · v'+w.formation_version:
+      const label=w.status==='legacy'?'исторический реестр':
+        w.status==='locked'?'утверждён · v'+w.formation_version:
         w.status==='formed'?'на рассмотрении · v'+w.formation_version:'черновик';
       const o=new Option(formatCalendarDate(w.week_start)+' · '+label,w.week_start);
       return o;
@@ -892,7 +899,8 @@ body.auth-ready .auth-screen{display:none}.auth-guard-note{font-size:9px;color:#
     document.getElementById('calendarReturnBtn').hidden=!canFix;
     const period=document.querySelector('.topbar .period');
     if(period)period.textContent=formatCalendarDate(week).toUpperCase()+' — '+formatCalendarDate(addCalendarDays(week,6)).toUpperCase()+' · '+
-      (activeCalendar.status==='draft'?'ПК ЧЕРНОВИК · НЕ СОГЛАСОВАН':
+      (isLegacyCalendar()?'ИСТОРИЧЕСКИЙ РЕЕСТР':
+       activeCalendar.status==='draft'?'ПК ЧЕРНОВИК · НЕ СОГЛАСОВАН':
        activeCalendar.status==='formed'?'ПК НА РАССМОТРЕНИИ':'ПК УТВЕРЖДЁН');
   }
   async function calendarPaymentsIfPublished(){
@@ -900,9 +908,19 @@ body.auth-ready .auth-screen{display:none}.auth-guard-note{font-size:9px;color:#
     const list=await session.fetch(SUPABASE_URL+'/rest/v1/calendar_weeks?select=week_start,status,formation_version,approval_note,locked_at&status=in.(draft,formed,locked)&order=week_start.desc&limit=40',{headers:authHeaders()});
     if(!list.ok)throw Error('Не удалось получить недели ПК: HTTP '+list.status);
     availableCalendarWeeks=await list.json();
-    if(!availableCalendarWeeks.length){activeCalendar=null;syncCalendarReview();return null;}
+    // Keep 19–25 October's legacy register as a separate selectable historical week.
+    // It lives in public.payments, not in calendar_items.
+    if(!availableCalendarWeeks.some(w=>w.week_start===legacyPaymentWeek)){
+      availableCalendarWeeks.push({week_start:legacyPaymentWeek,status:'legacy',formation_version:0});
+    }
+    availableCalendarWeeks.sort((a,b)=>b.week_start.localeCompare(a.week_start));
     const preferred=new URLSearchParams(location.search).get('week');
-    activeCalendar=availableCalendarWeeks.find(w=>w.week_start===preferred)||availableCalendarWeeks[0];
+    activeCalendar=availableCalendarWeeks.find(w=>w.week_start===preferred)||
+      availableCalendarWeeks.find(w=>w.week_start===legacyPaymentWeek)||availableCalendarWeeks[0];
+    if(isLegacyCalendar()){
+      syncCalendarReview();
+      return null; // loadPayments() will load public.payments, never calendar_items.
+    }
     const response=await session.fetch(SUPABASE_URL+'/rest/v1/calendar_items?select=id,origin,payer,counterparty,amount,project,direction,subcategory,funding_source,flow_type,due_date,source_ref&week_start=eq.'+encodeURIComponent(activeCalendar.week_start)+'&order=due_date.asc,created_at.asc&limit=3000',{headers:authHeaders()});
     if(!response.ok)throw Error('Не удалось загрузить ПК: HTTP '+response.status);
     const data=await response.json();
