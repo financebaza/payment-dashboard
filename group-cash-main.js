@@ -213,7 +213,9 @@ async function init(){
   weeks=[...new Set(data.map(x=>x.week_start))].sort().reverse();
   if(!weeks.length){e('gcbAlert').hidden=false;e('gcbAlert').textContent='Нет недель с прогнозом остатков';return;}
   const requested=new URLSearchParams(location.search).get('week');
-  selectedWeek=weeks.includes(requested)?requested:weeks.includes('2026-10-19')?'2026-10-19':weeks[0];
+  const displayedCalendar=window.__BAZA_ACTIVE_CALENDAR_WEEK;
+  // Match the actual payment register period: never show old 19 October cash alongside the 26 October draft.
+  selectedWeek=weeks.includes(displayedCalendar)?displayedCalendar:weeks.includes(requested)?requested:weeks[0];
   e('gcbWeek').innerHTML=weeks.map(w=>'<option value="'+esc(w)+'">'+day(w)+' — '+day(addDay(w,6))+'</option>').join('');
   e('gcbWeek').value=selectedWeek;
   await load();
