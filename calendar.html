@@ -41,6 +41,27 @@ fieldset{border:none;padding:0;margin:0}dialog{border:1px solid #cfdeea;border-r
 .cash-forecast #cashForecastMessage{border:1px solid #d8e6ef;border-radius:8px;background:#f7faff;padding:10px 12px;color:#678399;font-size:11px}
 .cash-forecast .cash-total{font-size:10px;font-weight:800;color:#1d587e}
 
+
+/* BAZA_WEEKLY_SELECTION_AND_CASH_ENTITY_V1 */
+.payment-selection-panel{border:1px solid #d2e2ee;background:#f8fbfe;border-radius:10px;padding:12px 14px;margin:0 0 12px;display:flex;flex-direction:column;gap:8px}
+.payment-selection-top,.payment-selection-actions{display:flex;align-items:center;flex-wrap:wrap;gap:10px 14px}
+.payment-selection-top{justify-content:space-between;color:#648198;font-size:10px}
+.payment-select-all{display:inline-flex;align-items:center;gap:8px;color:#235779;font-weight:800;cursor:pointer}
+.payment-selection-panel input[type=checkbox],.payment-row-checkbox{accent-color:#123e67;cursor:pointer;width:16px;height:16px}
+.payment-selection-actions strong{font-size:13px;color:#103c65;flex:1}
+.payment-selection-panel .btn{padding:8px 11px;font-size:10px}
+.payment-selection-entities{display:flex;align-items:center;flex-wrap:wrap;gap:7px;border-top:1px solid #dce9f2;padding-top:10px}
+.payment-selection-entities .entity-copy{padding:7px 10px;border:1px solid #c5dceb;background:white;border-radius:8px;color:#194c75;cursor:pointer;font-size:10px;font-weight:800}
+.payment-selection-entities .entity-copy:hover{background:#eaf3fc}
+.payment-copy-feedback{font-size:10px;color:#256c51;min-height:0}
+.payment-copy-feedback:empty{display:none}
+.payment-selection-hint{font-size:10px;color:#7590a3;line-height:1.5;margin:0}
+#itemsBody tr.payment-selected{background:#eaf4fd}
+#itemsBody td:first-child{vertical-align:middle;text-align:center}
+.cash-forecast tr[data-cash-row] td:nth-child(5){white-space:nowrap}
+.cash-forecast .cash-new-entity{display:block;color:#557f9f;font-weight:600;font-size:9px;margin-top:4px}
+@media(max-width:740px){.payment-selection-actions strong{flex-basis:100%}.payment-selection-top{align-items:start;flex-direction:column}}
+
 /* BAZA_BITRIX_CSV_UPLOAD_V1 */
 .csv-dialog{width:min(1250px,calc(100vw - 30px));max-height:91vh}
 .csv-dialog .dialog-body{max-height:calc(91vh - 76px)}
@@ -84,10 +105,25 @@ fieldset{border:none;padding:0;margin:0}dialog{border:1px solid #cfdeea;border-r
  <main class="card">
   <div class="section-head"><h2>Позиции недельного ПК</h2><small id="itemCounter">0 строк</small></div>
   <div class="toolbar"><select id="originFilter"><option value="">Все источники</option><option value="bitrix">Битрикс24</option><option value="vgo">ВГО</option><option value="other">Прочие</option></select>
+   <select id="fundingFilter" aria-label="Фильтр по источнику средств"><option value="">Все средства</option><option value="Кредит">Кредит</option><option value="Собственные">Собственные</option></select>
    <input id="search" type="search" placeholder="Поиск: юрлицо, контрагент, проект…">
    <button id="addVgo" type="button" class="btn primary">+ ВГО</button><button id="addOther" type="button" class="btn">+ Прочий</button>
   </div>
-  <div class="tablewrap"><table><thead><tr><th>Дата</th><th>Плательщик / получатель</th><th>Проект / направление</th><th>Источник</th><th>Средства</th><th style="text-align:right">Сумма</th><th></th></tr></thead><tbody id="itemsBody"><tr><td colspan="7">Нет платежей</td></tr></tbody></table></div>
+  <div id="paymentSelectionPanel" class="payment-selection-panel">
+    <div class="payment-selection-top">
+      <label class="payment-select-all"><input type="checkbox" id="selectVisiblePayments"> Выделить все платежи в текущем фильтре</label>
+      <span id="paymentFilteredSum">По фильтру: —</span>
+    </div>
+    <div class="payment-selection-actions">
+      <strong id="paymentSelectedTotal">Выделено: 0 платежей · 0 ₽</strong>
+      <button type="button" class="btn" id="paymentCopySelected" disabled>Скопировать сумму</button>
+      <button type="button" class="btn" id="paymentClearSelected" disabled>Снять выделение</button>
+    </div>
+    <div id="paymentSelectedByEntity" class="payment-selection-entities" hidden></div>
+    <div id="paymentCopyFeedback" class="payment-copy-feedback" role="status"></div>
+    <p class="payment-selection-hint">Выделите кредитные платежи и скопируйте сумму в поле «Приходы за неделю» нужного юрлица. Это сумма расходов, а план кредитных траншей может от неё отличаться.</p>
+  </div>
+  <div class="tablewrap"><table><thead><tr><th style="width:42px">Выбор</th><th>Дата</th><th>Плательщик / получатель</th><th>Проект / направление</th><th>Источник</th><th>Средства</th><th style="text-align:right">Сумма</th><th></th></tr></thead><tbody id="itemsBody"><tr><td colspan="8">Нет платежей</td></tr></tbody></table></div>
  </main>
  <aside>
   <div class="sidebar-box" id="bitrixCsvCard">
@@ -169,6 +205,8 @@ const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const formatDate=s=>s?new Intl.DateTimeFormat('ru-RU',{day:'2-digit',month:'short'}).format(new Date(s+'T12:00:00Z')):'—';
 let token='',role='',week=null,items=[],events=[],currentWeek='',user=null,origin='vgo';
 let cashTemplates=[],cashBalances=[],cashPreview=[];
+const selectedPayments=new Set();
+let lastPaymentSelectionIndex=null;
 const editable=()=>Boolean(week?.status==='draft'&&(role==='admin'||role==='approver'));
 const mondayUTC=ymd=>{const d=new Date(ymd+'T12:00:00Z');const day=d.getUTCDay();d.setUTCDate(d.getUTCDate()-((day+6)%7));return d.toISOString().slice(0,10)};
 const shift=(ymd,days)=>{const d=new Date(ymd+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+days);return d.toISOString().slice(0,10)};
@@ -216,21 +254,80 @@ function draw(){
  $('formedInfo').textContent=isLocked?'ПК №'+week.formation_version+' утверждён и зафиксирован: '+new Date(week.locked_at).toLocaleString('ru-RU'):
    week?.status==='formed'?'Версия №'+week.formation_version+' сформирована · готова для внешнего согласования. Фиксация доступна на главном дашборде.':
    'После формирования ПК появится на основном дашборде; руководители рассматривают его без обязательных нажатий.';
+ for(const id of [...selectedPayments])if(!items.some(r=>r.id===id))selectedPayments.delete(id);
  const totals={all:0,bitrix:0,vgo:0,other:0};items.forEach(r=>{const x=Number(r.amount||0);totals.all+=x;totals[r.origin]+=x});
  $('kpiAll').textContent=money(totals.all);$('kpiBitrix').textContent=money(totals.bitrix);
  $('kpiVgo').textContent=money(totals.vgo);$('kpiOther').textContent=money(totals.other);$('kpiCount').textContent=items.length+' платежей';
  drawTable();drawHistory();drawCashForecast();
 }
+
+function filteredCalendarPayments(){
+ const q=$('search').value.trim().toLowerCase(),source=$('originFilter').value,funding=$('fundingFilter').value;
+ return items.filter(r=>(!source||r.origin===source)&&(!funding||r.funding_source===funding)&&
+  (!q||[r.payer,r.counterparty,r.direction,r.project,r.memo,r.subcategory].join(' ').toLowerCase().includes(q)));
+}
+function selectedCalendarPayments(){return items.filter(r=>selectedPayments.has(r.id))}
+function amountCents(rows){return rows.reduce((total,r)=>total+Math.round(Number(r.amount||0)*100),0)}
+function clipboardPaymentAmount(cents){
+ const v=Math.abs(cents),integer=String(Math.floor(v/100)),dec=String(v%100).padStart(2,'0');
+ return (cents<0?'-':'')+integer+','+dec;
+}
+async function copyPaymentAmount(cents,description){
+ const value=clipboardPaymentAmount(cents);
+ try{
+  if(navigator.clipboard&&window.isSecureContext){await navigator.clipboard.writeText(value)}
+  else{
+   const field=document.createElement('textarea');
+   field.value=value;field.style.position='fixed';field.style.opacity='0';
+   document.body.appendChild(field);field.select();
+   const ok=document.execCommand('copy');field.remove();
+   if(!ok)throw Error('Браузер не разрешил копирование');
+  }
+  $('paymentCopyFeedback').textContent='Скопировано: '+description+' · '+value+' ₽. Вставьте в поле «Приходы за неделю» нужного юрлица.';
+ }catch(error){
+  $('paymentCopyFeedback').textContent='Не удалось скопировать автоматически. Выделите сумму вручную: '+value+' ₽';
+ }
+}
+function drawPaymentSelection(){
+ const visible=filteredCalendarPayments();
+ const selected=selectedCalendarPayments();
+ const groups=new Map();
+ for(const r of selected){
+  const key=String(r.payer||'').trim();
+  const entry=groups.get(key)||{rows:[],total:0};
+  entry.rows.push(r);entry.total+=Math.round(Number(r.amount||0)*100);
+  groups.set(key,entry);
+ }
+ const visibleChecked=visible.filter(x=>selectedPayments.has(x.id)).length;
+ $('selectVisiblePayments').checked=visible.length>0&&visibleChecked===visible.length;
+ $('selectVisiblePayments').indeterminate=visibleChecked>0&&visibleChecked<visible.length;
+ $('selectVisiblePayments').disabled=!visible.length;
+ $('paymentFilteredSum').textContent='По текущему фильтру: '+visible.length+' платежей · '+money(amountCents(visible)/100);
+ const total=amountCents(selected);
+ $('paymentSelectedTotal').textContent='Выделено: '+selected.length+' платежей · '+money(total/100);
+ $('paymentCopySelected').disabled=!selected.length;
+ $('paymentClearSelected').disabled=!selected.length;
+ $('paymentCopySelected').title=groups.size>1?'Выбрано несколько юрлиц. Лучше копировать сумму отдельно по каждой организации.':'Скопировать сумму всех выделенных платежей';
+ const groupBox=$('paymentSelectedByEntity');
+ groupBox.hidden=!selected.length;
+ window.__BAZA_PAYMENT_SELECTED_GROUPS=[...groups].map(([name,item])=>({name,total:item.total,count:item.rows.length}));
+ groupBox.innerHTML=window.__BAZA_PAYMENT_SELECTED_GROUPS.map((g,i)=>
+  '<button type="button" class="entity-copy" data-copy-entity="'+i+'" title="Скопировать сумму только по этому юрлицу">'+esc(g.name)+': '+money(g.total/100)+' · '+g.count+' шт. <b>⧉</b></button>'
+ ).join('');
+}
 function drawTable(){
- const q=$('search').value.trim().toLowerCase(),src=$('originFilter').value;
- const selected=items.filter(r=>(!src||r.origin===src)&&(!q||[r.payer,r.counterparty,r.direction,r.project,r.memo].join(' ').toLowerCase().includes(q)));
+ const selected=filteredCalendarPayments();
  $('itemCounter').textContent=selected.length+' из '+items.length+' строк';
- $('itemsBody').innerHTML=selected.map(r=>'<tr><td>'+formatDate(r.due_date)+'</td><td><b>'+esc(r.payer)+'</b><div class="muted">'+esc(r.counterparty)+'</div></td>'+
+ $('itemsBody').innerHTML=selected.map((r,i)=>
+ '<tr class="'+(selectedPayments.has(r.id)?'payment-selected':'')+'">'+
+ '<td><input class="payment-row-checkbox" type="checkbox" data-payment-select="'+esc(r.id)+'" data-selection-index="'+i+'" '+(selectedPayments.has(r.id)?'checked':'')+' aria-label="Выделить платёж '+esc(r.source_ref||r.counterparty)+'"></td>'+
+ '<td>'+formatDate(r.due_date)+'</td><td><b>'+esc(r.payer)+'</b><div class="muted">'+esc(r.counterparty)+'</div></td>'+
  '<td>'+esc(r.project||'—')+'<div class="muted">'+esc(r.direction||'')+'</div></td>'+
  '<td><span class="src '+esc(r.origin)+'">'+({bitrix:'Битрикс24',vgo:'ВГО',other:'Прочие'}[r.origin]||'—')+'</span></td>'+
  '<td>'+esc(r.funding_source)+'</td><td class="money">'+money(r.amount)+'</td>'+
  '<td>'+(editable()?'<button class="danger-link" type="button" data-del="'+esc(r.id)+'">Удалить</button>':'')+'</td></tr>').join('')||
- '<tr><td colspan="7" class="muted" style="text-align:center;padding:25px">Нет платежей в выбранном срезе</td></tr>';
+ '<tr><td colspan="8" class="muted" style="text-align:center;padding:25px">Нет платежей в выбранном срезе</td></tr>';
+ drawPaymentSelection();
 }
 function drawHistory(){
  const names={item_added:'Добавлена позиция',item_updated:'Изменена позиция',item_deleted:'Удалена позиция',week_formed:'Сформирована версия для рассмотрения',week_returned_to_draft:'Возврат на доработку',week_locked:'ПК зафиксирован',bitrix_csv_import:'Импорт заявок из CSV Битрикс24'};
@@ -271,19 +368,19 @@ function drawCashForecast(){
  $('cashForecastMessage').textContent=
    week.status==='locked'?'ПК уже утверждён. Плановые остатки зафиксированы на дату утверждения, дальнейшее редактирование закрыто.':
    week.status==='formed'?'ПК на рассмотрении. Чтобы изменить прогноз, администратор должен вернуть ПК на доработку.':
-   'Заполни остатки и поступления до формирования ПК. Пустое поле означает «нет данных», ноль нужно указать цифрой 0. Неполные прогнозы не подменяются нулём.';
+   'Заполни остатки и план поступлений по каждому юрлицу. Чтобы не считать кредитные платежи вручную, выдели их в реестре выше и скопируй сумму. Кредитный транш может отличаться от суммы оплачиваемых из него заявок. Пустое поле — «нет данных», ноль указывай цифрой 0.';
  $('cashForecastBody').innerHTML=arr.map((r,i)=>{
   const calc=current.get(r.entity_key);
-  const unknown=r.entity_key.startsWith('unmapped:');
-  const disable=!editableNow||unknown?'disabled':'';
+  const isNewEntity=r.entity_key.startsWith('entity:')||r.entity_key.startsWith('unmapped:');
+  const disable=!editableNow?'disabled':'';
   const opening=r.opening_balance??'',receipts=r.planned_receipts??'';
   return '<tr data-cash-row="'+i+'"><td title="'+esc(r.entity_key)+'"><b>'+esc(r.entity_name||r.entity_key)+'</b>'+
-   (unknown?'<div class="unknown">Нет кода юрлица · нужно сопоставление</div>':'')+'</td>'+
+   (isNewEntity?'<small class="cash-new-entity">Новое юрлицо · код создаётся автоматически</small>':'')+'</td>'+
    '<td><input data-cash-opening value="'+esc(opening)+'" inputmode="decimal" '+disable+' aria-label="Начальный остаток '+esc(r.entity_name)+'"></td>'+
    '<td><input data-cash-income value="'+esc(receipts)+'" inputmode="decimal" '+disable+' aria-label="План поступлений '+esc(r.entity_name)+'"></td>'+
    '<td class="num">'+displayCashValue(calc?.planned_payments||0)+'</td>'+
    '<td class="num">'+(calc?.is_complete?displayCashValue(calc.planned_closing):'<span class="unknown">Нет полного прогноза</span>')+'</td>'+
-   '<td>'+(editableNow&&!unknown?'<button type="button" class="cash-save" data-cash-save="'+i+'">Сохранить</button>':'')+'</td></tr>';
+   '<td>'+(editableNow?'<button type="button" class="cash-save" data-cash-save="'+i+'">Сохранить</button>':'')+'</td></tr>';
  }).join('')||'<tr><td colspan="6">Не найдены организации для формирования прогноза</td></tr>';
  window.__BAZA_CASH_FORM_ROWS=arr;
 }
@@ -296,7 +393,7 @@ function parseCashForecastInput(raw,label){
 async function saveCashForecast(index){
  if(!editable())return;
  const row=window.__BAZA_CASH_FORM_ROWS?.[index];
- if(!row||row.entity_key.startsWith('unmapped:'))return;
+ if(!row)return;
  const tr=$('cashForecastBody').querySelectorAll('[data-cash-row]')[index];
  const btn=tr?.querySelector('[data-cash-save]');
  if(!btn)return;
@@ -324,7 +421,7 @@ async function openWeek(){
  try{
   const date=$('weekDate').value;if(!date)throw Error('Укажите понедельник недели');
   if(mondayUTC(date)!==date)throw Error('Выберите именно понедельник');
-  currentWeek=date;bitrixBatch=null;if($('bitrixDialog').open)$('bitrixDialog').close();await loadWeek();
+  currentWeek=date;selectedPayments.clear();lastPaymentSelectionIndex=null;bitrixBatch=null;if($('bitrixDialog').open)$('bitrixDialog').close();await loadWeek();
  }catch(e){inform(e.message,'error')}
 }
 async function createWeek(){
@@ -568,7 +665,34 @@ $('weekDate').addEventListener('change',()=>{if($('weekDate').value){$('weekDate
 $('addVgo').addEventListener('click',()=>openNew('vgo'));
 $('addOther').addEventListener('click',()=>openNew('other'));
 $('itemForm').addEventListener('submit',saveItem);
-$('originFilter').addEventListener('change',drawTable);$('search').addEventListener('input',drawTable);
+$('originFilter').addEventListener('change',()=>{lastPaymentSelectionIndex=null;drawTable()});
+$('fundingFilter').addEventListener('change',()=>{lastPaymentSelectionIndex=null;drawTable()});
+$('search').addEventListener('input',()=>{lastPaymentSelectionIndex=null;drawTable()});
+$('selectVisiblePayments').addEventListener('change',e=>{
+ for(const r of filteredCalendarPayments()){if(e.target.checked)selectedPayments.add(r.id);else selectedPayments.delete(r.id)}
+ lastPaymentSelectionIndex=null;$('paymentCopyFeedback').textContent='';drawTable();
+});
+$('itemsBody').addEventListener('click',e=>{
+ const checkbox=e.target.closest('input[data-payment-select]');
+ if(!checkbox)return;
+ const visible=filteredCalendarPayments(),index=Number(checkbox.dataset.selectionIndex);
+ const start=e.shiftKey&&lastPaymentSelectionIndex!==null?Math.min(lastPaymentSelectionIndex,index):index;
+ const end=e.shiftKey&&lastPaymentSelectionIndex!==null?Math.max(lastPaymentSelectionIndex,index):index;
+ for(let i=start;i<=end;i++){const r=visible[i];if(r){if(checkbox.checked)selectedPayments.add(r.id);else selectedPayments.delete(r.id)}}
+ lastPaymentSelectionIndex=index;
+ $('paymentCopyFeedback').textContent='';drawTable();
+});
+$('paymentCopySelected').addEventListener('click',()=>{
+ const selected=selectedCalendarPayments(),unique=new Set(selected.map(r=>r.payer));
+ if(unique.size>1&&!confirm('Выделены платежи нескольких юрлиц. Скопировать их общую сумму? Для плановых поступлений безопаснее использовать суммы по юрлицам ниже.'))return;
+ copyPaymentAmount(amountCents(selected),'все выделенные платежи');
+});
+$('paymentClearSelected').addEventListener('click',()=>{selectedPayments.clear();lastPaymentSelectionIndex=null;$('paymentCopyFeedback').textContent='';drawTable()});
+$('paymentSelectedByEntity').addEventListener('click',e=>{
+ const btn=e.target.closest('[data-copy-entity]');if(!btn)return;
+ const data=window.__BAZA_PAYMENT_SELECTED_GROUPS?.[Number(btn.dataset.copyEntity)];
+ if(data)copyPaymentAmount(data.total,data.name);
+});
 $('itemsBody').addEventListener('click',e=>{const b=e.target.closest('[data-del]');if(b)deleteItem(b.dataset.del)});
 $('formWeek').addEventListener('click',formWeek);
 $('historyReload').addEventListener('click',()=>loadWeek().catch(e=>inform(e.message,'error')));
