@@ -1,0 +1,48 @@
+/* Group cash movement bridge for main BAZA dashboard */
+body.auth-locked #groupCashBridge{display:none!important}
+#groupCashBridge{margin:18px 0;padding:18px 19px;background:#fff;border:1px solid #cfdfed;border-radius:13px}
+#groupCashBridge .gcb-heading{display:flex;gap:14px;justify-content:space-between;align-items:start;flex-wrap:wrap}
+#groupCashBridge .gcb-eyebrow{font-size:9px;letter-spacing:.1em;font-weight:900;color:#61839f}
+#groupCashBridge h3{font-size:16px;color:#173e60;margin:5px 0}
+#groupCashBridge p{font-size:10px;color:#738da4;line-height:1.6;margin:6px 0}
+#groupCashBridge .gcb-week{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+#groupCashBridge label{font-size:10px;font-weight:800;color:#4f7899}
+#groupCashBridge select{background:white;border:1px solid #cbdfeb;padding:9px;border-radius:8px;color:#173f60;font-size:11px}
+#groupCashBridge .gcb-week button{border:1px solid #bcd5e7;background:#f4f9fd;border-radius:8px;padding:9px 12px;cursor:pointer;color:#22577e;font-size:10px;font-weight:800}
+#groupCashBridge .gcb-cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:14px 0}
+#groupCashBridge .gcb-card{display:flex;flex-direction:column;gap:8px;min-width:0;text-align:left;border:1px solid #d6e5ef;background:#f9fcfe;border-radius:11px;padding:15px 12px;cursor:pointer;color:#153c59}
+#groupCashBridge .gcb-card:hover,#groupCashBridge .gcb-card:focus-visible{outline:2px solid #b9d5e8}
+#groupCashBridge .gcb-card span{font-size:9px;font-weight:900;color:#6b8aa1;display:flex;justify-content:space-between;gap:5px;letter-spacing:.04em}
+#groupCashBridge .gcb-card strong{font-size:clamp(15px,1.7vw,22px);white-space:nowrap}
+#groupCashBridge .gcb-card small{font-size:9px;color:#7c95a9;line-height:1.5}
+#groupCashBridge .gcb-card[data-kind=income]{background:#f2faf5;border-color:#cfe6d8}
+#groupCashBridge .gcb-card[data-kind=income] strong{color:#23744c}
+#groupCashBridge .gcb-card[data-kind=expense]{background:#fff6f7;border-color:#eed0d6}
+#groupCashBridge .gcb-card[data-kind=expense] strong{color:#b83246}
+#groupCashBridge .gcb-card[data-kind=closing]{background:#153d62;color:white;border-color:#153d62}
+#groupCashBridge .gcb-card[data-kind=closing] span,#groupCashBridge .gcb-card[data-kind=closing] small{color:#b5cfe0}
+#groupCashBridge .gcb-bottom{display:flex;align-items:center;gap:12px;flex-wrap:wrap;border-top:1px solid #e1eaf1;padding-top:11px}
+#groupCashBridge .gcb-net{font-size:11px;color:#17476d;font-weight:900}
+#groupCashBridge .gcb-vgo{padding:7px 10px;background:#f2f7fc;border:1px solid #c9ddeb;border-radius:8px;cursor:pointer;color:#1d5c89;font-size:10px;font-weight:800}
+#groupCashBridge .gcb-coverage{font-size:10px;color:#66849a}
+#groupCashBridge .gcb-alert{background:#fff8e9;border:1px solid #e8d4ae;border-radius:8px;padding:10px 12px;color:#835f2a;font-size:10px;line-height:1.7;margin-top:11px}
+#groupCashBridge .gcb-alert[hidden]{display:none}
+.gcb-modal{position:fixed;inset:0;z-index:9900;background:rgba(5,27,48,.68);display:none;align-items:center;justify-content:center;padding:18px}
+.gcb-modal.open{display:flex}
+.gcb-modal-box{width:min(1100px,100%);max-height:90vh;display:flex;flex-direction:column;background:white;border-radius:14px;overflow:hidden;box-shadow:0 25px 70px #071b3355}
+.gcb-modal-head{display:flex;align-items:start;justify-content:space-between;gap:12px;padding:18px 19px;border-bottom:1px solid #e0e9f1}
+.gcb-modal-head h3{font-size:17px;color:#174166;margin:0}
+.gcb-modal-head p{font-size:11px;color:#6b88a0;margin:7px 0 0}
+.gcb-modal-head button{background:#fff;border:1px solid #cbdce7;border-radius:8px;padding:7px 13px;cursor:pointer;font-size:15px}
+.gcb-modal-tools{background:#f8fbfe;padding:11px 18px;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.gcb-modal-tools input{border:1px solid #c6d9e8;border-radius:8px;background:white;color:#1a4869;padding:9px 10px;min-width:230px;flex:1;font-size:11px}
+.gcb-modal-tools strong{color:#214e70;font-size:12px}
+.gcb-modal-table{flex:1;overflow:auto;padding:0 12px}
+.gcb-modal table{width:100%;min-width:850px;border-collapse:collapse}
+.gcb-modal th{position:sticky;top:0;z-index:1;padding:11px 8px;background:#f1f7fb;color:#5e7e95;font-size:9px;text-align:left}
+.gcb-modal td{border-bottom:1px solid #e5edf3;color:#204764;padding:10px 8px;font-size:10px;vertical-align:top}
+.gcb-modal th:last-child,.gcb-modal td:last-child{text-align:right;white-space:nowrap;font-weight:800}
+.gcb-modal .gcb-unmatched{color:#ab6b21}
+.gcb-modal-foot{padding:11px 18px;font-size:10px;line-height:1.65;color:#778fa3;border-top:1px solid #e5edf3}
+@media(max-width:890px){#groupCashBridge .gcb-cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:520px){#groupCashBridge .gcb-cards{grid-template-columns:1fr}#groupCashBridge .gcb-card strong{font-size:20px}}
