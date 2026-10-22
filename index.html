@@ -271,7 +271,7 @@ body.calendar-review-mode .kpi-board{grid-template-columns:1.5fr 1fr}
 </head>
 <body>
 <div class="page">
-<header class="topbar"><div class="brand"><b>BAZA</b><small>ПЛАТЕЖНЫЙ КОНТРОЛЬ</small></div><div class="period">19–25 ОКТЯБРЯ 2026 · ФИНАНСОВЫЙ КОНТРОЛЬ</div><nav class="nav"><a href="#dashboard">Дашборд</a><a href="#registry">Реестр платежей</a><a href="calendar.html">Формирование ПК</a><a href="#cashBoard">Остатки</a><a href="plan-fact.html">План / факт</a><a id="adminUsersLink" href="users.html" hidden>Пользователи</a></nav></header>
+<header class="topbar"><div class="brand"><b>BAZA</b><small>ПЛАТЕЖНЫЙ КОНТРОЛЬ</small></div><div class="period">19–25 ОКТЯБРЯ 2026 · ФИНАНСОВЫЙ КОНТРОЛЬ</div><nav class="nav"><a href="#dashboard">Дашборд</a><a href="#registry">Реестр платежей</a><a href="calendar.html">Формирование ПК</a><a href="#groupCashBridge">Остатки</a><a href="plan-fact.html">План / факт</a><a id="adminUsersLink" href="users.html" hidden>Пользователи</a></nav></header>
 <section class="hero" id="dashboard"><div><div class="eyebrow">EXECUTIVE VIEW</div><h1>Платежный контроль</h1><p>Куда уходят деньги, за счёт какого источника и какие платежи требуют решения.</p></div><button class="reset" id="reset">Сбросить фильтры</button></section>
 <section id="calendarReviewBanner" hidden aria-live="polite">
  <div style="flex:1;min-width:235px"><div class="calendar-review-label">НЕДЕЛЬНЫЙ ПЛАТЁЖНЫЙ КАЛЕНДАРЬ</div>
@@ -1416,7 +1416,7 @@ if(document.body.classList.contains('auth-ready'))load();
 (function(){
  const links=[...document.querySelectorAll('.topbar .nav a[href^="#"]')];
  function sync(){
-  const current=['#registry','#cashBoard'].includes(location.hash)?location.hash:'#dashboard';
+  const current=['#registry','#cashBoard','#groupCashBridge'].includes(location.hash)?location.hash:'#dashboard';
   links.forEach(a=>{
    const selected=a.getAttribute('href')===current;
    a.classList.toggle('active',selected);
