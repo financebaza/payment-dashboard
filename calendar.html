@@ -62,6 +62,15 @@ fieldset{border:none;padding:0;margin:0}dialog{border:1px solid #cfdeea;border-r
 .cash-forecast .cash-new-entity{display:block;color:#557f9f;font-weight:600;font-size:9px;margin-top:4px}
 @media(max-width:740px){.payment-selection-actions strong{flex-basis:100%}.payment-selection-top{align-items:start;flex-direction:column}}
 
+
+/* BAZA_ITEM_EDIT_RESET_IMPORT_V1 */
+.edit-actions{display:flex;align-items:center;gap:9px;justify-content:flex-end;white-space:nowrap}
+.edit-actions .edit-payment{padding:6px 8px;background:#f2f7fa;border:1px solid #bbd2e5;border-radius:6px;color:#164569;font-size:10px}
+.clear-draft{background:#fff4f4!important;color:#a43140!important;border:1px solid #e6c8cc!important}
+.clear-draft:hover{background:#fce8ec!important}
+.cash-forecast-buttons{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:flex-end}
+.cash-forecast-buttons .btn{font-size:10px;padding:8px 11px;color:#174565;background:#f0f7fd}
+
 /* BAZA_BITRIX_CSV_UPLOAD_V1 */
 .csv-dialog{width:min(1250px,calc(100vw - 30px));max-height:91vh}
 .csv-dialog .dialog-body{max-height:calc(91vh - 76px)}
@@ -107,7 +116,7 @@ fieldset{border:none;padding:0;margin:0}dialog{border:1px solid #cfdeea;border-r
   <div class="toolbar"><select id="originFilter"><option value="">Все источники</option><option value="bitrix">Битрикс24</option><option value="vgo">ВГО</option><option value="other">Прочие</option></select>
    <select id="fundingFilter" aria-label="Фильтр по источнику средств"><option value="">Все средства</option><option value="Кредит">Кредит</option><option value="Собственные">Собственные</option></select>
    <input id="search" type="search" placeholder="Поиск: юрлицо, контрагент, проект…">
-   <button id="addVgo" type="button" class="btn primary">+ ВГО</button><button id="addOther" type="button" class="btn">+ Прочий</button>
+   <button id="addVgo" type="button" class="btn primary">+ ВГО</button><button id="addOther" type="button" class="btn">+ Прочий</button><button id="clearDraft" type="button" class="btn clear-draft">Очистить черновик</button>
   </div>
   <div id="paymentSelectionPanel" class="payment-selection-panel">
     <div class="payment-selection-top">
@@ -145,7 +154,7 @@ fieldset{border:none;padding:0;margin:0}dialog{border:1px solid #cfdeea;border-r
  </aside></div>
  <section id="cashForecastSection" class="card cash-forecast" hidden>
  <div class="section-head"><div><h2>Прогноз остатков на конец недели · по юрлицам</h2><p>Заполни начальные остатки и план поступлений, включая кредитные транши и ВГО. План списаний возьмём из позиций ПК. Значения не по банковским счетам — по каждой организации в целом.</p></div>
- <span class="cash-total" id="cashForecastCount">—</span></div>
+ <div class="cash-forecast-buttons"><span class="cash-total" id="cashForecastCount">—</span><button type="button" class="btn" id="importOpeningButton">Импорт начальных остатков · XLSX</button><input id="openingXlsxFile" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden></div></div>
  <div id="cashForecastMessage" role="status">Загружаем прогноз...</div>
  <div class="tablewrap" style="margin-top:12px"><table><thead><tr><th>Наше юрлицо</th><th>Начальный остаток, ₽</th><th>Приходы за неделю, ₽</th><th style="text-align:right">Расходы по ПК, ₽</th><th style="text-align:right">Остаток на конец, ₽</th><th></th></tr></thead>
  <tbody id="cashForecastBody"><tr><td colspan="6">Нет данных</td></tr></tbody></table></div>
@@ -181,7 +190,7 @@ fieldset{border:none;padding:0;margin:0}dialog{border:1px solid #cfdeea;border-r
  </div>
 </dialog>
 <dialog id="itemDialog" aria-labelledby="itemTitle"><div class="dialog-head"><h2 id="itemTitle">Добавить платёж</h2><button class="close" type="button" data-close="itemDialog">×</button></div>
- <div class="dialog-body"><form id="itemForm"><div class="form-grid">
+ <div class="dialog-body"><form id="itemForm"><div id="itemBitrixInfo" class="inset" hidden style="margin-bottom:12px"></div><div class="form-grid">
  <div class="field"><label for="itemDue">Крайняя дата оплаты</label><input id="itemDue" type="date" required></div>
  <div class="field"><label for="itemAmount">Сумма, ₽</label><input id="itemAmount" type="number" step="0.01" min="0.01" required></div>
  <div class="field"><label for="itemPayer">Наше юрлицо</label><input id="itemPayer" required maxlength="240"></div>
@@ -203,7 +212,7 @@ const $=id=>document.getElementById(id);
 const money=n=>new Intl.NumberFormat('ru-RU',{maximumFractionDigits:2}).format(Number(n)||0)+' ₽';
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const formatDate=s=>s?new Intl.DateTimeFormat('ru-RU',{day:'2-digit',month:'short'}).format(new Date(s+'T12:00:00Z')):'—';
-let token='',role='',week=null,items=[],events=[],currentWeek='',user=null,origin='vgo';
+let token='',role='',week=null,items=[],events=[],currentWeek='',user=null,origin='vgo',editItemId=null;
 let cashTemplates=[],cashBalances=[],cashPreview=[];
 const selectedPayments=new Set();
 let lastPaymentSelectionIndex=null;
@@ -246,7 +255,7 @@ function draw(){
  else if(week.status==='locked')$('bitrixStatus').textContent='ПК утверждён · импорт закрыт';
  else if(week.status==='formed')$('bitrixStatus').textContent='ПК на рассмотрении · импорт закрыт';
  else $('bitrixStatus').textContent='Готово к загрузке CSV · неделя '+formatDate(currentWeek)+' — '+formatDate(shift(currentWeek,6));
- $('addVgo').disabled=!editable();$('addOther').disabled=!editable();
+ $('addVgo').disabled=!editable();$('addOther').disabled=!editable();$('clearDraft').disabled=!editable()||!items.length;
  $('formWeek').disabled=!editable()||!items.length;
  $('formWeek').hidden=isLocked||week?.status==='formed';
  $('reviewOnDashboard').hidden=!week||week.status==='draft';
@@ -325,12 +334,12 @@ function drawTable(){
  '<td>'+esc(r.project||'—')+'<div class="muted">'+esc(r.direction||'')+'</div></td>'+
  '<td><span class="src '+esc(r.origin)+'">'+({bitrix:'Битрикс24',vgo:'ВГО',other:'Прочие'}[r.origin]||'—')+'</span></td>'+
  '<td>'+esc(r.funding_source)+'</td><td class="money">'+money(r.amount)+'</td>'+
- '<td>'+(editable()?'<button class="danger-link" type="button" data-del="'+esc(r.id)+'">Удалить</button>':'')+'</td></tr>').join('')||
+ '<td>'+(editable()?'<div class="edit-actions"><button class="btn edit-payment" type="button" data-edit="'+esc(r.id)+'">Изменить</button><button class="danger-link" type="button" data-del="'+esc(r.id)+'">Удалить</button></div>':'')+'</td></tr>').join('')||
  '<tr><td colspan="8" class="muted" style="text-align:center;padding:25px">Нет платежей в выбранном срезе</td></tr>';
  drawPaymentSelection();
 }
 function drawHistory(){
- const names={item_added:'Добавлена позиция',item_updated:'Изменена позиция',item_deleted:'Удалена позиция',week_formed:'Сформирована версия для рассмотрения',week_returned_to_draft:'Возврат на доработку',week_locked:'ПК зафиксирован',bitrix_csv_import:'Импорт заявок из CSV Битрикс24'};
+ const names={item_added:'Добавлена позиция',item_updated:'Изменена позиция',item_deleted:'Удалена позиция',week_formed:'Сформирована версия для рассмотрения',week_returned_to_draft:'Возврат на доработку',week_locked:'ПК зафиксирован',bitrix_csv_import:'Импорт заявок из CSV Битрикс24',draft_cleared:'Очищен черновик',cash_opening_import:'Загружены начальные остатки 1С'};
  $('history').innerHTML=events.slice(0,15).map(e=>'<div><strong>'+esc(names[e.event]||e.event)+'</strong><small>'+esc(new Date(e.occurred_at).toLocaleString('ru-RU'))+
  (e.details?.counterparty?' · '+esc(e.details.counterparty):e.event==='bitrix_csv_import'?' · '+esc(e.details.created||0)+' новых, '+esc(e.details.updated||0)+' обновлено':'')+'</small></div>').join('')||'<div>Пока без изменений</div>';
 }
@@ -435,23 +444,68 @@ async function createWeek(){
 }
 function openNew(type){
  if(!editable())return;
- origin=type;$('itemForm').reset();$('itemDue').value=shift(currentWeek,1);
+ editItemId=null;origin=type;$('itemForm').reset();$('itemDue').value=shift(currentWeek,1);
+ $('itemBitrixInfo').hidden=true;
  $('itemFlow').value=type==='vgo'?'ВГО':'Прочие платежи';
  $('itemTitle').textContent=type==='vgo'?'Добавить ВГО':'Добавить прочий платёж';
+ $('itemSave').textContent='Добавить в ПК';
+ $('itemDialog').showModal();
+}
+function editItem(id){
+ if(!editable())return;
+ const r=items.find(x=>x.id===id);if(!r)return;
+ editItemId=id;origin=r.origin;
+ $('itemForm').reset();
+ const fields={itemDue:r.due_date,itemAmount:r.amount,itemPayer:r.payer,itemCounterparty:r.counterparty,
+  itemProject:r.project,itemDirection:r.direction,itemFunding:r.funding_source,
+  itemFlow:r.flow_type,itemSubcategory:r.subcategory,itemMemo:r.memo};
+ for(const [id,value] of Object.entries(fields)){
+  const control=$(id);const text=String(value??'');
+  if(control.tagName==='SELECT'&&![...control.options].some(o=>o.value===text)&&text)
+   control.add(new Option(text,text));
+  control.value=text;
+ }
+ $('itemBitrixInfo').hidden=r.origin!=='bitrix';
+ $('itemBitrixInfo').textContent=r.origin==='bitrix'
+  ?'Битрикс24 · заявка №'+r.source_ref+'. Изменения сохраняются только в BAZA и не передаются обратно в Битрикс. При повторном импорте CSV данные этой заявки могут обновиться.':'';
+ $('itemTitle').textContent='Редактирование платежа';
+ $('itemSave').textContent='Сохранить изменения';
  $('itemDialog').showModal();
 }
 async function saveItem(ev){
  ev.preventDefault();const btn=$('itemSave');btn.disabled=true;
  try{
-  const data={week_start:currentWeek,origin,created_by:user.id,
+  const data={
    due_date:$('itemDue').value,amount:Number($('itemAmount').value),
    payer:$('itemPayer').value.trim(),counterparty:$('itemCounterparty').value.trim(),
    project:$('itemProject').value.trim(),direction:$('itemDirection').value.trim(),
    funding_source:$('itemFunding').value,flow_type:$('itemFlow').value,
    subcategory:$('itemSubcategory').value.trim(),memo:$('itemMemo').value.trim()};
   if(!data.payer||!data.counterparty||!data.due_date||!Number.isFinite(data.amount)||data.amount<=0)throw Error('Заполните обязательные поля');
-  await request('calendar_items',{method:'POST',body:data});$('itemDialog').close();await loadWeek();
+  if(!editable())throw Error('Редактировать можно только открытый черновик ПК');
+  if(data.due_date<currentWeek||data.due_date>shift(currentWeek,6))throw Error('Дата платежа должна входить в выбранную неделю ПК');
+  if(editItemId){
+   const original=items.find(x=>x.id===editItemId);
+   if(!original)throw Error('Платёж не найден');
+   await request('calendar_items?id=eq.'+encodeURIComponent(editItemId)+'&week_start=eq.'+currentWeek,{method:'PATCH',body:data});
+  }else await request('calendar_items',{method:'POST',body:{...data,week_start:currentWeek,origin,created_by:user.id}});
+  $('itemDialog').close();editItemId=null;await loadWeek();
+  inform('Платёж успешно '+(origin==='bitrix'?'изменён в черновике BAZA':'сохранён')+'.','success');
  }catch(e){inform(e.message,'error')}finally{btn.disabled=false}
+}
+async function clearDraft(){
+ if(!editable()||!items.length)return;
+ const label='ОЧИСТИТЬ',n=items.length;
+ const typed=prompt('Будут удалены ВСЕ '+n+' позиции из черновика за неделю '+formatDate(currentWeek)+' — '+formatDate(shift(currentWeek,6))+'.\nПрогноз остатков по юрлицам НЕ удаляется.\nЧтобы продолжить, введи: '+label);
+ if(typed!==label){if(typed!==null)inform('Очистка отменена: неверное подтверждение','error');return}
+ if(!confirm('Окончательно удалить '+n+' позиций из черновика? Это действие нельзя отменить.'))return;
+ const btn=$('clearDraft');btn.disabled=true;
+ try{
+  const result=await request('rpc/calendar_clear_draft',{method:'POST',body:{p_week_start:currentWeek,p_confirmed:true}});
+  selectedPayments.clear();lastPaymentSelectionIndex=null;await loadWeek();
+  inform('Черновик очищен: удалено '+result.deleted+' платежей. Можно заново загрузить CSV. Остатки сохранены.','success');
+ }catch(e){inform('Не удалось очистить черновик: '+e.message,'error')}
+ finally{btn.disabled=false}
 }
 async function deleteItem(id){
  if(!editable())return;
@@ -693,7 +747,8 @@ $('paymentSelectedByEntity').addEventListener('click',e=>{
  const data=window.__BAZA_PAYMENT_SELECTED_GROUPS?.[Number(btn.dataset.copyEntity)];
  if(data)copyPaymentAmount(data.total,data.name);
 });
-$('itemsBody').addEventListener('click',e=>{const b=e.target.closest('[data-del]');if(b)deleteItem(b.dataset.del)});
+$('itemsBody').addEventListener('click',e=>{const edit=e.target.closest('[data-edit]');if(edit){editItem(edit.dataset.edit);return}const b=e.target.closest('[data-del]');if(b)deleteItem(b.dataset.del)});
+$('clearDraft').addEventListener('click',clearDraft);
 $('formWeek').addEventListener('click',formWeek);
 $('historyReload').addEventListener('click',()=>loadWeek().catch(e=>inform(e.message,'error')));
 document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',()=>$(b.dataset.close).close()));
