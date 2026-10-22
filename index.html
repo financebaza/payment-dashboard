@@ -1009,8 +1009,6 @@ body.auth-ready .auth-screen{display:none}.auth-guard-note{font-size:9px;color:#
     // Only the expense row identifies the sender and must survive deduplication.
     if(a.isNonExpense!==b.isNonExpense)return a.isNonExpense?b:a;
     const sub=String(a.subcategory||b.subcategory||'').toLowerCase();
-    if(Math.abs(Number(a.amount)-16762520)<1&&/база-куйбышева/i.test(a.entity||'')&&/база/i.test(a.counterparty||''))return a;
-    if(Math.abs(Number(b.amount)-16762520)<1&&/база-куйбышева/i.test(b.entity||'')&&/база/i.test(b.counterparty||''))return b;
     if(/взносы учредителей/.test(sub)){
       if(/база девелопмент/i.test(a.entity||''))return a;
       if(/база девелопмент/i.test(b.entity||''))return b;
