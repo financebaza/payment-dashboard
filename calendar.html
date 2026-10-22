@@ -434,7 +434,14 @@ function drawCashForecast(){
  $('cashForecastMessage').textContent=
    week.status==='locked'?'ПК уже утверждён. Плановые остатки зафиксированы на дату утверждения, дальнейшее редактирование закрыто.':
    week.status==='formed'?'ПК на рассмотрении. Чтобы изменить прогноз, администратор должен вернуть ПК на доработку.':
-   'Заполни остатки и план поступлений по каждому юрлицу. Чтобы не считать кредитные платежи вручную, выдели их в реестре выше и скопируй сумму. Кредитный транш может отличаться от суммы оплачиваемых из него заявок. Пустое поле — «нет данных», ноль указывай цифрой 0.';
+   'Заполни остатки и план поступлений по каждому юрлицу, затем нажми «Сохранить все изменения». Чтобы не считать кредитные платежи вручную, выдели их в реестре выше и скопируй сумму. Кредитный транш может отличаться от суммы оплачиваемых из него заявок. Пустое поле — «нет данных», ноль указывай цифрой 0.'; 
+ const stale1c=cashBalances.filter(r=>{
+  const m=String(r.source_note||'').match(/дата отчёта\s+(\d{4}-\d{2}-\d{2})/i);
+  return m&&m[1]!==shift(currentWeek,-1);
+ });
+ if(stale1c.length){
+  $('cashForecastMessage').textContent+=' ВНИМАНИЕ: по '+stale1c.length+' юрлицам начальные остатки взяты из 1С за другую дату (например, '+stale1c[0].source_note.match(/дата отчёта\s+(\d{4}-\d{2}-\d{2})/i)[1]+'). Это не актуальные остатки на начало выбранной недели.';
+ }
  $('cashForecastBody').innerHTML=arr.map((r,i)=>{
   const calc=current.get(r.entity_key);
   const isNewEntity=r.entity_key.startsWith('entity:')||r.entity_key.startsWith('unmapped:');
@@ -470,15 +477,16 @@ function readCashForecastChanges(){
   const oldIncome=prev?.planned_receipts==null?null:Number(prev.planned_receipts);
   const rawOpening=a.value.trim(),rawIncome=b.value.trim();
   let opening,receipts;
+  a.classList.remove('cash-invalid-field');b.classList.remove('cash-invalid-field');
   try{
    // An accidentally emptied existing field must not wipe a previously imported/saved value.
    opening=rawOpening===''&&oldOpening!==null?oldOpening:parseCashForecastInput(rawOpening,'начального остатка · '+r.entity_name);
+  }catch(err){errors.push(err.message);a.classList.add('cash-invalid-field');}
+  try{
    receipts=rawIncome===''&&oldIncome!==null?oldIncome:parseCashForecastInput(rawIncome,'поступлений · '+r.entity_name);
    if(receipts!==null&&receipts<0)throw Error('Поступления не могут быть отрицательными · '+r.entity_name);
-   a.classList.remove('cash-invalid-field');b.classList.remove('cash-invalid-field');
-  }catch(err){
-   errors.push(err.message);
-   (rawOpening===null?a:b).classList.add('cash-invalid-field');
+  }catch(err){errors.push(err.message);b.classList.add('cash-invalid-field');}
+  if(a.classList.contains('cash-invalid-field')||b.classList.contains('cash-invalid-field')){
    const closing=tr.querySelector('[data-cash-closing]');
    if(closing)closing.innerHTML='<span class="unknown">Проверьте сумму</span>';
    continue;
@@ -486,10 +494,15 @@ function readCashForecastChanges(){
   const changed=opening!==oldOpening||receipts!==oldIncome;
   const payments=Number(cashPreview.find(x=>x.entity_key===r.entity_key)?.planned_payments||0);
   const closing=tr.querySelector('[data-cash-closing]');
-  if(closing&&changed){
-   const value=opening===null||receipts===null?null:Math.round((opening+receipts-payments)*100)/100;
-   closing.innerHTML=value===null?'<span class="unknown">Нет полного прогноза</span>':
-    '<span class="cash-live-preview" title="Предварительный расчёт · не сохранено">'+displayCashValue(value)+' *</span>';
+  if(closing){
+   const original=cashPreview.find(x=>x.entity_key===r.entity_key);
+   if(!changed)closing.innerHTML=original?.is_complete?displayCashValue(original.planned_closing):
+    '<span class="unknown">Нет полного прогноза</span>';
+   else{
+    const value=opening===null||receipts===null?null:Math.round((opening+receipts-payments)*100)/100;
+    closing.innerHTML=value===null?'<span class="unknown">Нет полного прогноза</span>':
+     '<span class="cash-live-preview" title="Предварительный расчёт · не сохранено">'+displayCashValue(value)+' *</span>';
+   }
   }
   if(changed)changes.push({
    entity_key:r.entity_key,entity_name:r.entity_name,opening_balance:opening,planned_receipts:receipts,
