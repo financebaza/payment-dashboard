@@ -203,6 +203,11 @@ function draw(){
  $('weekStatus').textContent=!week?'Нет черновика':isLocked?'Утверждён':week.status==='formed'?'На рассмотрении':'Черновик';
  $('weekStatus').className='status'+(isLocked?' locked':'');
  $('createWeek').hidden=!!week||!['admin','approver'].includes(role);
+ $('bitrixImportButton').disabled=!editable();
+ if(!week)$('bitrixStatus').textContent='Сначала создайте черновик недели';
+ else if(week.status==='locked')$('bitrixStatus').textContent='ПК утверждён · импорт закрыт';
+ else if(week.status==='formed')$('bitrixStatus').textContent='ПК на рассмотрении · импорт закрыт';
+ else $('bitrixStatus').textContent='Готово к загрузке CSV · неделя '+formatDate(currentWeek)+' — '+formatDate(shift(currentWeek,6));
  $('addVgo').disabled=!editable();$('addOther').disabled=!editable();
  $('formWeek').disabled=!editable()||!items.length;
  $('formWeek').hidden=isLocked||week?.status==='formed';
@@ -319,7 +324,7 @@ async function openWeek(){
  try{
   const date=$('weekDate').value;if(!date)throw Error('Укажите понедельник недели');
   if(mondayUTC(date)!==date)throw Error('Выберите именно понедельник');
-  currentWeek=date;await loadWeek();
+  currentWeek=date;bitrixBatch=null;if($('bitrixDialog').open)$('bitrixDialog').close();await loadWeek();
  }catch(e){inform(e.message,'error')}
 }
 async function createWeek(){
@@ -367,48 +372,195 @@ async function formWeek(){
  }catch(e){inform(e.message,'error')}finally{btn.disabled=false}
 }
 
-function openBitrixDialog(){
- if(role!=='admin'){inform('Проверить вебхук может только администратор BAZA','error');return;}
- $('bitrixTestResult').hidden=true;
- $('bitrixWebhookInput').value='';
- $('bitrixDialog').showModal();
+
+/* BAZA_BITRIX_CSV_IMPORT_V1: client-side preview, server-side atomic validated import. */
+let bitrixBatch=null;
+function csvFields(text){
+ const raw=String(text||'').replace(/^\uFEFF/,'');
+ const firstLine=raw.split(/\r?\n/,1)[0]||'';
+ const delimiter=firstLine.includes(';')?';':firstLine.includes('\t')?'\t':',';
+ const output=[],row=[];let cell='',quoted=false;
+ for(let i=0;i<raw.length;i++){
+  const ch=raw[i];
+  if(ch==='"'){
+   if(quoted&&raw[i+1]==='"'){cell+='"';i++;continue}
+   if(quoted){quoted=false;continue}
+   if(cell.trim()===''){quoted=true;continue}
+   cell+='"';continue;
+  }
+  if(!quoted&&ch===delimiter){row.push(cell);cell='';continue}
+  if(!quoted&&(ch==='\n'||ch==='\r')){
+   row.push(cell);if(row.some(v=>String(v).trim()))output.push(row.slice());
+   row.length=0;cell='';
+   if(ch==='\r'&&raw[i+1]==='\n')i++;
+   continue;
+  }
+  cell+=ch;
+ }
+ if(quoted)throw Error('В CSV не закрыта кавычка. Проверьте файл экспорта Битрикс24.');
+ row.push(cell);if(row.some(v=>String(v).trim()))output.push(row);
+ if(!output.length)throw Error('CSV пустой');
+ if(output.length>5002)throw Error('Файл слишком большой: максимум 5000 строк для предварительной проверки');
+ return output;
 }
-async function testBitrix(event){
- event.preventDefault();
- if(role!=='admin')return;
- const btn=$('bitrixTestSubmit'),result=$('bitrixTestResult');
- btn.disabled=true;result.hidden=false;result.textContent='Проверяем права и читаем поля и стадии смарт-процесса…';
- const secret=$('bitrixWebhookInput').value.trim();
+function csvHeaderKey(x){return String(x||'').replace(/^\uFEFF/,'').toLocaleLowerCase('ru-RU').replace(/\s+/g,' ').trim()}
+function bitrixParseAmount(x){
+ let v=String(x??'').replace(/[\u00a0\u202f\s₽]/g,'').trim();
+ if(v.includes(',')&&v.includes('.'))v=v.lastIndexOf(',')>v.lastIndexOf('.')?v.replace(/\./g,'').replace(',','.'):v.replace(/,/g,'');
+ else if(v.includes(','))v=v.replace(',','.');
+ if(!/^\d{1,15}(\.\d{1,2})?$/.test(v)||Number(v)<=0)return null;
+ return Number(v);
+}
+function bitrixParseDate(x){
+ const v=String(x||'').trim();
+ let year,month,day,m;
+ if(m=v.match(/^(\d{2})\.(\d{2})\.(\d{4})$/)){day=+m[1];month=+m[2];year=+m[3]}
+ else if(m=v.match(/^(\d{4})-(\d{2})-(\d{2})$/)){year=+m[1];month=+m[2];day=+m[3]}
+ else return null;
+ const d=new Date(Date.UTC(year,month-1,day));
+ if(d.getUTCFullYear()!==year||d.getUTCMonth()!==month-1||d.getUTCDate()!==day)return null;
+ return String(year).padStart(4,'0')+'-'+String(month).padStart(2,'0')+'-'+String(day).padStart(2,'0');
+}
+function bitrixFunding(value){
+ const v=String(value??'').toLocaleLowerCase('ru-RU').replace(/\s+/g,' ').trim();
+ if(!v||['-','не заполнено','нет данных','null'].includes(v))return '';
+ if(['да','1','true','yes','кредит','кредитные','кредитные средства','из кредитных средств'].includes(v))return 'Кредит';
+ if(['нет','0','false','no','собственные','собственные средства'].includes(v))return 'Собственные';
+ return '';
+}
+function bitrixTransform(text,filename){
+ const table=csvFields(text),headers=table[0].map(csvHeaderKey),lookup=new Map(headers.map((key,i)=>[key,i]));
+ const required=['id','крайняя дата оплаты','сумма','название контрагента','наше юр. лицо','доход(+)/расходы(-)'];
+ const missing=required.filter(k=>!lookup.has(k));
+ if(missing.length)throw Error('Не найдены обязательные колонки: '+missing.join(', ')+'. Нужна CSV-выгрузка смарт-процесса «Согласование платежей NEW».');
+ const col=(r,name)=>{const ix=lookup.get(csvHeaderKey(name));return ix===undefined?'':String(r[ix]??'').trim()};
+ const existing=new Map(items.filter(x=>x.origin==='bitrix'&&x.source_ref).map(x=>[String(x.source_ref),x]));
+ const result={week:currentWeek,filename,rows:[],outside:0,income:0,duplicates:0,errors:[],fileCount:table.length-1};
+ const ids=new Set();
+ for(let i=1;i<table.length;i++){
+  const cells=table[i],ref=col(cells,'ID'),date=bitrixParseDate(col(cells,'Крайняя дата оплаты'));
+  if(!/^\d{1,15}$/.test(ref)){result.errors.push('Строка '+(i+1)+': некорректный ID');continue}
+  if(ids.has(ref)){result.duplicates++;result.errors.push('Строка '+(i+1)+': повторяется ID '+ref);continue}
+  ids.add(ref);
+  if(!date){result.errors.push('Строка '+(i+1)+', ID '+ref+': некорректная крайняя дата оплаты');continue}
+  if(date<currentWeek||date>shift(currentWeek,6)){result.outside++;continue}
+  const sign=col(cells,'Доход(+)/Расходы(-)');
+  if(sign==='+'){result.income++;continue}
+  if(sign!=='-'){result.errors.push('Строка '+(i+1)+', ID '+ref+': не определён знак расхода');continue}
+  const amount=bitrixParseAmount(col(cells,'Сумма'));
+  const payer=col(cells,'Наше Юр. лицо'),counterparty=col(cells,'Название контрагента');
+  if(amount===null||!payer||!counterparty){result.errors.push('Строка '+(i+1)+', ID '+ref+': отсутствует корректная сумма, юрлицо или контрагент');continue}
+  const title=col(cells,'Название'),main=col(cells,'Основная статья'),sub=col(cells,'Подстатья'),subsub=col(cells,'Подподстатья');
+  const direction=title.includes(' | ')?title.split(' | ')[0].trim():'';
+  const creditRaw=col(cells,'Из кредитных средств');
+  const funding=bitrixFunding(creditRaw)||(!creditRaw&&existing.has(ref)?existing.get(ref).funding_source:'');
+  if(creditRaw&&!bitrixFunding(creditRaw))result.errors.push('Строка '+(i+1)+', ID '+ref+': непонятное значение «Из кредитных средств»: '+creditRaw);
+  const memo=['Битрикс24 №'+ref,title,main?'Основная статья: '+main:'',subsub?'Подподстатья: '+subsub:''].filter(Boolean).join(' · ').slice(0,1500);
+  result.rows.push({source_ref:ref,payer,counterparty,amount,due_date:date,
+    direction,project:col(cells,'Наименование проекта'),
+    subcategory:sub||main,flow_type:'Прочие платежи',funding_source:funding||'',
+    memo,flow_sign:'-',already:existing.has(ref)});
+ }
+ if(result.rows.length>500)result.errors.push('В выбранной неделе более 500 заявок. Разделите выгрузку на части.');
+ return result;
+}
+function bitrixSetStatus(message,error=false){
+ const el=$('bitrixTestResult');
+ el.hidden=!message;el.textContent=message||'';el.className='csv-import-message'+(error?' error':'');
+}
+function bitrixDrawPreview(){
+ if(!bitrixBatch)return;
+ const b=bitrixBatch;
+ const sum=b.rows.reduce((n,r)=>n+Math.round(r.amount*100),0)/100;
+ const unassigned=b.rows.filter(r=>!r.funding_source).length;
+ const already=b.rows.filter(r=>r.already).length;
+ $('bitrixImportSummary').innerHTML='<b>'+esc(b.filename)+'</b><br>'+
+  'Неделя ПК: <b>'+esc(formatDate(b.week))+' — '+esc(formatDate(shift(b.week,6)))+'</b> · '+
+  'В CSV: '+b.fileCount+' заявок · к загрузке: <b>'+b.rows.length+'</b> · уже в черновике: '+already+
+  ' · исключены: вне недели '+b.outside+', приходы '+b.income+'.';
+ const warnings=[];
+ if(!b.hasStage)warnings.push('CSV не содержит колонку стадии. Убедитесь, что в Битриксе выбран фильтр «Согласование с Finance».');
+ if(b.errors.length)warnings.push('Ошибки файла (импорт заблокирован):\n'+b.errors.slice(0,12).join('\n')+(b.errors.length>12?'\n...и ещё '+(b.errors.length-12):''));
+ if(unassigned)warnings.push('Не выбран источник финансирования: '+unassigned+' заявок. Это обязательное поле перед загрузкой.');
+ $('bitrixImportWarnings').hidden=!warnings.length;
+ $('bitrixImportWarnings').textContent=warnings.join('\n\n');
+ $('bitrixPreviewBody').innerHTML=b.rows.map((r,i)=>
+  '<tr><td><b>#'+esc(r.source_ref)+'</b></td><td>'+esc(formatDate(r.due_date))+'</td>'+
+  '<td><b>'+esc(r.payer)+'</b><div class="muted">'+esc(r.counterparty)+'</div></td>'+
+  '<td>'+esc(r.project||'—')+'<div class="muted">'+esc(r.direction||'Не указано')+'</div></td>'+
+  '<td class="csv-money">'+money(r.amount)+'</td>'+
+  '<td><select data-bitrix-funding="'+i+'" class="'+(!r.funding_source?'csv-blank':'')+'" aria-label="Источник финансирования заявки '+esc(r.source_ref)+'">'+
+  '<option value="" '+(!r.funding_source?'selected':'')+'>Не выбран</option>'+
+  '<option value="Собственные" '+(r.funding_source==='Собственные'?'selected':'')+'>Собственные</option>'+
+  '<option value="Кредит" '+(r.funding_source==='Кредит'?'selected':'')+'>Кредит</option></select></td>'+
+  '<td>'+(r.already?'<span class="csv-existing">Обновление</span>':'Новая')+'</td></tr>'
+ ).join('')||'<tr><td colspan="7">Нет расходных заявок для выбранной недели. Проверьте период в Битриксе или в календаре BAZA.</td></tr>';
+ $('bitrixImportTotal').innerHTML='<span>К загрузке: <b>'+b.rows.length+'</b> · сумма: <b>'+money(sum)+'</b></span>'+
+  '<span>Не указан источник: <b>'+unassigned+'</b></span>';
+ $('bitrixImportConfirm').disabled=!editable()||b.week!==currentWeek||!b.rows.length||unassigned>0||b.errors.length>0;
+}
+async function bitrixChooseFile(e){
+ const file=e.target.files?.[0];e.target.value='';
+ if(!file)return;
+ if(!editable()){inform('Импорт доступен только после создания черновика ПК','error');return}
+ if(!/\.csv$/i.test(file.name)){inform('Выберите файл с расширением .csv','error');return}
+ if(file.size>2*1024*1024){inform('Файл больше 2 МБ. Сформируйте CSV меньшего размера.','error');return}
  try{
-  // Do not pass the URL in query string, URL fragments, localStorage, or browser logs.
-  const response=await session.fetch(BASE+'/functions/v1/baza-bitrix-probe',{
-   method:'POST',headers:{apikey:KEY,Authorization:'Bearer '+session.token(),'Content-Type':'application/json'},
-   body:JSON.stringify({webhook_url:secret})
-  });
-  $('bitrixWebhookInput').value='';
-  const data=await response.json().catch(()=>({}));
-  if(!response.ok||!data.ok)throw Error(data.error||'Проверка Битрикса не выполнена');
-  $('bitrixStatus').textContent='API отвечает · поля определены';
-  const makeList=entries=>entries.map(x=>'<li>'+esc(x.title)+' <small class="muted">('+esc(x.code||x.key)+')</small></li>').join('');
-  const stages=Array.isArray(data.stages)?data.stages:[];
-  const fields=Array.isArray(data.fields)?data.fields:[];
-  const sample=Array.isArray(data.sample)?data.sample:[];
-  result.innerHTML='<b>Подключение успешно · '+esc(data.smart_process_title)+'</b>'+
-   '<p>Тип: '+esc(data.entity_type_id)+' · воронка: '+esc(data.category_id)+
-   ' · полей: '+fields.length+' · стадий: '+stages.length+'</p>'+
-   '<div style="margin-top:10px"><b>Стадии</b><ul style="padding-left:17px;max-height:200px;overflow:auto">'+makeList(stages)+'</ul></div>'+
-   '<div style="margin-top:10px"><b>Поля</b><ul style="padding-left:17px;max-height:210px;overflow:auto">'+makeList(fields)+'</ul></div>'+
-   '<p>Карточек в первой выборке: '+sample.length+'. Никаких изменений в CRM или ПК не сделано.</p>';
- }catch(e){
-  $('bitrixWebhookInput').value='';
-  result.textContent=e.message||'Ошибка соединения с Битриксом';
- }finally{btn.disabled=false;}
+  const data=await file.arrayBuffer();
+  let contents;
+  try{contents=new TextDecoder('utf-8',{fatal:true}).decode(data)}
+  catch{contents=new TextDecoder('windows-1251').decode(data)}
+  bitrixBatch=bitrixTransform(contents,file.name);
+  bitrixBatch.hasStage=csvFields(contents)[0].some(x=>/^(стадия|стадия согласования|этап)$/i.test(String(x).trim()));
+  $('bitrixBulkFunding').value='';
+  bitrixSetStatus('');
+  bitrixDrawPreview();
+  $('bitrixDialog').showModal();
+ }catch(error){bitrixBatch=null;inform('Не удалось прочитать CSV: '+error.message,'error')}
 }
-$('bitrixTestButton').addEventListener('click',openBitrixDialog);
-$('bitrixTestForm').addEventListener('submit',testBitrix);
+async function bitrixImportConfirm(){
+ if(!editable()||!bitrixBatch||bitrixBatch.week!==currentWeek)return;
+ bitrixDrawPreview();
+ const b=bitrixBatch,btn=$('bitrixImportConfirm');
+ if(btn.disabled||b.errors.length||b.rows.some(r=>!r.funding_source))return;
+ if(!confirm('Загрузить '+b.rows.length+' расходных заявок на сумму '+money(b.rows.reduce((a,r)=>a+r.amount,0))+' в черновик ПК за неделю '+formatDate(currentWeek)+' — '+formatDate(shift(currentWeek,6))+'?\n\nПовторные ID будут обновлены. Отсутствующие в файле заявки из черновика не удаляются.'))return;
+ btn.disabled=true;bitrixSetStatus('Сохраняем заявки в черновик BAZA...');
+ try{
+  const clean=b.rows.map(r=>({source_ref:r.source_ref,payer:r.payer,counterparty:r.counterparty,
+   amount:r.amount,due_date:r.due_date,direction:r.direction,project:r.project,
+   subcategory:r.subcategory,flow_type:r.flow_type,funding_source:r.funding_source,
+   memo:r.memo,flow_sign:'-'}));
+  const result=await request('rpc/calendar_import_bitrix_csv',{method:'POST',body:{p_week_start:currentWeek,p_rows:clean}});
+  if(!result?.ok)throw Error('Сервер не подтвердил импорт');
+  $('bitrixDialog').close();bitrixBatch=null;
+  await loadWeek();
+  $('bitrixStatus').textContent='CSV загружен: '+result.total+' заявок';
+  inform('Импорт Битрикс24 выполнен: добавлено '+result.created+', обновлено '+result.updated+', без изменений '+result.unchanged+'. Сохранено в черновике ПК.','success');
+ }catch(error){
+  bitrixSetStatus(error.message||'Ошибка импорта, данные не сохранены',true);
+  bitrixDrawPreview();btn.disabled=false;
+ }
+}
+$('bitrixImportButton').addEventListener('click',()=>{
+ if(!editable())return;
+ $('bitrixCsvFile').click();
+});
+$('bitrixCsvFile').addEventListener('change',bitrixChooseFile);
+$('bitrixPreviewBody').addEventListener('change',e=>{
+ const s=e.target.closest('select[data-bitrix-funding]');
+ if(!s||!bitrixBatch)return;
+ const r=bitrixBatch.rows[Number(s.dataset.bitrixFunding)];
+ if(r){r.funding_source=s.value;bitrixDrawPreview();}
+});
+$('bitrixApplyBulk').addEventListener('click',()=>{
+ if(!bitrixBatch)return;
+ const f=$('bitrixBulkFunding').value;if(!f)return;
+ for(const row of bitrixBatch.rows)if(!row.funding_source)row.funding_source=f;
+ bitrixDrawPreview();
+});
+$('bitrixImportConfirm').addEventListener('click',bitrixImportConfirm);
 $('bitrixDialogClose').addEventListener('click',()=>$('bitrixDialog').close());
 $('bitrixTestCancel').addEventListener('click',()=>$('bitrixDialog').close());
-$('bitrixDialog').addEventListener('close',()=>{$('bitrixWebhookInput').value='';});
 
 $('openWeek').addEventListener('click',openWeek);
 $('createWeek').addEventListener('click',createWeek);
