@@ -330,6 +330,10 @@ async function saveApproval(id,status,comment=getComment(id)){
     alert('Входящие операции не являются платежами на согласование.');
     return;
   }
+  if(window.__BAZA_CALENDAR_DRAFT){
+    alert('Черновик нельзя согласовывать. Сначала сформируйте ПК.');
+    return;
+  }
   if(!['admin','approver'].includes(window.__BAZA_AUTH_ROLE||'')){alert('Для согласования платежей необходима роль согласующего или администратора.');return;}
   if(typeof window.approvalHeaders!=='function'){alert('Нет активной сессии. Войдите в систему повторно.');return;}
   const p={payment_id:id,status,comment:comment||null,approved_by:window.__BAZA_AUTH_NAME||'',approved_by_user_id:window.__BAZA_AUTH_USER_ID||null,updated_at:new Date().toISOString()};
@@ -528,6 +532,12 @@ function renderTable(){
   const comment='<td>'+(c?'<div class="comment-view" title="'+esc(c)+'"><span class="comment-text">'+esc(c)+'</span><button class="comment-add" data-edit="'+esc(r.id)+'">изменить</button></div>':'<button class="comment-add" data-add="'+esc(r.id)+'">+ Добавить</button>')+'</td>';
   return '<tr data-open="'+esc(r.id)+'" class="'+(selected?'registry-row-selected':'')+'">'+checkbox+details+status+comment+'</tr>';
  }).join('');
+ if(!rs.length)paymentTable.innerHTML='<tr><td colspan="10" style="padding:22px;text-align:center;color:#5e7e99">'+
+  (PAY.length?'По выбранным фильтрам платежей нет.':
+    window.__BAZA_CALENDAR_DRAFT?
+      'В черновике выбранной недели пока нет платежей. Загрузите CSV из Битрикс24 в разделе <a href="calendar.html">«Формирование ПК»</a>.':
+      'В выбранном платёжном календаре нет платежей.')+
+  '</td></tr>';
  rowsCount.textContent='Показаны '+rs.length+' из '+PAY.filter(isRegistryOutgoing).length+' расходных платежей';
  document.querySelectorAll('[data-action]').forEach(b=>b.onclick=e=>{e.stopPropagation();saveApproval(b.dataset.id,b.dataset.action==='approve'?'approved':'rejected')});
  document.querySelectorAll('[data-add],[data-edit]').forEach(b=>b.onclick=e=>{
@@ -844,22 +854,36 @@ body.auth-ready .auth-screen{display:none}.auth-guard-note{font-size:9px;color:#
   const addCalendarDays=(date,n)=>{const d=new Date(date+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10);};
   function syncCalendarReview(){
     const banner=document.getElementById('calendarReviewBanner');
-    if(!activeCalendar){banner.hidden=true;document.body.classList.remove('calendar-review-mode');return;}
+    if(!activeCalendar){
+      banner.hidden=true;document.body.classList.remove('calendar-review-mode');
+      window.__BAZA_ACTIVE_CALENDAR_WEEK=null;
+      window.__BAZA_CALENDAR_DRAFT=false;
+      return;
+    }
     document.body.classList.add('calendar-review-mode');
     banner.hidden=false;
     const week=activeCalendar.week_start;
+    window.__BAZA_ACTIVE_CALENDAR_WEEK=week;
+    window.__BAZA_CALENDAR_DRAFT=activeCalendar.status==='draft';
     document.getElementById('calendarReviewWeek').textContent=
-      formatCalendarDate(week)+' — '+formatCalendarDate(addCalendarDays(week,6))+' · версия '+activeCalendar.formation_version;
+      formatCalendarDate(week)+' — '+formatCalendarDate(addCalendarDays(week,6))+
+      (activeCalendar.status==='draft'?' · черновик':' · версия '+activeCalendar.formation_version);
     const badge=document.getElementById('calendarReviewStatus');
-    badge.textContent=activeCalendar.status==='locked'?'Утверждён':'На рассмотрении';
-    badge.className=activeCalendar.status==='locked'?'locked':'';
+    badge.textContent=activeCalendar.status==='locked'?'Утверждён':
+      activeCalendar.status==='formed'?'На рассмотрении':'Черновик';
+    badge.className=activeCalendar.status==='locked'?'locked':
+      activeCalendar.status==='draft'?'draft':'';
     document.getElementById('calendarReviewNote').textContent=
-      activeCalendar.status==='formed'
+      activeCalendar.status==='draft'
+       ?'Это ещё не сформированный ПК. На главной показаны ТОЛЬКО позиции черновика выбранной недели. Заявки можно загрузить и отредактировать в разделе «Формирование ПК». До формирования черновик не передаётся на согласование.'
+       :activeCalendar.status==='formed'
        ?'Сформированный ПК опубликован для рассмотрения Лидерами. Согласование происходит вне BAZA. После получения согласований администратор фиксирует эту версию.'
        :'Зафиксированный ПК: '+(activeCalendar.approval_note||'внешнее согласование подтверждено')+'. Изменения запрещены.';
     const select=document.getElementById('calendarWeekSelect');
     select.replaceChildren(...availableCalendarWeeks.map(w=>{
-      const o=new Option(formatCalendarDate(w.week_start)+' · '+(w.status==='locked'?'утверждён':'на рассмотрении')+' · v'+w.formation_version,w.week_start);
+      const label=w.status==='locked'?'утверждён · v'+w.formation_version:
+        w.status==='formed'?'на рассмотрении · v'+w.formation_version:'черновик';
+      const o=new Option(formatCalendarDate(w.week_start)+' · '+label,w.week_start);
       return o;
     }));
     select.value=week;
@@ -867,11 +891,14 @@ body.auth-ready .auth-screen{display:none}.auth-guard-note{font-size:9px;color:#
     document.getElementById('calendarLockBtn').hidden=!canFix;
     document.getElementById('calendarReturnBtn').hidden=!canFix;
     const period=document.querySelector('.topbar .period');
-    if(period)period.textContent=formatCalendarDate(week).toUpperCase()+' — '+formatCalendarDate(addCalendarDays(week,6)).toUpperCase()+' · '+(activeCalendar.status==='formed'?'ПК НА РАССМОТРЕНИИ':'ПК УТВЕРЖДЁН');
+    if(period)period.textContent=formatCalendarDate(week).toUpperCase()+' — '+formatCalendarDate(addCalendarDays(week,6)).toUpperCase()+' · '+
+      (activeCalendar.status==='draft'?'ПК ЧЕРНОВИК · НЕ СОГЛАСОВАН':
+       activeCalendar.status==='formed'?'ПК НА РАССМОТРЕНИИ':'ПК УТВЕРЖДЁН');
   }
   async function calendarPaymentsIfPublished(){
-    const list=await session.fetch(SUPABASE_URL+'/rest/v1/calendar_weeks?select=week_start,status,formation_version,approval_note,locked_at&status=in.(formed,locked)&order=week_start.desc&limit=40',{headers:authHeaders()});
-    if(!list.ok)throw Error('Не удалось получить сформированные ПК: HTTP '+list.status);
+    // Include drafts as well as formed/locked weeks: never silently substitute old history for a working ПК.
+    const list=await session.fetch(SUPABASE_URL+'/rest/v1/calendar_weeks?select=week_start,status,formation_version,approval_note,locked_at&status=in.(draft,formed,locked)&order=week_start.desc&limit=40',{headers:authHeaders()});
+    if(!list.ok)throw Error('Не удалось получить недели ПК: HTTP '+list.status);
     availableCalendarWeeks=await list.json();
     if(!availableCalendarWeeks.length){activeCalendar=null;syncCalendarReview();return null;}
     const preferred=new URLSearchParams(location.search).get('week');
@@ -880,7 +907,7 @@ body.auth-ready .auth-screen{display:none}.auth-guard-note{font-size:9px;color:#
     if(!response.ok)throw Error('Не удалось загрузить ПК: HTTP '+response.status);
     const data=await response.json();
     if(data.length>=3000)throw Error('Слишком большой ПК. Нельзя показывать неполную выборку.');
-    if(!data.length)throw Error('Сформированный ПК не содержит позиций — проверьте данные.');
+    // An empty draft is valid: show an empty register, NEVER the unrelated legacy payments.
     const result=data.map(r=>({
       id:'calendar:'+r.id,calendarItemId:r.id,entity:r.payer,counterparty:r.counterparty,
       amount:Number(r.amount),source:r.funding_source,direction:r.direction,
