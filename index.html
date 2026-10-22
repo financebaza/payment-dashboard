@@ -384,7 +384,18 @@ function isRegistryIncome(r){
  const movement=String(r.direction||r.flow_type||'').trim().toLowerCase();
  return /^(выгрузка кредитных средств|зачисление кредитных средств|получение кредитных средств)$/.test(movement);
 }
-function isRegistryOutgoing(r){return !isRegistryIncome(r)}
+/* BAZA_LEGACY_19OCT_PHANTOM_VGO_V1:
+   The 16 762 520 ₽ transfer is only in the workbook's full "Реестр",
+   represented by a mirrored VGO pair, but was not part of the weekly
+   19–25 Oct approval list. Preserve historical records for audit and
+   VGO analysis, never present either mirrored line for approval. */
+const NON_APPROVABLE_HISTORICAL_PAYMENT_IDS=new Set([
+ "127-16762520.0-ООО СЗ База-Куйбышева-ООО \"БАЗА\"",
+ "16-16762520.0-ООО \"БАЗА\"-ООО СЗ База-Куйбышева"
+]);
+function isRegistryOutgoing(r){
+ return !isRegistryIncome(r)&&!NON_APPROVABLE_HISTORICAL_PAYMENT_IDS.has(String(r.id));
+}
 window.__BAZA_REGISTRY_OUTGOING=isRegistryOutgoing;
 function rows(){return PAY.filter(r=>isRegistryOutgoing(r)&&matches(r))}
 function agg(rs,f){const m={};rs.forEach(r=>m[r[f]]=(m[r[f]]||0)+Number(r.amount||0));return Object.entries(m).sort((a,b)=>b[1]-a[1])}
