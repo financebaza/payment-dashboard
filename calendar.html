@@ -240,6 +240,7 @@ fieldset{border:none;padding:0;margin:0}dialog{border:1px solid #cfdeea;border-r
  </div><div class="dialog-actions"><button type="button" class="btn" data-close="itemDialog">Отмена</button><button class="btn primary" type="submit" id="itemSave">Добавить в ПК</button></div></form></div>
 </dialog>
 <script src="auth-session.js?v=3"></script>
+<script src="opening-xlsx.js?v=1"></script>
 <script>
 (()=>{'use strict';
 const BASE='https://duvdlpzwxtuwbwyggpla.supabase.co',KEY='sb_publishable_WBg9viktHBpz9lw1Nwqtyw_49Src_lU';
@@ -292,6 +293,7 @@ function draw(){
  else if(week.status==='formed')$('bitrixStatus').textContent='ПК на рассмотрении · импорт закрыт';
  else $('bitrixStatus').textContent='Готово к загрузке CSV · неделя '+formatDate(currentWeek)+' — '+formatDate(shift(currentWeek,6));
  $('addVgo').disabled=!editable();$('addOther').disabled=!editable();$('clearDraft').disabled=!editable()||!items.length;
+ $('importOpeningButton').disabled=!editable();
  $('formWeek').disabled=!editable()||!items.length;
  $('formWeek').hidden=isLocked||week?.status==='formed';
  $('reviewOnDashboard').hidden=!week||week.status==='draft';
@@ -462,11 +464,142 @@ $('cashForecastBody').addEventListener('click',event=>{
  if(button)saveCashForecast(Number(button.dataset.cashSave));
 });
 
+
+/* BAZA_1C_OPENING_IMPORT_V1 */
+let openingBatch=null;
+const openingLabel=ymd=>ymd?new Intl.DateTimeFormat('ru-RU',{day:'2-digit',month:'2-digit',year:'numeric'}).format(new Date(ymd+'T12:00:00Z')):'—';
+function cashImportTargets(){
+ const m=new Map();
+ for(const r of cashTemplates)m.set(r.entity_key,{key:r.entity_key,name:r.entity_name});
+ for(const r of cashPreview)m.set(r.entity_key,{key:r.entity_key,name:r.entity_name});
+ for(const r of cashBalances)m.set(r.entity_key,{key:r.entity_key,name:r.entity_name});
+ return [...m.values()].sort((a,b)=>a.name.localeCompare(b.name,'ru'));
+}
+function cashSuggestTarget(name,targets){
+ const norm=window.BazaOpeningXlsx.normalize;
+ const found=targets.find(t=>norm(t.name)===norm(name));
+ if(found)return found;
+ const alias={
+  'ооосзбазаперово':'perovskoe','оообазаск':'bazask','ооостройкатеринбург':'stroik',
+  'тзбазаоо':'tz','ооомизинвест':'miz','ипзаводовскийми':'zavod',
+  'ооосзбазакуйбышева':'kuib','ооосзсмартдевелопмент':'smart',
+  'ооосзкаменныепалатки':'kamennye','оообазадевелопмент':'bazadev',
+  'оообуп':'bup','оообаза':'baza','ипбассаа':'bass','ипсамойлинамв':'samoilina'
+ };
+ return targets.find(t=>t.key===alias[norm(name)])||null;
+}
+function cashImportDraw(){
+ if(!openingBatch)return;
+ const b=openingBatch,old=new Map(cashBalances.map(r=>[r.entity_key,r]));
+ const valid=b.groups.filter(x=>x.selected&&x.targetKey);
+ const chosenKeys=valid.map(x=>x.targetKey);
+ const hasDuplicates=new Set(chosenKeys).size!==chosenKeys.length;
+ const date=$('openingReportDate').value,expected=shift(currentWeek,-1),mismatch=date!==expected;
+ $('openingExpectedDate').textContent='Для начала недели '+openingLabel(currentWeek)+' нужен остаток на '+openingLabel(expected);
+ $('openingMismatchBlock').hidden=!mismatch;
+ const warnings=[];
+ if(mismatch)warnings.push('ВНИМАНИЕ: дата отчёта '+openingLabel(date)+' не совпадает с '+openingLabel(expected)+'. Проверьте выгрузку 1С.');
+ const skipped=b.groups.filter(g=>!g.targetKey);
+ if(skipped.length)warnings.push('Не сопоставлены и пропущены: '+skipped.map(g=>g.name).join('; ')+'. Можно выбрать соответствующее юрлицо в BAZA вручную.');
+ if(hasDuplicates)warnings.push('Один код юрлица BAZA выбран для нескольких строк. Устраните дублирование сопоставления.');
+ $('openingImportWarnings').hidden=!warnings.length;$('openingImportWarnings').textContent=warnings.join('\n\n');
+ const sum=valid.reduce((a,r)=>a+r.cents,0);
+ $('openingFileInfo').textContent=b.filename+' · '+b.groups.length+' организаций по счёту 51 · выбрано '+valid.length+
+  ' на '+displayCashValue(sum/100)+'. Исключено: '+b.excluded.otherAccounts+' строк других счетов (депозиты, касса, 76.05 и др.), '+
+  b.excluded.restricted+' строк временных средств, '+b.excluded.missing+' строк без суммы.';
+ $('openingImportBody').innerHTML=b.groups.map((g,i)=>{
+  const previous=old.get(g.targetKey);
+  const before=previous&&previous.opening_balance!==null&&previous.opening_balance!==undefined
+    ?displayCashValue(previous.opening_balance):'—';
+  const options=b.targets.map(t=>'<option value="'+esc(t.key)+'" '+(g.targetKey===t.key?'selected':'')+'>'+esc(t.name)+'</option>').join('');
+  return '<tr class="'+(!g.targetKey?'opening-unmatched':'')+'"><td>'+
+   '<input type="checkbox" data-opening-check="'+i+'" '+(g.selected&&g.targetKey?'checked':'')+' '+(!g.targetKey?'disabled':'')+
+   ' aria-label="Импортировать '+esc(g.name)+'"></td>'+
+   '<td><b>'+esc(g.name)+'</b><small class="opening-info-small">'+g.accounts+' расчётных счетов</small></td>'+
+   '<td><select data-opening-map="'+i+'" aria-label="Сопоставить '+esc(g.name)+'">'+
+   '<option value="">Не импортировать</option>'+options+'</select></td>'+
+   '<td class="opening-amount">'+displayCashValue(g.cents/100)+'</td>'+
+   '<td class="opening-amount">'+before+'</td></tr>';
+ }).join('')||'<tr><td colspan="5">В отчёте нет сумм по собственным расчётным счетам.</td></tr>';
+ $('openingImportSave').disabled=!editable()||!valid.length||!date||hasDuplicates||(mismatch&&!$('openingAllowDateMismatch').checked);
+}
+async function cashImportFile(e){
+ const file=e.target.files?.[0];e.target.value='';if(!file)return;
+ if(!editable()){inform('Загрузка остатков доступна только в черновике ПК','error');return}
+ if(!/\.xlsx$/i.test(file.name)){inform('Выберите XLSX-файл из 1С','error');return}
+ const button=$('importOpeningButton');button.disabled=true;
+ try{
+  if(!window.BazaOpeningXlsx?.parse)throw Error('Не загружен модуль чтения XLSX. Обновите страницу Ctrl+F5.');
+  const parsed=await window.BazaOpeningXlsx.parse(file),targets=cashImportTargets();
+  const groups=parsed.groups.map(g=>{
+   const target=cashSuggestTarget(g.name,targets);
+   return {...g,targetKey:target?.key||'',selected:!!target};
+  });
+  openingBatch={...parsed,groups,targets,filename:file.name,week:currentWeek};
+  $('openingReportDate').value=parsed.reportDate||'';
+  $('openingReportDate').readOnly=Boolean(parsed.reportDate);
+  $('openingAllowDateMismatch').checked=false;
+  $('openingImportResult').hidden=true;
+  cashImportDraw();$('openingDialog').showModal();
+ }catch(error){openingBatch=null;inform('Не удалось разобрать файл 1С: '+error.message,'error')}
+ finally{button.disabled=!editable()}
+}
+async function cashImportSave(){
+ if(!editable()||!openingBatch||openingBatch.week!==currentWeek)return;
+ cashImportDraw();
+ const button=$('openingImportSave');if(button.disabled)return;
+ const b=openingBatch,selected=b.groups.filter(g=>g.selected&&g.targetKey);
+ const targets=new Map(b.targets.map(t=>[t.key,t]));
+ const payload=selected.map(g=>({
+  entity_key:g.targetKey,entity_name:targets.get(g.targetKey).name,
+  opening_balance:(g.cents/100).toFixed(2)
+ }));
+ const mismatch=$('openingReportDate').value!==shift(currentWeek,-1);
+ if(!confirm('Импортировать '+payload.length+' начальных остатков на '+displayCashValue(selected.reduce((n,g)=>n+g.cents,0)/100)+
+   '?\nНовые значения заменят начальные остатки выбранных юрлиц, но НЕ изменят план поступлений.'+
+   (mismatch?'\n\nВНИМАНИЕ: дата отчёта отличается от даты перед выбранной неделей!':'')))return;
+ button.disabled=true;
+ $('openingImportResult').hidden=false;$('openingImportResult').textContent='Сохраняем остатки в BAZA...';
+ try{
+  const result=await request('rpc/calendar_import_opening_balances',{method:'POST',body:{
+   p_week_start:currentWeek,p_rows:payload,p_source_date:$('openingReportDate').value,
+   p_source_name:b.filename,p_allow_date_mismatch:$('openingAllowDateMismatch').checked
+  }});
+  if(!result?.ok)throw Error('Сервер не подтвердил импорт.');
+  $('openingDialog').close();openingBatch=null;await loadWeek();
+  inform('Из 1С загружены остатки: '+result.submitted+' юрлиц, обновлено '+result.changed+
+    '. Начальные остатки можно изменить вручную в таблице ниже.','success');
+ }catch(error){$('openingImportResult').textContent='Ошибка загрузки: '+error.message;button.disabled=false}
+}
+$('importOpeningButton').addEventListener('click',()=>{if(editable())$('openingXlsxFile').click()});
+$('openingXlsxFile').addEventListener('change',cashImportFile);
+$('openingImportBody').addEventListener('change',event=>{
+ if(!openingBatch)return;
+ const drop=event.target.closest('select[data-opening-map]');
+ if(drop){
+  const g=openingBatch.groups[Number(drop.dataset.openingMap)];
+  if(g){g.targetKey=drop.value;g.selected=Boolean(drop.value)}
+ }else{
+  const check=event.target.closest('input[data-opening-check]');
+  if(check){
+   const g=openingBatch.groups[Number(check.dataset.openingCheck)];
+   if(g)g.selected=check.checked;
+  }
+ }
+ cashImportDraw();
+});
+$('openingReportDate').addEventListener('change',()=>{$('openingAllowDateMismatch').checked=false;cashImportDraw()});
+$('openingAllowDateMismatch').addEventListener('change',cashImportDraw);
+$('openingImportSave').addEventListener('click',cashImportSave);
+$('openingDialogClose').addEventListener('click',()=>$('openingDialog').close());
+$('openingImportCancel').addEventListener('click',()=>$('openingDialog').close());
+
 async function openWeek(){
  try{
   const date=$('weekDate').value;if(!date)throw Error('Укажите понедельник недели');
   if(mondayUTC(date)!==date)throw Error('Выберите именно понедельник');
-  currentWeek=date;selectedPayments.clear();lastPaymentSelectionIndex=null;bitrixBatch=null;if($('bitrixDialog').open)$('bitrixDialog').close();await loadWeek();
+  currentWeek=date;selectedPayments.clear();lastPaymentSelectionIndex=null;bitrixBatch=null;openingBatch=null;
+  if($('bitrixDialog').open)$('bitrixDialog').close();if($('openingDialog').open)$('openingDialog').close();await loadWeek();
  }catch(e){inform(e.message,'error')}
 }
 async function createWeek(){
@@ -788,7 +921,7 @@ $('clearDraft').addEventListener('click',clearDraft);
 $('formWeek').addEventListener('click',formWeek);
 $('historyReload').addEventListener('click',()=>loadWeek().catch(e=>inform(e.message,'error')));
 document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',()=>$(b.dataset.close).close()));
-for(const id of ['itemDialog','bitrixDialog'])$(id).addEventListener('click',e=>{if(e.target===$(id))$(id).close()});
+for(const id of ['itemDialog','bitrixDialog','openingDialog'])$(id).addEventListener('click',e=>{if(e.target===$(id))$(id).close()});
 (async()=>{
  try{
   await authenticate();
