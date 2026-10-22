@@ -64,6 +64,17 @@ fieldset{border:none;padding:0;margin:0}dialog{border:1px solid #cfdeea;border-r
 
 
 
+
+/* BAZA_CASH_ONE_SAVE_V1 */
+.cash-forecast-savebar{position:sticky;bottom:12px;z-index:3;background:#f4faff;border:1px solid #bfd8eb;border-radius:11px;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:13px 16px;margin-top:13px;box-shadow:0 5px 20px rgba(18,57,92,.10)}
+.cash-forecast-savebar strong{font-size:12px;color:#153e62;display:block}
+.cash-forecast-savebar small{display:block;font-size:10px;line-height:1.55;color:#6c8da6;margin-top:4px}
+.cash-forecast-savebar button{font-size:11px;min-width:200px;white-space:nowrap}
+.cash-forecast-savebar button:disabled{opacity:.48}
+.cash-forecast .cash-live-preview{color:#176d61;font-weight:900}
+.cash-forecast .cash-invalid-field{border-color:#c74753!important;background:#fff7f8!important}
+@media(max-width:650px){.cash-forecast-savebar{align-items:stretch;flex-direction:column}.cash-forecast-savebar button{width:100%}}
+
 /* BAZA_1C_XLSX_OPENING_V1 */
 .opening-import-dialog{width:min(1120px,calc(100vw - 28px));max-height:92vh}
 .opening-import-dialog .dialog-body{max-height:calc(92vh - 75px);overflow:auto}
@@ -178,8 +189,15 @@ fieldset{border:none;padding:0;margin:0}dialog{border:1px solid #cfdeea;border-r
  <div class="section-head"><div><h2>Прогноз остатков на конец недели · по юрлицам</h2><p>Заполни начальные остатки и план поступлений, включая кредитные транши и ВГО. План списаний возьмём из позиций ПК. Значения не по банковским счетам — по каждой организации в целом.</p></div>
  <div class="cash-forecast-buttons"><span class="cash-total" id="cashForecastCount">—</span><button type="button" class="btn" id="importOpeningButton">Импорт начальных остатков · XLSX</button><input id="openingXlsxFile" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden></div></div>
  <div id="cashForecastMessage" role="status">Загружаем прогноз...</div>
- <div class="tablewrap" style="margin-top:12px"><table><thead><tr><th>Наше юрлицо</th><th>Начальный остаток, ₽</th><th>Приходы за неделю, ₽</th><th style="text-align:right">Расходы по ПК, ₽</th><th style="text-align:right">Остаток на конец, ₽</th><th></th></tr></thead>
- <tbody id="cashForecastBody"><tr><td colspan="6">Нет данных</td></tr></tbody></table></div>
+ <div class="tablewrap" style="margin-top:12px"><table><thead><tr><th>Наше юрлицо</th><th>Начальный остаток, ₽</th><th>Приходы за неделю, ₽</th><th style="text-align:right">Расходы по ПК, ₽</th><th style="text-align:right">Остаток на конец, ₽</th></tr></thead>
+ <tbody id="cashForecastBody"><tr><td colspan="5">Нет данных</td></tr></tbody></table></div>
+ <div class="cash-forecast-savebar">
+  <div>
+   <strong id="cashForecastPending">Изменений нет</strong>
+   <small>Заполните данные по нескольким юрлицам и сохраните их одной операцией. Пустое поле не стирает ранее сохранённое значение.</small>
+  </div>
+  <button type="button" class="btn primary" id="saveAllCashForecast" disabled>Сохранить все изменения</button>
+ </div>
 </section>
 
  <p class="footer">Новая система формирования ПК не изменяет исторический реестр платежей и предыдущую сверку 1С. Для новой недели создаётся черновик, затем собираются заявки из Битрикс24, добавляются ВГО и формируется версия для рассмотрения на главном дашборде.</p>
@@ -294,6 +312,7 @@ function draw(){
  else $('bitrixStatus').textContent='Готово к загрузке CSV · неделя '+formatDate(currentWeek)+' — '+formatDate(shift(currentWeek,6));
  $('addVgo').disabled=!editable();$('addOther').disabled=!editable();$('clearDraft').disabled=!editable()||!items.length;
  $('importOpeningButton').disabled=!editable();
+ $('saveAllCashForecast').disabled=!editable();
  $('formWeek').disabled=!editable()||!items.length;
  $('formWeek').hidden=isLocked||week?.status==='formed';
  $('reviewOnDashboard').hidden=!week||week.status==='draft';
@@ -426,10 +445,10 @@ function drawCashForecast(){
    '<td><input data-cash-opening value="'+esc(opening)+'" inputmode="decimal" '+disable+' aria-label="Начальный остаток '+esc(r.entity_name)+'"></td>'+
    '<td><input data-cash-income value="'+esc(receipts)+'" inputmode="decimal" '+disable+' aria-label="План поступлений '+esc(r.entity_name)+'"></td>'+
    '<td class="num">'+displayCashValue(calc?.planned_payments||0)+'</td>'+
-   '<td class="num">'+(calc?.is_complete?displayCashValue(calc.planned_closing):'<span class="unknown">Нет полного прогноза</span>')+'</td>'+
-   '<td>'+(editableNow?'<button type="button" class="cash-save" data-cash-save="'+i+'">Сохранить</button>':'')+'</td></tr>';
- }).join('')||'<tr><td colspan="6">Не найдены организации для формирования прогноза</td></tr>';
+   '<td class="num" data-cash-closing="'+i+'">'+(calc?.is_complete?displayCashValue(calc.planned_closing):'<span class="unknown">Нет полного прогноза</span>')+'</td></tr>';
+ }).join('')||'<tr><td colspan="5">Не найдены организации для формирования прогноза</td></tr>';
  window.__BAZA_CASH_FORM_ROWS=arr;
+ updateCashForecastPending();
 }
 function parseCashForecastInput(raw,label){
  const v=String(raw||'').trim().replace(/[\s\u00a0\u202f]/g,'').replace(',','.');
@@ -437,33 +456,84 @@ function parseCashForecastInput(raw,label){
  if(!/^-?\d{1,15}(\.\d{1,2})?$/.test(v))throw Error('Неверный формат '+label+': '+raw);
  return Number(v);
 }
-async function saveCashForecast(index){
- if(!editable())return;
- const row=window.__BAZA_CASH_FORM_ROWS?.[index];
- if(!row)return;
- const tr=$('cashForecastBody').querySelectorAll('[data-cash-row]')[index];
- const btn=tr?.querySelector('[data-cash-save]');
- if(!btn)return;
- btn.disabled=true;
- try{
-  const opening=parseCashForecastInput(tr.querySelector('[data-cash-opening]').value,'начального остатка');
-  const receipts=parseCashForecastInput(tr.querySelector('[data-cash-income]').value,'поступлений');
-  if(receipts!==null&&receipts<0)throw Error('План поступлений не может быть отрицательным');
-  const data={entity_name:row.entity_name,opening_balance:opening,planned_receipts:receipts,
-    source_note:'Прогноз для ПК BAZA · '+currentWeek};
-  const wasSaved=cashBalances.some(x=>x.entity_key===row.entity_key);
-  if(wasSaved)await request('weekly_cash_balances?week_start=eq.'+currentWeek+'&entity_key=eq.'+encodeURIComponent(row.entity_key),{method:'PATCH',body:data});
-  else await request('weekly_cash_balances',{method:'POST',body:{week_start:currentWeek,entity_key:row.entity_key,...data}});
-  await loadWeek();
-  inform('Прогноз по '+row.entity_name+' сохранён. Пересчитан остаток на конец недели.','success');
- }catch(e){inform(e.message,'error')}
- finally{btn.disabled=false}
-}
-$('cashForecastBody').addEventListener('click',event=>{
- const button=event.target.closest('[data-cash-save]');
- if(button)saveCashForecast(Number(button.dataset.cashSave));
-});
 
+function readCashForecastChanges(){
+ const list=window.__BAZA_CASH_FORM_ROWS||[];
+ const saved=new Map(cashBalances.map(r=>[r.entity_key,r]));
+ const changes=[],errors=[];
+ for(const [index,r] of list.entries()){
+  const tr=$('cashForecastBody').querySelector('[data-cash-row="'+index+'"]');
+  if(!tr)continue;
+  const a=tr.querySelector('[data-cash-opening]'),b=tr.querySelector('[data-cash-income]');
+  const prev=saved.get(r.entity_key);
+  const oldOpening=prev?.opening_balance==null?null:Number(prev.opening_balance);
+  const oldIncome=prev?.planned_receipts==null?null:Number(prev.planned_receipts);
+  const rawOpening=a.value.trim(),rawIncome=b.value.trim();
+  let opening,receipts;
+  try{
+   // An accidentally emptied existing field must not wipe a previously imported/saved value.
+   opening=rawOpening===''&&oldOpening!==null?oldOpening:parseCashForecastInput(rawOpening,'начального остатка · '+r.entity_name);
+   receipts=rawIncome===''&&oldIncome!==null?oldIncome:parseCashForecastInput(rawIncome,'поступлений · '+r.entity_name);
+   if(receipts!==null&&receipts<0)throw Error('Поступления не могут быть отрицательными · '+r.entity_name);
+   a.classList.remove('cash-invalid-field');b.classList.remove('cash-invalid-field');
+  }catch(err){
+   errors.push(err.message);
+   (rawOpening===null?a:b).classList.add('cash-invalid-field');
+   const closing=tr.querySelector('[data-cash-closing]');
+   if(closing)closing.innerHTML='<span class="unknown">Проверьте сумму</span>';
+   continue;
+  }
+  const changed=opening!==oldOpening||receipts!==oldIncome;
+  const payments=Number(cashPreview.find(x=>x.entity_key===r.entity_key)?.planned_payments||0);
+  const closing=tr.querySelector('[data-cash-closing]');
+  if(closing&&changed){
+   const value=opening===null||receipts===null?null:Math.round((opening+receipts-payments)*100)/100;
+   closing.innerHTML=value===null?'<span class="unknown">Нет полного прогноза</span>':
+    '<span class="cash-live-preview" title="Предварительный расчёт · не сохранено">'+displayCashValue(value)+' *</span>';
+  }
+  if(changed)changes.push({
+   entity_key:r.entity_key,entity_name:r.entity_name,opening_balance:opening,planned_receipts:receipts,
+   expected_opening_balance:oldOpening,expected_planned_receipts:oldIncome
+  });
+ }
+ return {changes,errors};
+}
+function updateCashForecastPending(){
+ const {changes,errors}=readCashForecastChanges();
+ const button=$('saveAllCashForecast');
+ if(!editable()){button.disabled=true;$('cashForecastPending').textContent='Данные зафиксированы · редактирование закрыто';return;}
+ if(errors.length){
+  $('cashForecastPending').textContent='Ошибки ввода: '+errors.length+'. Проверьте суммы.';
+  button.disabled=false;
+ }else{
+  $('cashForecastPending').textContent=changes.length?
+   'Несохранённые изменения: '+changes.length+' юрлиц.':
+   'Все изменения сохранены';
+  button.disabled=changes.length===0;
+ }
+}
+async function saveAllCashForecast(){
+ if(!editable())return;
+ const {changes,errors}=readCashForecastChanges();
+ if(errors.length){inform('Не удалось сохранить данные: '+errors.slice(0,3).join('; '),'error');return}
+ if(!changes.length){inform('Новых изменений в остатках и поступлениях нет.','');return}
+ const button=$('saveAllCashForecast');button.disabled=true;
+ const expectedWeek=currentWeek;
+ try{
+  const result=await request('rpc/calendar_save_cash_forecast',{method:'POST',
+   body:{p_week_start:expectedWeek,p_rows:changes}});
+  if(!result?.ok)throw Error('Не удалось подтвердить сохранение прогноза');
+  await loadWeek();
+  inform('Сохранено прогнозов по '+result.changed+' юрлицам. Все изменения применены одной операцией.','success');
+ }catch(error){
+  inform('Ошибка сохранения прогнозов: '+error.message+'. Данные в форме сохранены для исправления.','error');
+  updateCashForecastPending();
+ }finally{if(currentWeek===expectedWeek)updateCashForecastPending()}
+}
+$('cashForecastBody').addEventListener('input',event=>{
+ if(event.target.matches('[data-cash-opening],[data-cash-income]'))updateCashForecastPending();
+});
+$('saveAllCashForecast').addEventListener('click',saveAllCashForecast);
 
 /* BAZA_1C_OPENING_IMPORT_V1 */
 let openingBatch=null;
