@@ -40,6 +40,31 @@ fieldset{border:none;padding:0;margin:0}dialog{border:1px solid #cfdeea;border-r
 .cash-forecast .cash-save:disabled{opacity:.5}
 .cash-forecast #cashForecastMessage{border:1px solid #d8e6ef;border-radius:8px;background:#f7faff;padding:10px 12px;color:#678399;font-size:11px}
 .cash-forecast .cash-total{font-size:10px;font-weight:800;color:#1d587e}
+
+/* BAZA_BITRIX_CSV_UPLOAD_V1 */
+.csv-dialog{width:min(1250px,calc(100vw - 30px));max-height:91vh}
+.csv-dialog .dialog-body{max-height:calc(91vh - 76px)}
+.csv-import-summary{padding:12px 14px;background:#f1f7fc;border:1px solid #d4e5ef;border-radius:9px;font-size:11px;line-height:1.7}
+.csv-import-summary b{color:#103b5c}
+.csv-import-warnings{margin-top:10px;padding:10px 13px;color:#875e16;background:#fff9eb;border:1px solid #f0dfb6;border-radius:8px;font-size:10px;white-space:pre-line;line-height:1.65}
+.csv-import-tools{display:flex;gap:13px;align-items:center;justify-content:space-between;margin:14px 0 10px;flex-wrap:wrap}
+.csv-import-tools b{font-size:12px}
+.csv-import-tools p{font-size:10px;line-height:1.5;color:#728ba2;margin:4px 0 0}
+.csv-import-tools select{height:36px;min-width:170px;padding:6px 10px;color:#123b67;border:1px solid #c7dbea;border-radius:7px;background:white}
+.csv-import-tools button{white-space:nowrap}
+.csv-preview-scroll{border:1px solid #d5e5ee;border-radius:9px;max-height:380px;overflow:auto}
+.csv-preview-table{min-width:900px;width:100%;table-layout:auto}
+.csv-preview-table th{background:#f3f8fb;position:sticky;top:0;z-index:2;white-space:nowrap;font-size:9px}
+.csv-preview-table td{padding:8px 7px;font-size:10px;border-bottom:1px solid #e8eef3;vertical-align:middle}
+.csv-preview-table td.csv-money{font-variant-numeric:tabular-nums;font-weight:800;text-align:right;white-space:nowrap}
+.csv-preview-table select{max-width:100%;min-width:115px;height:32px;border:1px solid #c8dceb;background:white;color:#194364;border-radius:6px;font-size:10px;padding:4px}
+.csv-preview-table .csv-existing{font-size:9px;color:#547c98;white-space:nowrap}
+.csv-preview-table .csv-blank{background:#fff5e6;color:#9b6c12;border-color:#e6bf80}
+.csv-import-total{display:flex;align-items:center;justify-content:space-between;margin-top:11px;color:#536f86;font-size:11px;font-weight:700}
+.csv-import-message{padding:12px 14px;border:1px solid #d4e5ef;background:#f6faff;border-radius:8px;font-size:11px;white-space:pre-line}
+.csv-import-message.error{border-color:#e7c5c9;background:#fff7f7;color:#ad2737}
+.csv-import-message.ok{border-color:#b3dcc6;background:#f4fbf6;color:#24714e}
+
 </style></head>
 <body><div class="page">
 <header class="topbar"><a href="index.html#dashboard" class="brand"><b>BAZA</b><small>ПЛАТЁЖНЫЙ КОНТРОЛЬ</small></a><div class="period">ФИНАНСЫ · ПЛАТЁЖНЫЙ КАЛЕНДАРЬ</div><nav class="nav"><a href="index.html#dashboard">Дашборд</a><a href="index.html#registry">Реестр</a><a class="active" href="calendar.html">Формирование ПК</a><a href="plan-fact.html">План / факт</a><a href="users.html" id="usersLink" hidden>Пользователи</a></nav></header>
@@ -65,11 +90,17 @@ fieldset{border:none;padding:0;margin:0}dialog{border:1px solid #cfdeea;border-r
   <div class="tablewrap"><table><thead><tr><th>Дата</th><th>Плательщик / получатель</th><th>Проект / направление</th><th>Источник</th><th>Средства</th><th style="text-align:right">Сумма</th><th></th></tr></thead><tbody id="itemsBody"><tr><td colspan="7">Нет платежей</td></tr></tbody></table></div>
  </main>
  <aside>
-  <div class="sidebar-box"><h3>Подключение Битрикс24</h3><p>Портал: <b>crm.baza.bz</b><br>Смарт-процесс: <b>185</b> · воронка: <b>19</b>. Коды стадий и поля определим после проверки REST API.</p>
-    <div class="inset"><b id="bitrixStatus">Доступ контролирует SMART</b><p>SMART не выдаёт сотрудникам вне своей команды секрет вебхука. Согласовываем серверную интеграцию на стороне IT или регламентную выгрузку; сам вебхук не запрашиваем и не передаём.</p></div>
-    <button class="btn primary" type="button" id="bitrixTestButton" style="margin-top:10px">Проверить подключение к Битриксу</button>
-    <p style="font-size:10px;margin-top:9px">Проверка доступна администратору BAZA только после официального согласования с SMART. Автоматическая интеграция ещё не подключена.</p>
+  <div class="sidebar-box" id="bitrixCsvCard">
+   <h3>Импорт заявок из Битрикс24</h3>
+   <p>Смарт-процесс <b>185</b> · воронка <b>19</b>. Выгрузите в Битриксе заявки со стадии <b>«Согласование с Finance»</b> с датами оплаты выбранной недели.</p>
+   <div class="inset" style="margin-bottom:10px">
+    <b id="bitrixStatus">CSV ещё не выбран</b>
+    <p>Загрузим только расходные заявки нужной недели. Повторный импорт сверяется по ID заявки. Источник финансирования проверяем перед сохранением.</p>
    </div>
+   <input id="bitrixCsvFile" type="file" accept=".csv,text/csv,text/plain" hidden>
+   <button class="btn primary" type="button" id="bitrixImportButton">Загрузить CSV из Битрикс24</button>
+   <p style="font-size:10px;margin-top:9px">Без вебхука и доступа к API. Импорт доступен только в черновике ПК.</p>
+  </div>
   <div class="sidebar-box"><h3>Формирование ПК</h3><p>Когда все заявки из Битрикса, ВГО и прочие платежи собраны, сформируйте версию для рассмотрения руководителями на основном дашборде. Это <b>не фиксация</b> и не согласование.</p>
     <button id="formWeek" type="button" class="btn primary">Сформировать ПК</button>
     <a id="reviewOnDashboard" href="index.html#registry" class="btn" style="display:block;text-align:center;text-decoration:none;margin-top:9px">Посмотреть на дашборде →</a>
@@ -86,16 +117,33 @@ fieldset{border:none;padding:0;margin:0}dialog{border:1px solid #cfdeea;border-r
 
  <p class="footer">Новая система формирования ПК не изменяет исторический реестр платежей и предыдущую сверку 1С. Для новой недели создаётся черновик, затем собираются заявки из Битрикс24, добавляются ВГО и формируется версия для рассмотрения на главном дашборде.</p>
 </div></div>
-<dialog id="bitrixDialog" aria-labelledby="bitrixDialogTitle"><div class="dialog-head"><h2 id="bitrixDialogTitle">Проверка REST API Битрикс24</h2><button type="button" class="close" id="bitrixDialogClose">×</button></div>
-<div class="dialog-body">
- <div class="inset"><b>https://crm.baza.bz</b><p>Тип смарт-процесса 185, воронка 19. Входящий вебхук создаётся в Битрикс24 в разделе «Приложения → Разработчикам → Входящий вебхук». Нужна область прав CRM и доступ на чтение заявок.</p></div>
- <form id="bitrixTestForm" autocomplete="off">
- <div class="field" style="margin-top:15px"><label for="bitrixWebhookInput">Полный URL входящего вебхука</label><input id="bitrixWebhookInput" type="password" required spellcheck="false" autocomplete="off" placeholder="https://crm.baza.bz/rest/ID/СЕКРЕТ/"></div>
- <div class="dialog-actions"><button class="btn" type="button" id="bitrixTestCancel">Закрыть</button><button type="submit" class="btn primary" id="bitrixTestSubmit">Проверить права и поля</button></div>
- </form>
- <div id="bitrixTestResult" class="inset" aria-live="polite" style="margin-top:15px" hidden></div>
- <p class="muted" style="margin-top:15px;font-size:10px">Это разовая проверка: ссылка отправляется только в защищённую серверную функцию BAZA и не записывается в базу или на странице. Не присылай URL вебхука в чат.</p>
-</div></dialog>
+<dialog id="bitrixDialog" class="csv-dialog" aria-labelledby="bitrixDialogTitle">
+ <div class="dialog-head"><h2 id="bitrixDialogTitle">Предпросмотр импорта Битрикс24</h2>
+ <button type="button" class="close" id="bitrixDialogClose" aria-label="Закрыть">×</button></div>
+ <div class="dialog-body">
+  <div id="bitrixImportSummary" class="csv-import-summary">Анализируем файл...</div>
+  <div id="bitrixImportWarnings" class="csv-import-warnings" hidden></div>
+  <div class="csv-import-tools">
+   <div><b>Источник финансирования</b><p>Для пустых значений выбери источник вручную. Групповое назначение применяется только к незаполненным полям.</p></div>
+   <select id="bitrixBulkFunding" aria-label="Назначить источник пустым строкам">
+    <option value="">Выбрать для незаполненных...</option>
+    <option value="Собственные">Собственные</option>
+    <option value="Кредит">Кредит</option>
+   </select>
+   <button class="btn" id="bitrixApplyBulk" type="button">Применить</button>
+  </div>
+  <div class="csv-preview-scroll"><table class="csv-preview-table"><thead><tr>
+   <th>ID</th><th>Дата оплаты</th><th>Юрлицо · контрагент</th><th>Проект / направление</th>
+   <th style="text-align:right">Сумма</th><th>Финансирование</th><th>В ПК</th>
+  </tr></thead><tbody id="bitrixPreviewBody"></tbody></table></div>
+  <div id="bitrixImportTotal" class="csv-import-total"></div>
+  <div class="dialog-actions">
+   <button class="btn" type="button" id="bitrixTestCancel">Отмена</button>
+   <button class="btn primary" type="button" id="bitrixImportConfirm" disabled>Загрузить в черновик ПК</button>
+  </div>
+  <div id="bitrixTestResult" role="status" class="csv-import-message" hidden></div>
+ </div>
+</dialog>
 <dialog id="itemDialog" aria-labelledby="itemTitle"><div class="dialog-head"><h2 id="itemTitle">Добавить платёж</h2><button class="close" type="button" data-close="itemDialog">×</button></div>
  <div class="dialog-body"><form id="itemForm"><div class="form-grid">
  <div class="field"><label for="itemDue">Крайняя дата оплаты</label><input id="itemDue" type="date" required></div>
