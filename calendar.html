@@ -248,7 +248,7 @@ fieldset{border:none;padding:0;margin:0}dialog{border:1px solid #cfdeea;border-r
 </section>
 <section class="card group-receipts" id="groupReceiptsSection" hidden>
  <div class="section-head"><div><h2>План поступлений · по операциям</h2>
- <p>Кредитные транши, поступления от продаж и прочие внешние приходы. ВГО от компаний группы учитываются автоматически по исходящему платежу и здесь повторно не создаются.</p></div>
+ <p>Кредитные транши и прочие свободные деньги на счетах ГК. Поступления на эскроу не включаем. ВГО внутри группы учитываются автоматически по исходящим платежам и повторно здесь не создаются.</p></div>
  <button id="addGroupReceipt" type="button" class="btn primary">+ Поступление</button></div>
  <div id="groupReceiptHint" class="group-receipt-hint">Детализированные поступления суммируются с остатком нерасшифрованного плана из таблицы ниже.</div>
  <div class="tablewrap"><table class="group-receipt-table"><thead><tr><th>Дата</th><th>Получатель / отправитель</th><th>Проект / вид поступления</th><th style="text-align:right">Сумма</th><th>Уже было в плане</th><th></th></tr></thead>
@@ -322,6 +322,11 @@ fieldset{border:none;padding:0;margin:0}dialog{border:1px solid #cfdeea;border-r
    <div class="field"><label for="groupReceiptProject">Проект</label><input id="groupReceiptProject" maxlength="200"></div>
    <div class="field wide"><label for="groupReceiptMemo">Комментарий</label><textarea id="groupReceiptMemo" maxlength="1500"></textarea></div>
   </div>
+  <label class="group-receipt-allocate" id="groupReceiptEscrowBlock" hidden>
+   <input type="checkbox" id="groupReceiptNotEscrow">
+   <span><b>Подтверждаю, что это поступление НЕ на эскроу</b>
+   <small>Включаем только свободные деньги на расчётном счёте, доступные для оплаты расходов. Поступления на эскроу до раскрытия здесь не учитываем.</small></span>
+  </label>
   <label class="group-receipt-allocate"><input type="checkbox" id="groupReceiptFromManual">
    <span><b>Уже входит в сумму «Приход без расшифровки»</b>
    <small>Уменьшить нерасшифрованный приход на эту сумму, чтобы не задвоить. Если это новое поступление сверх текущего плана, оставь галочку снятой.</small></span></label>
@@ -630,6 +635,9 @@ function groupReceiptTargets(){
  for(const r of cashBalances)targets.set(r.entity_key,{key:r.entity_key,name:r.entity_name});
  return [...targets.values()].sort((a,b)=>a.name.localeCompare(b.name,'ru'));
 }
+function updateGroupEscrowBlock(){
+ $('groupReceiptEscrowBlock').hidden=$('groupReceiptType').value!=='Поступления от продаж';
+}
 function updateGroupReceiptManualHint(){
  const key=$('groupReceiptEntity').value;
  const r=cashBalances.find(x=>x.entity_key===key);
@@ -664,6 +672,8 @@ function openGroupReceipt(id=null){
  $('groupReceiptProject').value=r?.project||'';
  $('groupReceiptMemo').value=r?.memo||'';
  $('groupReceiptFromManual').checked=!!r?.from_manual;
+ $('groupReceiptNotEscrow').checked=false;
+ updateGroupEscrowBlock();
  $('groupReceiptTitle').textContent=r?'Редактировать плановое поступление':'Добавить плановое поступление';
  $('groupReceiptSave').textContent=r?'Сохранить изменения':'Добавить поступление';
  updateGroupReceiptManualHint();
@@ -685,10 +695,14 @@ async function saveGroupReceipt(event){
   counterparty:$('groupReceiptCounterparty').value.trim(),
   project:$('groupReceiptProject').value.trim(),
   memo:$('groupReceiptMemo').value.trim(),
-  from_manual:$('groupReceiptFromManual').checked
+  from_manual:$('groupReceiptFromManual').checked,
+  confirm_not_escrow:$('groupReceiptType').value!=='Поступления от продаж'||$('groupReceiptNotEscrow').checked
  };
  if(data.due_date<currentWeek||data.due_date>shift(currentWeek,6)){
   inform('Дата поступления не входит в выбранную неделю','error');return;
+ }
+ if(data.source_type==='Поступления от продаж'&&!data.confirm_not_escrow){
+  inform('Поступления на эскроу нельзя учитывать как свободные остатки. Подтверди, что деньги доступны на расчётном счёте.','error');return;
  }
  const button=$('groupReceiptSave');button.disabled=true;
  try{
@@ -728,6 +742,7 @@ $('groupReceiptBody').addEventListener('click',event=>{
 });
 $('groupReceiptEntity').addEventListener('change',updateGroupReceiptManualHint);
 $('groupReceiptAmount').addEventListener('input',updateGroupReceiptManualHint);
+$('groupReceiptType').addEventListener('change',updateGroupEscrowBlock);
 $('groupReceiptForm').addEventListener('submit',saveGroupReceipt);
 $('groupReceiptClose').addEventListener('click',()=>$('groupReceiptDialog').close());
 $('groupReceiptCancel').addEventListener('click',()=>$('groupReceiptDialog').close());
