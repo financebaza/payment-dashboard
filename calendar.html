@@ -233,9 +233,9 @@ function drawTable(){
  '<tr><td colspan="7" class="muted" style="text-align:center;padding:25px">Нет платежей в выбранном срезе</td></tr>';
 }
 function drawHistory(){
- const names={item_added:'Добавлена позиция',item_updated:'Изменена позиция',item_deleted:'Удалена позиция',week_formed:'Сформирована версия для рассмотрения',week_returned_to_draft:'Возврат на доработку',week_locked:'ПК зафиксирован'};
+ const names={item_added:'Добавлена позиция',item_updated:'Изменена позиция',item_deleted:'Удалена позиция',week_formed:'Сформирована версия для рассмотрения',week_returned_to_draft:'Возврат на доработку',week_locked:'ПК зафиксирован',bitrix_csv_import:'Импорт заявок из CSV Битрикс24'};
  $('history').innerHTML=events.slice(0,15).map(e=>'<div><strong>'+esc(names[e.event]||e.event)+'</strong><small>'+esc(new Date(e.occurred_at).toLocaleString('ru-RU'))+
- (e.details?.counterparty?' · '+esc(e.details.counterparty):'')+'</small></div>').join('')||'<div>Пока без изменений</div>';
+ (e.details?.counterparty?' · '+esc(e.details.counterparty):e.event==='bitrix_csv_import'?' · '+esc(e.details.created||0)+' новых, '+esc(e.details.updated||0)+' обновлено':'')+'</small></div>').join('')||'<div>Пока без изменений</div>';
 }
 async function loadWeek(){
  const start=currentWeek;
