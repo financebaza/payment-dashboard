@@ -26,6 +26,20 @@ body{margin:0;background:var(--bg);color:var(--ink);font:12px/1.5 Arial,Helvetic
 fieldset{border:none;padding:0;margin:0}dialog{border:1px solid #cfdeea;border-radius:15px;padding:0;box-shadow:0 24px 80px #122e4260;color:var(--ink);max-height:90vh;width:min(650px,calc(100vw - 25px))}dialog::backdrop{background:#0b243a84}.dialog-head{padding:17px 20px;background:#f4f8fb;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}.dialog-head h2{margin:0;font-size:17px}.close{background:white;border:1px solid var(--border);border-radius:7px;font-size:18px;color:#45647e;padding:2px 11px}.dialog-body{padding:20px;overflow:auto;max-height:calc(90vh - 75px)}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.form-grid .wide{grid-column:1/-1}.dialog-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}textarea{height:auto;min-height:80px;resize:vertical}.check{display:flex;align-items:start;gap:9px;font-size:11px;margin-top:14px}.check input{width:17px;height:17px}.footer{font-size:10px;color:var(--muted);margin:17px 2px}
 @media(max-width:1100px){.topbar{flex-wrap:wrap}.period{display:none}.nav{overflow:auto;max-width:100%}.layout{grid-template-columns:1fr}}
 @media(max-width:760px){.page{padding:0 14px 35px}.hero{align-items:flex-start;flex-direction:column}.kpis{grid-template-columns:repeat(2,1fr)}.kpi strong{font-size:20px}.form-grid{grid-template-columns:1fr}.form-grid .wide{grid-column:auto}}
+
+/* BAZA_WEEKLY_LIQUIDITY_FORECAST_EDITOR_V1 */
+.cash-forecast{margin-top:14px}
+.cash-forecast .section-head{margin-bottom:9px}
+.cash-forecast p{font-size:11px;color:#68829a;line-height:1.75;margin:7px 0 14px}
+.cash-forecast td{vertical-align:middle}
+.cash-forecast input{font-size:11px;color:#143c5e;width:145px;max-width:100%;border:1px solid #ccdfea;border-radius:7px;height:33px;padding:6px 8px;text-align:right}
+.cash-forecast input:disabled{background:#f1f5f8}
+.cash-forecast td.num{text-align:right;white-space:nowrap;font-weight:800}
+.cash-forecast .unknown{color:#a07b3b;font-weight:normal}
+.cash-forecast .cash-save{padding:8px 10px;border:1px solid #b9d3e5;border-radius:7px;background:#f5faff;color:#154b73;font-weight:800;white-space:nowrap}
+.cash-forecast .cash-save:disabled{opacity:.5}
+.cash-forecast #cashForecastMessage{border:1px solid #d8e6ef;border-radius:8px;background:#f7faff;padding:10px 12px;color:#678399;font-size:11px}
+.cash-forecast .cash-total{font-size:10px;font-weight:800;color:#1d587e}
 </style></head>
 <body><div class="page">
 <header class="topbar"><a href="index.html#dashboard" class="brand"><b>BAZA</b><small>ПЛАТЁЖНЫЙ КОНТРОЛЬ</small></a><div class="period">ФИНАНСЫ · ПЛАТЁЖНЫЙ КАЛЕНДАРЬ</div><nav class="nav"><a href="index.html#dashboard">Дашборд</a><a href="index.html#registry">Реестр</a><a class="active" href="calendar.html">Формирование ПК</a><a href="plan-fact.html">План / факт</a><a href="users.html" id="usersLink" hidden>Пользователи</a></nav></header>
@@ -62,6 +76,14 @@ fieldset{border:none;padding:0;margin:0}dialog{border:1px solid #cfdeea;border-r
     <p id="formedInfo" style="margin-top:10px"></p></div>
   <div class="sidebar-box"><div class="section-head"><h3>История действий</h3><button id="historyReload" type="button" class="btn">Обновить</button></div><div id="history" class="audit muted">Нет действий</div></div>
  </aside></div>
+ <section id="cashForecastSection" class="card cash-forecast" hidden>
+ <div class="section-head"><div><h2>Прогноз остатков на конец недели · по юрлицам</h2><p>Заполни начальные остатки и план поступлений, включая кредитные транши и ВГО. План списаний возьмём из позиций ПК. Значения не по банковским счетам — по каждой организации в целом.</p></div>
+ <span class="cash-total" id="cashForecastCount">—</span></div>
+ <div id="cashForecastMessage" role="status">Загружаем прогноз...</div>
+ <div class="tablewrap" style="margin-top:12px"><table><thead><tr><th>Наше юрлицо</th><th>Начальный остаток, ₽</th><th>Приходы за неделю, ₽</th><th style="text-align:right">Расходы по ПК, ₽</th><th style="text-align:right">Остаток на конец, ₽</th><th></th></tr></thead>
+ <tbody id="cashForecastBody"><tr><td colspan="6">Нет данных</td></tr></tbody></table></div>
+</section>
+
  <p class="footer">Новая система формирования ПК не изменяет исторический реестр платежей и предыдущую сверку 1С. Для новой недели создаётся черновик, затем собираются заявки из Битрикс24, добавляются ВГО и формируется версия для рассмотрения на главном дашборде.</p>
 </div></div>
 <dialog id="bitrixDialog" aria-labelledby="bitrixDialogTitle"><div class="dialog-head"><h2 id="bitrixDialogTitle">Проверка REST API Битрикс24</h2><button type="button" class="close" id="bitrixDialogClose">×</button></div>
@@ -98,6 +120,7 @@ const money=n=>new Intl.NumberFormat('ru-RU',{maximumFractionDigits:2}).format(N
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const formatDate=s=>s?new Intl.DateTimeFormat('ru-RU',{day:'2-digit',month:'short'}).format(new Date(s+'T12:00:00Z')):'—';
 let token='',role='',week=null,items=[],events=[],currentWeek='',user=null,origin='vgo';
+let cashTemplates=[],cashBalances=[],cashPreview=[];
 const editable=()=>Boolean(week?.status==='draft'&&(role==='admin'||role==='approver'));
 const mondayUTC=ymd=>{const d=new Date(ymd+'T12:00:00Z');const day=d.getUTCDay();d.setUTCDate(d.getUTCDate()-((day+6)%7));return d.toISOString().slice(0,10)};
 const shift=(ymd,days)=>{const d=new Date(ymd+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+days);return d.toISOString().slice(0,10)};
@@ -143,7 +166,7 @@ function draw(){
  const totals={all:0,bitrix:0,vgo:0,other:0};items.forEach(r=>{const x=Number(r.amount||0);totals.all+=x;totals[r.origin]+=x});
  $('kpiAll').textContent=money(totals.all);$('kpiBitrix').textContent=money(totals.bitrix);
  $('kpiVgo').textContent=money(totals.vgo);$('kpiOther').textContent=money(totals.other);$('kpiCount').textContent=items.length+' платежей';
- drawTable();drawHistory();
+ drawTable();drawHistory();drawCashForecast();
 }
 function drawTable(){
  const q=$('search').value.trim().toLowerCase(),src=$('originFilter').value;
@@ -163,16 +186,87 @@ function drawHistory(){
 }
 async function loadWeek(){
  const start=currentWeek;
- const [weeks,rows,audit]=await Promise.all([
+ const [weeks,rows,audit,balances,templates,preview]=await Promise.all([
  request('calendar_weeks?select=*&week_start=eq.'+start),
  request('calendar_items?select=*&week_start=eq.'+start+'&order=due_date.asc,created_at.asc&limit=1000'),
- request('calendar_events?select=event,item_id,occurred_at,details&week_start=eq.'+start+'&order=occurred_at.desc&limit=50')
+ request('calendar_events?select=event,item_id,occurred_at,details&week_start=eq.'+start+'&order=occurred_at.desc&limit=50'),
+ request('weekly_cash_balances?select=entity_key,entity_name,opening_balance,planned_receipts&week_start=eq.'+start+'&order=entity_name.asc&limit=150'),
+ request('weekly_cash_balances?select=entity_key,entity_name&week_start=eq.2026-10-19&order=entity_name.asc&limit=150'),
+ request('rpc/liquidity_preview_week?p_week_start='+start)
  ]);
  if(currentWeek!==start)return;
  week=weeks?.[0]||null;items=rows||[];events=audit||[];
+ cashBalances=balances||[];cashTemplates=templates||[];cashPreview=preview||[];
  inform(!week?'Выберите «Создать черновик», чтобы начать формирование ПК на эту неделю.':week.status==='locked'?'Утверждённый ПК сохранён и защищён от изменений.':week.status==='formed'?'ПК сформирован и опубликован на главном дашборде для рассмотрения. После внешнего согласования администратор фиксирует его на главной странице.':'Черновик открыт. Добавьте ВГО и прочие платежи; заявки Битрикс24 появятся после подключения API.',week?.status==='locked'?'success':'');
  draw();
 }
+
+function displayCashValue(x){return x===null||x===undefined?'—':new Intl.NumberFormat('ru-RU',{minimumFractionDigits:2,maximumFractionDigits:2}).format(Number(x))+' ₽'}
+function drawCashForecast(){
+ const section=$('cashForecastSection');
+ section.hidden=!week;
+ if(!week)return;
+ const data=new Map();
+ for(const row of cashTemplates)data.set(row.entity_key,{...row,opening_balance:null,planned_receipts:null});
+ for(const row of cashBalances)data.set(row.entity_key,{...(data.get(row.entity_key)||{}),...row});
+ const current=new Map(cashPreview.map(x=>[x.entity_key,x]));
+ for(const row of cashPreview)if(!data.has(row.entity_key))data.set(row.entity_key,{entity_key:row.entity_key,entity_name:row.entity_name,opening_balance:null,planned_receipts:null});
+ const editableNow=editable();
+ const arr=[...data.values()].sort((a,b)=>String(a.entity_name||'').localeCompare(String(b.entity_name||''),'ru'));
+ const complete=arr.filter(r=>{const v=current.get(r.entity_key);return v?.is_complete===true}).length;
+ $('cashForecastCount').textContent='Полных прогнозов: '+complete+' / '+arr.length;
+ $('cashForecastMessage').textContent=
+   week.status==='locked'?'ПК уже утверждён. Плановые остатки зафиксированы на дату утверждения, дальнейшее редактирование закрыто.':
+   week.status==='formed'?'ПК на рассмотрении. Чтобы изменить прогноз, администратор должен вернуть ПК на доработку.':
+   'Заполни остатки и поступления до формирования ПК. Пустое поле означает «нет данных», ноль нужно указать цифрой 0. Неполные прогнозы не подменяются нулём.';
+ $('cashForecastBody').innerHTML=arr.map((r,i)=>{
+  const calc=current.get(r.entity_key);
+  const unknown=r.entity_key.startsWith('unmapped:');
+  const disable=!editableNow||unknown?'disabled':'';
+  const opening=r.opening_balance??'',receipts=r.planned_receipts??'';
+  return '<tr data-cash-row="'+i+'"><td title="'+esc(r.entity_key)+'"><b>'+esc(r.entity_name||r.entity_key)+'</b>'+
+   (unknown?'<div class="unknown">Нет кода юрлица · нужно сопоставление</div>':'')+'</td>'+
+   '<td><input data-cash-opening value="'+esc(opening)+'" inputmode="decimal" '+disable+' aria-label="Начальный остаток '+esc(r.entity_name)+'"></td>'+
+   '<td><input data-cash-income value="'+esc(receipts)+'" inputmode="decimal" '+disable+' aria-label="План поступлений '+esc(r.entity_name)+'"></td>'+
+   '<td class="num">'+displayCashValue(calc?.planned_payments||0)+'</td>'+
+   '<td class="num">'+(calc?.is_complete?displayCashValue(calc.planned_closing):'<span class="unknown">Нет полного прогноза</span>')+'</td>'+
+   '<td>'+(editableNow&&!unknown?'<button type="button" class="cash-save" data-cash-save="'+i+'">Сохранить</button>':'')+'</td></tr>';
+ }).join('')||'<tr><td colspan="6">Не найдены организации для формирования прогноза</td></tr>';
+ window.__BAZA_CASH_FORM_ROWS=arr;
+}
+function parseCashForecastInput(raw,label){
+ const v=String(raw||'').trim().replace(/[\s\u00a0\u202f]/g,'').replace(',','.');
+ if(v==='')return null;
+ if(!/^-?\d{1,15}(\.\d{1,2})?$/.test(v))throw Error('Неверный формат '+label+': '+raw);
+ return Number(v);
+}
+async function saveCashForecast(index){
+ if(!editable())return;
+ const row=window.__BAZA_CASH_FORM_ROWS?.[index];
+ if(!row||row.entity_key.startsWith('unmapped:'))return;
+ const tr=$('cashForecastBody').querySelectorAll('[data-cash-row]')[index];
+ const btn=tr?.querySelector('[data-cash-save]');
+ if(!btn)return;
+ btn.disabled=true;
+ try{
+  const opening=parseCashForecastInput(tr.querySelector('[data-cash-opening]').value,'начального остатка');
+  const receipts=parseCashForecastInput(tr.querySelector('[data-cash-income]').value,'поступлений');
+  if(receipts!==null&&receipts<0)throw Error('План поступлений не может быть отрицательным');
+  const data={entity_name:row.entity_name,opening_balance:opening,planned_receipts:receipts,
+    source_note:'Прогноз для ПК BAZA · '+currentWeek};
+  const wasSaved=cashBalances.some(x=>x.entity_key===row.entity_key);
+  if(wasSaved)await request('weekly_cash_balances?week_start=eq.'+currentWeek+'&entity_key=eq.'+encodeURIComponent(row.entity_key),{method:'PATCH',body:data});
+  else await request('weekly_cash_balances',{method:'POST',body:{week_start:currentWeek,entity_key:row.entity_key,...data}});
+  await loadWeek();
+  inform('Прогноз по '+row.entity_name+' сохранён. Пересчитан остаток на конец недели.','success');
+ }catch(e){inform(e.message,'error')}
+ finally{btn.disabled=false}
+}
+$('cashForecastBody').addEventListener('click',event=>{
+ const button=event.target.closest('[data-cash-save]');
+ if(button)saveCashForecast(Number(button.dataset.cashSave));
+});
+
 async function openWeek(){
  try{
   const date=$('weekDate').value;if(!date)throw Error('Укажите понедельник недели');
