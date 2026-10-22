@@ -254,6 +254,47 @@ dialog::backdrop{background:rgba(11,39,64,.45)}
 .pf-match-error{color:#b12235;font-weight:700}
 @media(max-width:650px){.pf-match-controls{justify-content:flex-start}.pf-match-summary{gap:7px}.pf-match-dialog .dialog-body{padding:13px}}
 
+
+/* BAZA_LIQUIDITY_PF_ENTITIES_V1 */
+.pf-liq-toolbar{display:flex;gap:12px;justify-content:space-between;align-items:end;flex-wrap:wrap;margin:8px 0 14px}
+.pf-liq-toolbar label{font-size:9px;color:var(--muted);font-weight:800;letter-spacing:.06em;display:block;margin-bottom:6px}
+.pf-liq-toolbar select{padding:10px 12px;color:var(--ink);background:white;border:1px solid var(--border);border-radius:8px;min-width:245px}
+.pf-liq-note{padding:12px 15px;border:1px solid #d6e5ee;background:#f5faff;border-radius:9px;color:#526f88;font-size:11px;line-height:1.7;margin:0 0 12px}
+.pf-liq-note.warn{background:#fff8ed;border-color:#ecd6ad;color:#906b21}
+.pf-liq-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px;margin:12px 0 15px}
+.pf-liq-kpi{background:white;border:1px solid var(--border);border-radius:12px;padding:15px 17px;min-width:0}
+.pf-liq-kpi:first-child{background:#10395f;color:white;border-color:#10395f}
+.pf-liq-kpi span{display:block;font-size:9px;letter-spacing:.09em;font-weight:800;color:#7591a7}
+.pf-liq-kpi:first-child span{color:#aec7dd}
+.pf-liq-kpi strong{display:block;font-size:21px;margin:9px 0 5px;letter-spacing:-.5px;white-space:nowrap}
+.pf-liq-kpi small{font-size:10px;color:#8299ab}
+.pf-liq-kpi:first-child small{color:#a9c6db}
+.pf-liq-kpi .neg{color:#c32837}.pf-liq-kpi .pos{color:#267a55}
+.pf-liq-table{min-width:1120px}
+.pf-liq-table th,.pf-liq-table td{padding:11px 9px}
+.pf-liq-table td{font-variant-numeric:tabular-nums}
+.pf-liq-table td.num,.pf-liq-table th.num{text-align:right;white-space:nowrap}
+.pf-liq-table td:first-child{font-weight:800;min-width:175px}
+.pf-liq-table .negative{font-weight:900;color:#bc3a46}
+.pf-liq-table .positive{font-weight:900;color:#278056}
+.pf-liq-table .unknown{font-size:10px;color:#a07c41}
+.pf-liq-table .unloaded{font-size:10px;color:#8aa0b2}
+.pf-liq-form{margin-top:16px;border:1px solid #d5e5ef;border-radius:12px;padding:16px 18px;background:#fbfdff}
+.pf-liq-form h3{font-size:14px;margin:0 0 7px}
+.pf-liq-form p{margin:0 0 11px;font-size:10px;color:#718ca1;line-height:1.7}
+.pf-liq-form textarea{width:100%;min-height:117px;background:#fff;border:1px solid #c9dce9;border-radius:9px;padding:12px;color:#173b5c;font:11px/1.6 monospace;resize:vertical}
+.pf-liq-actions{display:flex;gap:9px;align-items:end;flex-wrap:wrap;margin:12px 0}
+.pf-liq-actions label{font-size:10px;color:#638199;display:flex;flex-direction:column;gap:6px}
+.pf-liq-actions input[type=text]{height:37px;border:1px solid #c8daea;border-radius:8px;min-width:275px;padding:8px 10px}
+.pf-liq-actions input[type=file]{font-size:10px;max-width:260px}
+.pf-liq-actions button{height:37px;padding:8px 14px;border:1px solid #123b67;border-radius:8px;color:#fff;background:#123b67;font-size:11px;font-weight:800}
+.pf-liq-actions button:disabled{opacity:.6}
+.pf-liq-status{font-size:11px;white-space:pre-line;color:#5b778d}
+.pf-liq-status.error{color:#b02b3a}.pf-liq-status.success{color:#257449}
+.pf-liq-legend{font-size:10px;color:#738da3;line-height:1.8;margin-top:12px}
+@media(max-width:940px){.pf-liq-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:530px){.pf-liq-kpi strong{font-size:17px}.pf-liq-actions input[type=text]{min-width:0;width:100%}}
+
 </style>
 </head>
 <body>
@@ -282,6 +323,7 @@ dialog::backdrop{background:rgba(11,39,64,.45)}
   <button class="tab" data-tab="plan" role="tab" aria-selected="false">Реестр план / факт <span id="tabPlanCount"></span></button>
   <button class="tab" data-tab="unlinked" role="tab" aria-selected="false">Факт без связи <span id="tabUnlinkedCount"></span></button>
   <button class="tab" data-tab="offcalendar" role="tab" aria-selected="false">Вне ПК <span id="tabOffCount"></span></button>
+  <button class="tab" data-tab="liquidity" role="tab" aria-selected="false">Остатки ДС · План / факт</button>
   <span class="right-label" id="loadedAs"></span>
  </div>
  <div id="chips" class="chips"></div><div id="filterSummary" class="filter-summary" hidden></div>
@@ -367,6 +409,41 @@ dialog::backdrop{background:rgba(11,39,64,.45)}
   <div class="surface">
    <div class="table-wrap"><table><thead><tr><th>Строка</th><th>Наше юрлицо</th><th>Контрагент</th><th>Тип / проект</th><th>Заявлено</th><th>Факт 1С</th><th>Результат</th></tr></thead><tbody id="outsideTbody"></tbody></table></div>
    <p class="inline-caption">Нажмите на контрагента, чтобы посмотреть пояснения и номера операций 1С.</p>
+  </div>
+ </section>
+
+ <section id="liquiditySection" hidden>
+  <div class="pf-section-head"><h2>План / факт остатков денежных средств по юрлицам</h2>
+   <span>Банковские счета не детализируем · на конец недели</span></div>
+  <div class="pf-liq-toolbar">
+   <div><label for="liquidityWeekSelect">НЕДЕЛЯ КОНТРОЛЯ ОСТАТКОВ</label>
+    <select id="liquidityWeekSelect" aria-label="Неделя остатков"><option value="">Загрузка периодов…</option></select></div>
+   <button class="secondary-btn" id="liquidityReload" type="button">Обновить остатки</button>
+  </div>
+  <div id="liquidityNote" class="pf-liq-note">Плановые и фактические остатки загружаются отдельно от сверки платежей.</div>
+  <div class="pf-liq-kpis">
+   <div class="pf-liq-kpi"><span>ПЛАНОВЫЙ ОСТАТОК</span><strong id="liqPlanTotal">—</strong><small>Только сопоставимые юрлица</small></div>
+   <div class="pf-liq-kpi"><span>ФАКТИЧЕСКИЙ ОСТАТОК</span><strong id="liqFactTotal">—</strong><small>Факт 1С на конец периода</small></div>
+   <div class="pf-liq-kpi"><span>ОТКЛОНЕНИЕ</span><strong id="liqVariance">—</strong><small>Факт − план</small></div>
+   <div class="pf-liq-kpi"><span>СРАВНЕНО ЮРЛИЦ</span><strong id="liqCoverage">—</strong><small id="liqCoverageHint">Не загружен факт</small></div>
+  </div>
+  <div class="surface">
+   <div class="table-wrap"><table class="pf-liq-table"><thead>
+   <tr><th>Наше юрлицо</th><th class="num">Начальный остаток</th><th class="num">Приход · план</th><th class="num">Расход · план</th>
+    <th class="num">Конечный · план</th><th class="num">Конечный · факт</th><th class="num">Отклонение ₽</th><th class="num">Отклонение %</th></tr>
+   </thead><tbody id="liquidityBody"><tr><td colspan="8">Загрузка…</td></tr></tbody></table></div>
+   <div id="liquidityLegend" class="pf-liq-legend"></div>
+  </div>
+  <div id="liquidityImportForm" class="pf-liq-form" hidden>
+   <h3>Загрузить фактические остатки из 1С</h3>
+   <p>Скопируйте из Excel две колонки: <b>Юрлицо</b> и <b>Остаток на конец недели</b>, либо вставьте коды юрлиц из таблицы. Можно загрузить файл CSV/TSV. Проверяем все строки перед сохранением: неизвестные организации или ошибки в суммах блокируют загрузку целиком. Уже сохранённые факты не исчезают при частичной загрузке.</p>
+   <textarea id="liquidityPaste" placeholder="ООО «БАЗА»&#9;12 345 678,90&#10;ООО СК «БАЗА»&#9;1 234 567,00" aria-label="Две колонки из 1С: юридическое лицо и конечный остаток"></textarea>
+   <div class="pf-liq-actions">
+    <label>Или файл CSV / TSV <input type="file" id="liquidityFile" accept=".csv,.tsv,.txt,text/csv,text/plain"></label>
+    <label>Источник и дата выгрузки<input type="text" id="liquiditySource" maxlength="250" placeholder="1С · остатки на 25.10.2026" value="1С · остатки на конец недели"></label>
+    <button type="button" id="liquidityImport">Проверить и сохранить факт</button>
+   </div>
+   <div id="liquidityImportStatus" class="pf-liq-status" role="status"></div>
   </div>
  </section>
 </div>
@@ -494,11 +571,12 @@ dialog::backdrop{background:rgba(11,39,64,.45)}
  function chooseTab(name){
   st.tab=name;
   document.querySelectorAll('[data-tab]').forEach(b=>{const on=b.dataset.tab===name;b.classList.toggle('active',on);b.setAttribute('aria-selected',String(on))});
-  ['overview','plan','unlinked','offcalendar'].forEach(key=>el(key+'Section').hidden=key!==name);
+  ['overview','plan','unlinked','offcalendar','liquidity'].forEach(key=>el(key+'Section').hidden=key!==name);
   if(name==='plan')renderPlanTable();
   if(name==='unlinked')renderUnlinkedTable();
   if(name==='offcalendar')renderOffcalendar();
   if(name==='overview')renderOverview();
+  if(name==='liquidity')renderLiquidity();
  }
  function renderChips(){
   const selected=[['bucket',st.bucket?STATUS_TITLE[st.bucket]:''],['direction',st.direction],['project',st.project],['flow',st.flow]].filter(x=>x[1]);
@@ -692,6 +770,7 @@ dialog::backdrop{background:rgba(11,39,64,.45)}
    el('periodSelect').innerHTML=periods.map(p=>'<option value="'+esc(p.period_id)+'">'+esc(p.title)+'</option>').join('');
    el('periodSelect').disabled=false;
    await loadPeriod();
+   await loadLiquidityWeeks();
   }catch(error){console.error(error);note(error.message||'Ошибка загрузки сверки',true)}
  }
 
@@ -769,6 +848,184 @@ dialog::backdrop{background:rgba(11,39,64,.45)}
  el('matcherApplyAuto').addEventListener('click',()=>applyMatcher('auto'));
  el('matcherApproveReview').addEventListener('click',()=>applyMatcher('review'));
  el('matcherDialog').addEventListener('click',e=>{if(e.target===el('matcherDialog'))el('matcherDialog').close()});
+
+
+ /* BAZA_LIQUIDITY_BY_ENTITY_V1 */
+ const liquidity={week:'',weeks:[],snapshot:[],preview:[],actual:[],loaded:false,loading:false};
+ const normalizeEntity=x=>String(x||'').toLocaleLowerCase('ru-RU').replace(/[^a-zа-яё0-9]/g,'');
+ const liqWeekEnd=x=>{const d=new Date(x+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+6);return d.toISOString().slice(0,10)};
+ const liqDate=x=>new Intl.DateTimeFormat('ru-RU',{day:'2-digit',month:'2-digit',year:'numeric'}).format(new Date(x+'T12:00:00Z'));
+ const liqCurrency=value=>new Intl.NumberFormat('ru-RU',{minimumFractionDigits:2,maximumFractionDigits:2}).format(Number(value))+' ₽';
+ const liqMissing=x=>x===null||x===undefined;
+ const liqMoney=x=>liqMissing(x)?'<span class="unknown">Нет данных</span>':liqCurrency(x);
+ function setLiqStatus(message,kind=''){const e=el('liquidityImportStatus');e.textContent=message;e.className='pf-liq-status '+kind;}
+ async function loadLiquidityWeeks(){
+  const [forecast,locked]=await Promise.all([
+   rest('weekly_cash_balances','select=week_start&order=week_start.desc&limit=1000'),
+   rest('liquidity_plan_snapshots','select=week_start&order=week_start.desc&limit=1000')
+  ]);
+  liquidity.weeks=[...new Set([...forecast,...locked].map(x=>x.week_start))].sort().reverse();
+  const preferred=st.period?.date_start;
+  liquidity.week=liquidity.weeks.includes(preferred)?preferred:liquidity.weeks[0]||'';
+  const selector=el('liquidityWeekSelect');
+  if(!liquidity.week){
+   selector.innerHTML='<option value="">Нет недель с планом остатков</option>';selector.disabled=true;
+   el('liquidityNote').textContent='В базе ещё нет плановых остатков по юрлицам. Добавьте прогноз начальных остатков и поступлений, после чего появится сравнение.';
+   return;
+  }
+  selector.innerHTML=liquidity.weeks.map(w=>'<option value="'+esc(w)+'">'+liqDate(w)+' — '+liqDate(liqWeekEnd(w))+'</option>').join('');
+  selector.value=liquidity.week;selector.disabled=false;
+  await loadLiquidity();
+ }
+ async function loadLiquidity(){
+  if(!liquidity.week||liquidity.loading)return;
+  liquidity.loading=true;
+  try{
+   const w=encodeURIComponent(liquidity.week);
+   const [snapshots,facts,preview]=await Promise.all([
+    rest('liquidity_plan_snapshots','select=*&week_start=eq.'+w+'&order=entity_name.asc&limit=1000'),
+    rest('liquidity_actual_balances','select=entity_key,actual_closing,source_note,updated_at&week_start=eq.'+w+'&limit=1000'),
+    rest('rpc/liquidity_preview_week','p_week_start='+w)
+   ]);
+   if(w!==liquidity.week)return;
+   liquidity.snapshot=snapshots;
+   liquidity.actual=facts;
+   liquidity.preview=preview;
+   liquidity.loaded=true;
+   renderLiquidity();
+  }catch(error){
+   liquidity.loaded=false;
+   el('liquidityNote').textContent='Не удалось загрузить остатки: '+error.message;
+   el('liquidityNote').className='pf-liq-note warn';
+  }finally{liquidity.loading=false}
+ }
+ function renderLiquidity(){
+  if(!liquidity.week||!liquidity.loaded)return;
+  const stored=liquidity.snapshot.length>0;
+  const plan=stored?liquidity.snapshot:liquidity.preview;
+  const actualByKey=new Map(liquidity.actual.map(x=>[x.entity_key,x]));
+  const paired=plan.filter(p=>p.is_complete===true&&!liqMissing(p.planned_closing)&&actualByKey.has(p.entity_key));
+  const incomplete=plan.filter(p=>p.is_complete!==true||liqMissing(p.planned_closing));
+  const missing=plan.filter(p=>p.is_complete===true&&!actualByKey.has(p.entity_key));
+  const totals=paired.reduce((a,p)=>{
+   const planCents=Math.round(Number(p.planned_closing)*100),factCents=Math.round(Number(actualByKey.get(p.entity_key).actual_closing)*100);
+   a.plan+=planCents;a.fact+=factCents;return a;
+  },{plan:0,fact:0});
+  const delta=totals.fact-totals.plan;
+  el('liqPlanTotal').textContent=paired.length?liqCurrency(totals.plan/100):'—';
+  el('liqFactTotal').textContent=paired.length?liqCurrency(totals.fact/100):'—';
+  el('liqVariance').textContent=paired.length?(delta>0?'+':'')+liqCurrency(delta/100):'—';
+  el('liqVariance').className=paired.length?(delta>0?'pos':delta<0?'neg':''):'';
+  el('liqCoverage').textContent=paired.length+' / '+plan.length;
+  el('liqCoverageHint').textContent=incomplete.length+' неполных планов · '+missing.length+' без факта';
+  const selectedPeriod='Неделя '+liqDate(liquidity.week)+' — '+liqDate(liqWeekEnd(liquidity.week));
+  const independent=st.period?.date_start!==liquidity.week;
+  const base=stored?'Зафиксированный плановый остаток сохранён при утверждении ПК.':
+    'Предварительный прогноз остатков: недельный ПК для этой недели не зафиксирован в новой системе. План пересчитывается по текущим исходным данным и НЕ является утверждённым снимком.';
+  el('liquidityNote').textContent=selectedPeriod+'. '+base+
+    (independent?' Это отдельная неделя остатков, не период выбранной выше сверки платежей.':'')+
+    (incomplete.length?' Есть '+incomplete.length+' юрлиц с неполными плановыми данными.':'');
+  el('liquidityNote').className='pf-liq-note'+(!stored||incomplete.length?' warn':'');
+  const rows=plan.slice().sort((a,b)=>{
+   const pa=actualByKey.get(a.entity_key),pb=actualByKey.get(b.entity_key);
+   const da=pa&&!liqMissing(a.planned_closing)?Math.abs(Number(pa.actual_closing)-Number(a.planned_closing)):-1;
+   const db=pb&&!liqMissing(b.planned_closing)?Math.abs(Number(pb.actual_closing)-Number(b.planned_closing)):-1;
+   return db-da||a.entity_name.localeCompare(b.entity_name,'ru');
+  });
+  el('liquidityBody').innerHTML=rows.map(p=>{
+   const fact=actualByKey.get(p.entity_key),pl=p.is_complete?Number(p.planned_closing):null;
+   const actual=fact?Number(fact.actual_closing):null;
+   const comparable=pl!==null&&actual!==null;
+   const difference=comparable?Math.round(actual*100-pl*100)/100:null;
+   const percent=comparable&&Math.abs(pl)>0.000001?100*difference/Math.abs(pl):null;
+   const pctValue=percent===null?'—':(percent>0?'+':'')+new Intl.NumberFormat('ru-RU',{maximumFractionDigits:1}).format(percent)+'%';
+   const varianceClass=!comparable?'':difference<0?'negative':difference>0?'positive':'';
+   return '<tr><td title="'+esc(p.entity_key)+'">'+esc(p.entity_name)+
+    (p.entity_key.startsWith('unmapped:')?'<div class="unknown">Не сопоставлено с юрлицом</div>':'')+'</td>'+
+    '<td class="num">'+liqMoney(p.opening_balance)+'</td>'+
+    '<td class="num">'+liqMoney(p.planned_receipts)+'</td>'+
+    '<td class="num">'+liqMoney(p.planned_payments)+'</td>'+
+    '<td class="num">'+liqMoney(pl)+'</td>'+
+    '<td class="num">'+(fact?liqMoney(actual):'<span class="unloaded">Не загружен</span>')+'</td>'+
+    '<td class="num '+varianceClass+'">'+(comparable?(difference>0?'+':'')+liqCurrency(difference):'—')+'</td>'+
+    '<td class="num '+varianceClass+'">'+pctValue+'</td></tr>';
+  }).join('')||'<tr><td colspan="8">По этой неделе плановых остатков нет</td></tr>';
+  el('liquidityLegend').textContent='Δ = Факт − План. Плюс означает денег больше плана, минус — меньше. Суммы вверху только по юридическим лицам, где есть полный план и фактический остаток. ВГО учтены как расход отправителя и приход получателя. Кредитные поступления входят в план прихода; эскроу и ограниченные средства не включаются в свободную ликвидность. Для строк с нулевым планом процент не рассчитывается.';
+  const canImport=['admin','approver'].includes(st.user?.role);
+  el('liquidityImportForm').hidden=!canImport;
+ }
+ function parseLiqAmount(text){
+  let value=String(text??'').trim().replace(/[\s\u00a0\u202f₽]/g,'');
+  if(!value)return null;
+  if(value.includes(',')&&value.includes('.')){
+   if(value.lastIndexOf(',')>value.lastIndexOf('.'))value=value.replace(/\./g,'').replace(',','.');
+   else value=value.replace(/,/g,'');
+  }else if(value.includes(','))value=value.replace(',','.');
+  if(!/^-?\d{1,15}(\.\d{1,2})?$/.test(value))return null;
+  return Number(value);
+ }
+ function parseLiqRows(input,plans){
+  const lookup=new Map();
+  for(const p of plans){
+   lookup.set(normalizeEntity(p.entity_name),p.entity_key);
+   lookup.set(normalizeEntity(p.entity_key),p.entity_key);
+  }
+  const matched=new Map(),errors=[];
+  const lines=input.split(/\r?\n/).filter(line=>line.trim());
+  for(const [idx,line] of lines.entries()){
+   const delim=line.includes('\t')?'\t':line.includes(';')?';':null;
+   if(!delim){errors.push('Строка '+(idx+1)+': ожидаются две колонки, разделённые табуляцией или точкой с запятой');continue}
+   const cells=line.split(delim).map(x=>x.trim().replace(/^"|"$/g,'').replace(/""/g,'"'));
+   const label=cells[0]||'',amount=cells[1];
+   const normalized=normalizeEntity(label);
+   if(idx===0&&/(юрлицо|организац|контрагент|наименование)/i.test(label)&&/(остаток|сумма|конец|факт)/i.test(amount||''))continue;
+   const key=lookup.get(normalized);
+   if(!key){errors.push('Строка '+(idx+1)+': не найдено юрлицо «'+label+'»');continue}
+   const parsed=parseLiqAmount(amount);
+   if(parsed===null){errors.push('Строка '+(idx+1)+': неверный остаток «'+amount+'»');continue}
+   if(matched.has(key)){errors.push('Строка '+(idx+1)+': повторное юрлицо «'+label+'»');continue}
+   matched.set(key,{entity_key:key,actual_closing:parsed});
+  }
+  if(matched.size===0&&errors.length===0)errors.push('Нет заполненных строк для загрузки');
+  return {rows:[...matched.values()],errors};
+ }
+ async function importLiquidity(){
+  const btn=el('liquidityImport');btn.disabled=true;
+  try{
+   if(!['admin','approver'].includes(st.user?.role))throw Error('Нет прав на загрузку факта');
+   if(!liquidity.week||!liquidity.loaded)throw Error('Сначала выберите неделю с планом');
+   const source=el('liquiditySource').value.trim();
+   if(source.length<5)throw Error('Укажите источник и дату выгрузки из 1С');
+   const current=liquidity.snapshot.length?liquidity.snapshot:liquidity.preview;
+   const parsed=parseLiqRows(el('liquidityPaste').value,current);
+   if(parsed.errors.length)throw Error(parsed.errors.slice(0,10).join('\n')+(parsed.errors.length>10?'\nЕсть и другие ошибки':''));
+   if(!confirm('Сохранить фактические остатки '+parsed.rows.length+' юрлиц за неделю '+liqDate(liquidity.week)+' — '+liqDate(liqWeekEnd(liquidity.week))+'? Уже сохранённые значения для этих юрлиц могут измениться.'))return;
+   const response=await session.fetch(BASE+'/rest/v1/rpc/liquidity_import_actuals',{
+    method:'POST',headers:{...authHeaders(session.token()),'Content-Type':'application/json'},
+    body:JSON.stringify({p_week_start:liquidity.week,p_rows:parsed.rows,p_source_note:source})
+   });
+   const answer=await response.json().catch(()=>({}));
+   if(!response.ok||answer.ok!==true)throw Error(answer.message||answer.error||'Не удалось загрузить фактические остатки');
+   el('liquidityPaste').value='';
+   await loadLiquidity();
+   setLiqStatus('Факт 1С сохранён: '+answer.submitted+' юрлиц; обновлено '+answer.changed+'. Сравнение пересчитано.','success');
+  }catch(e){setLiqStatus(e.message,'error')}finally{btn.disabled=false}
+ }
+ el('liquidityWeekSelect').addEventListener('change',e=>{
+  liquidity.week=e.target.value;
+  liquidity.loaded=false;
+  el('liquidityBody').innerHTML='<tr><td colspan="8">Загружаем неделю…</td></tr>';
+  loadLiquidity();
+ });
+ el('liquidityReload').addEventListener('click',loadLiquidity);
+ el('liquidityImport').addEventListener('click',importLiquidity);
+ el('liquidityFile').addEventListener('change',async e=>{
+  const file=e.target.files?.[0];if(!file)return;
+  if(file.size>2*1024*1024){setLiqStatus('Файл больше 2 МБ. Используйте CSV или скопируйте две колонки из Excel.','error');return}
+  try{el('liquidityPaste').value=await file.text();setLiqStatus('Текст из файла '+file.name+' загружен для проверки. Нажмите «Проверить и сохранить факт».')}
+  catch(error){setLiqStatus('Не удалось прочитать файл: '+error.message,'error')}
+  finally{e.target.value=''}
+ });
 
  document.addEventListener('keydown',event=>{const card=event.target.closest?.('[data-kpi]');if(card&&(event.key==='Enter'||event.key===' ')){event.preventDefault();selectKpi(card.dataset.kpi)}});
  document.addEventListener('click',event=>{
