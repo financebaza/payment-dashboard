@@ -271,7 +271,7 @@ body.calendar-review-mode .kpi-board{grid-template-columns:1.5fr 1fr}
 </head>
 <body>
 <div class="page">
-<header class="topbar"><div class="brand"><b>BAZA</b><small>ПЛАТЕЖНЫЙ КОНТРОЛЬ</small></div><div class="period">19–25 ОКТЯБРЯ 2026 · ФИНАНСОВЫЙ КОНТРОЛЬ</div><nav class="nav"><a href="#dashboard">Дашборд</a><a href="#registry">Реестр платежей</a><a href="calendar.html">Формирование ПК</a><a href="#groupCashBridge">Остатки</a><a href="plan-fact.html">План / факт</a><a id="adminUsersLink" href="users.html" hidden>Пользователи</a></nav></header>
+<header class="topbar"><div class="brand"><b>BAZA</b><small>ПЛАТЕЖНЫЙ КОНТРОЛЬ</small></div><div class="period">19–25 ОКТЯБРЯ 2026 · ФИНАНСОВЫЙ КОНТРОЛЬ</div><nav class="nav"><a href="#dashboard">Дашборд</a><a href="#registry">Реестр платежей</a><a href="calendar.html">Формирование ПК</a><a href="#groupCashBridge">Остатки</a><a href="plan-fact.html">План / факт</a><a id="adminUsersLink" href="users.html" hidden>Пользователи</a><div class="auth-user" id="authUser"><span id="authUserText"></span><button id="authLogout">Выйти</button></div></nav></header>
 <section class="hero" id="dashboard"><div><div class="eyebrow">EXECUTIVE VIEW</div><h1>Платежный контроль</h1><p>Куда уходят деньги, за счёт какого источника и какие платежи требуют решения.</p></div><button class="reset" id="reset">Сбросить фильтры</button></section>
 <section id="calendarReviewBanner" hidden aria-live="polite">
  <div style="flex:1;min-width:235px"><div class="calendar-review-label">НЕДЕЛЬНЫЙ ПЛАТЁЖНЫЙ КАЛЕНДАРЬ</div>
@@ -837,7 +837,7 @@ body.auth-ready .auth-screen{display:none}.auth-guard-note{font-size:9px;color:#
     <div class="auth-guard-note">Сессия защищена Supabase Auth · данные платежей загружаются только после входа.</div>
   </form>
 </div>
-<div class="auth-user" id="authUser"><span id="authUserText"></span><button id="authLogout">Выйти</button></div>
+
 <script src="approved-xlsx.js?v=1"></script>
 <script src="auth-session.js?v=3"></script>
 <script>
