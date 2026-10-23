@@ -281,6 +281,7 @@ body.calendar-review-mode .kpi-board{grid-template-columns:1.5fr 1fr}
   <div><div class="calendar-review-label" style="margin-bottom:5px">ПОКАЗЫВАТЬ НЕДЕЛЮ</div><select id="calendarWeekSelect" aria-label="Период сформированного ПК"></select></div>
   <button id="calendarReturnBtn" class="calendar-review-btn secondary" type="button" hidden>Вернуть на доработку</button>
   <button id="calendarLockBtn" class="calendar-review-btn" type="button" hidden>Зафиксировать ПК</button>
+   <button id="calendarDownloadBtn" class="calendar-review-btn secondary" type="button" hidden>Скачать Excel</button>
  </div>
 </section>
 <dialog id="calendarConfirmDialog" aria-labelledby="calendarConfirmTitle">
@@ -837,6 +838,7 @@ body.auth-ready .auth-screen{display:none}.auth-guard-note{font-size:9px;color:#
   </form>
 </div>
 <div class="auth-user" id="authUser"><span id="authUserText"></span><button id="authLogout">Выйти</button></div>
+<script src="approved-xlsx.js?v=1"></script>
 <script src="auth-session.js?v=3"></script>
 <script>
 /* BAZA_AUTH_V3 */
@@ -908,6 +910,7 @@ body.auth-ready .auth-screen{display:none}.auth-guard-note{font-size:9px;color:#
     const canFix=activeCalendar.status==='formed'&&currentProfile?.role==='admin';
     document.getElementById('calendarLockBtn').hidden=!canFix;
     document.getElementById('calendarReturnBtn').hidden=!canFix;
+    document.getElementById('calendarDownloadBtn').hidden=activeCalendar.status!=='locked';
     const period=document.querySelector('.topbar .period');
     if(period)period.textContent=formatCalendarDate(week).toUpperCase()+' — '+formatCalendarDate(addCalendarDays(week,6)).toUpperCase()+' · '+
       (isLegacyCalendar()?'ИСТОРИЧЕСКИЙ РЕЕСТР':
@@ -932,7 +935,7 @@ body.auth-ready .auth-screen{display:none}.auth-guard-note{font-size:9px;color:#
       syncCalendarReview();
       return null; // loadPayments() will load public.payments, never calendar_items.
     }
-    const response=await session.fetch(SUPABASE_URL+'/rest/v1/calendar_items?select=id,origin,payer,counterparty,amount,project,direction,subcategory,funding_source,flow_type,due_date,source_ref&week_start=eq.'+encodeURIComponent(activeCalendar.week_start)+'&order=due_date.asc,created_at.asc&limit=3000',{headers:authHeaders()});
+    const response=await session.fetch(SUPABASE_URL+'/rest/v1/calendar_items?select=id,origin,payer,counterparty,amount,project,direction,subcategory,funding_source,flow_type,due_date,source_ref,memo&week_start=eq.'+encodeURIComponent(activeCalendar.week_start)+'&order=due_date.asc,created_at.asc&limit=3000',{headers:authHeaders()});
     if(!response.ok)throw Error('Не удалось загрузить ПК: HTTP '+response.status);
     const data=await response.json();
     if(data.length>=3000)throw Error('Слишком большой ПК. Нельзя показывать неполную выборку.');
@@ -941,7 +944,7 @@ body.auth-ready .auth-screen{display:none}.auth-guard-note{font-size:9px;color:#
       id:'calendar:'+r.id,calendarItemId:r.id,entity:r.payer,counterparty:r.counterparty,
       amount:Number(r.amount),source:r.funding_source,direction:r.direction,
       project:r.project,subcategory:r.subcategory,isInternal:r.origin==='vgo'||/ВГО/i.test(r.flow_type),
-      isNonExpense:false,origin:r.origin,dueDate:r.due_date,sourceRef:r.source_ref||''
+      isNonExpense:false,origin:r.origin,dueDate:r.due_date,sourceRef:r.source_ref||'',flowType:r.flow_type||'',memo:r.memo||''
     }));
     syncCalendarReview();
     return result;
@@ -988,6 +991,14 @@ body.auth-ready .auth-screen{display:none}.auth-guard-note{font-size:9px;color:#
     document.getElementById('calendarConfirmDialog').showModal();
   });
   document.getElementById('calendarReturnBtn').addEventListener('click',returnCalendarToDraft);
+  document.getElementById('calendarDownloadBtn').addEventListener('click',()=>{
+    if(!activeCalendar||activeCalendar.status!=='locked')return;
+    try{
+      window.BazaApprovedXlsx.download({weekStart:activeCalendar.week_start,
+        version:activeCalendar.formation_version,lockedAt:activeCalendar.locked_at,
+        approvalNote:activeCalendar.approval_note,items:window.__BAZA_ALL_PAYMENTS||[]});
+    }catch(error){alert(error.message||'Не удалось сформировать Excel-файл.');}
+  });
   document.getElementById('calendarConfirmForm').addEventListener('submit',lockCalendarFromDashboard);
   document.getElementById('calendarConfirmClose').addEventListener('click',()=>document.getElementById('calendarConfirmDialog').close());
   document.getElementById('calendarConfirmCancel').addEventListener('click',()=>document.getElementById('calendarConfirmDialog').close());
