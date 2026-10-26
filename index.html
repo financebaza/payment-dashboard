@@ -211,18 +211,18 @@ button.project-item.dashboard-clickable.selected{background:#e3f0fc;border-color
 .calendar-review-btn:disabled{opacity:.5;cursor:wait}
 #calendarReviewStatus{display:inline-flex;background:#e6eef6;border:1px solid #c4d7e9;color:#235779;border-radius:20px;padding:3px 9px;font-size:10px;font-weight:800}
 #calendarReviewStatus.locked{background:#e8f4ee;border-color:#c6e2d1;color:#286c49}
-body.calendar-review-mode .status-strip,
-body.calendar-review-mode .kpi-board>.board:nth-child(3),
-body.calendar-review-mode #registry thead th:nth-child(9),
-body.calendar-review-mode #registry thead th:nth-child(10),
-body.calendar-review-mode #paymentTable td:nth-child(9),
-body.calendar-review-mode #paymentTable td:nth-child(10),
+body.calendar-review-mode:not(.calendar-locked) .status-strip,
+body.calendar-review-mode:not(.calendar-locked) .kpi-board>.board:nth-child(3),
+body.calendar-review-mode:not(.calendar-locked) #registry thead th:nth-child(9),
+body.calendar-review-mode:not(.calendar-locked) #registry thead th:nth-child(10),
+body.calendar-review-mode:not(.calendar-locked) #paymentTable td:nth-child(9),
+body.calendar-review-mode:not(.calendar-locked) #paymentTable td:nth-child(10),
 body.calendar-review-mode #cashBoard,
-body.calendar-review-mode .modal-actions,
-body.calendar-review-mode #modalStatus,
-body.calendar-review-mode .modal-card>.comment,
+body.calendar-review-mode:not(.calendar-locked) .modal-actions,
+body.calendar-review-mode:not(.calendar-locked) #modalStatus,
+body.calendar-review-mode:not(.calendar-locked) .modal-card>.comment,
 body.calendar-review-mode a[href="#cashBoard"] {display:none!important}
-body.calendar-review-mode .kpi-board{grid-template-columns:1.5fr 1fr}
+body.calendar-review-mode:not(.calendar-locked) .kpi-board{grid-template-columns:1.5fr 1fr}
 #calendarConfirmDialog{width:min(570px,calc(100vw - 30px));border:1px solid #d3e2ec;border-radius:15px;padding:0;color:#153b59;box-shadow:0 23px 70px #103c5470;font:12px Arial,sans-serif}
 #calendarConfirmDialog::backdrop{background:#0e294c80}
 #calendarConfirmDialog .calendar-dialog-head{display:flex;align-items:center;justify-content:space-between;background:#f1f7fb;border-bottom:1px solid #d9e6ed;padding:14px 20px}
@@ -871,10 +871,12 @@ body.auth-ready .auth-screen{display:none}.auth-guard-note{font-size:9px;color:#
       banner.hidden=true;document.body.classList.remove('calendar-review-mode');
       window.__BAZA_ACTIVE_CALENDAR_WEEK=null;
       window.__BAZA_CALENDAR_DRAFT=false;
+      document.body.classList.remove('calendar-locked');
       return;
     }
     // Archival week uses the historic full dashboard; calendar weeks use the weekly-PC review layout.
     document.body.classList.toggle('calendar-review-mode',!isLegacyCalendar());
+    document.body.classList.toggle('calendar-locked',activeCalendar.status==='locked');
     banner.hidden=false;
     const week=activeCalendar.week_start;
     window.__BAZA_ACTIVE_CALENDAR_WEEK=week;
@@ -895,7 +897,7 @@ body.auth-ready .auth-screen{display:none}.auth-guard-note{font-size:9px;color:#
        ?'Это ещё не сформированный ПК. На главной показаны ТОЛЬКО позиции черновика выбранной недели. Заявки можно загрузить и отредактировать в разделе «Формирование ПК». До формирования черновик не передаётся на согласование.'
        :activeCalendar.status==='formed'
        ?'Сформированный ПК опубликован для рассмотрения Лидерами. Согласование происходит вне BAZA. После получения согласований администратор фиксирует эту версию.'
-       :'Зафиксированный ПК: '+(activeCalendar.approval_note||'внешнее согласование подтверждено')+'. Изменения запрещены.';
+        :'ПК зафиксирован: '+(activeCalendar.approval_note||'версия календаря закреплена')+'. Теперь согласуйте или отклоните каждый платёж отдельно; фиксация ПК не меняет статус платежей.';
     const select=document.getElementById('calendarWeekSelect');
     select.replaceChildren(...availableCalendarWeeks.map(w=>{
       const label=w.status==='legacy'?'исторический реестр':
