@@ -27,7 +27,7 @@ Deno.serve(async(req:Request)=>{
  const period=String(body?.period_id||'').trim();
  const action=String(body?.action||'preview');
  if(!/^[\w-]{5,64}$/.test(period))return reply(400,{error:'Некорректный период'});
- if(!['preview','apply_auto','approve_review'].includes(action))return reply(400,{error:'Неизвестное действие'});
+ if(!['preview','apply_auto','approve_review','manual_link','save_note'].includes(action))return reply(400,{error:'Неизвестное действие'});
  if(action!=='preview'&&!['admin','approver'].includes(profile.role))return reply(403,{error:'Подтверждение сверки доступно только согласователю и администратору'});
  async function readAll(table:string,fields:string,sort:string,limit:number){
    const all:any[]=[];
@@ -52,6 +52,51 @@ Deno.serve(async(req:Request)=>{
  const result=suggestMatches(plans,facts,{date_start:periodData.date_start,date_end:periodData.date_end});
  const suggestions={auto:result.auto.map((x:any)=>({...x,id:keyOf(x)})),review:result.review.map((x:any)=>({...x,id:keyOf(x)}))};
  if(action==='preview')return reply(200,{ok:true,period:periodData.title,period_id:period,result:{stats:result.stats,...suggestions}});
+ if(action==='save_note'){
+   const planRow=Number(body?.plan_row);
+   const comment=String(body?.user_comment??'').trim();
+   if(!Number.isInteger(planRow)||planRow<1)return reply(400,{error:'Некорректная строка плана'});
+   if(comment.length>2000)return reply(400,{error:'Пометка не должна превышать 2000 символов'});
+   const {data,error}=await admin.from('reconciliation_plan_rows').update({user_comment:comment})
+     .eq('period_id',period).eq('plan_row',planRow).select('plan_row,user_comment').maybeSingle();
+   if(error)return reply(409,{error:'Не удалось сохранить пометку: '+error.message});
+   if(!data)return reply(404,{error:'Строка плана не найдена'});
+   return reply(200,{ok:true,saved:true,plan_row:planRow});
+ }
+ if(action==='manual_link'){
+   const planRow=Number(body?.plan_row);
+   const rawRows=body?.fact_rows;
+   if(!Number.isInteger(planRow)||planRow<1)return reply(400,{error:'Некорректная строка плана'});
+   if(!Array.isArray(rawRows)||rawRows.length<1||rawRows.length>30||!rawRows.every((x:any)=>Number.isInteger(Number(x))&&Number(x)>0))
+     return reply(400,{error:'Выберите от 1 до 30 операций 1С'});
+   const factRows=rawRows.map((x:any)=>Number(x));
+   if(new Set(factRows).size!==factRows.length)return reply(400,{error:'Операция 1С выбрана несколько раз'});
+   const plan=plans.find(x=>Number(x.plan_row)===planRow);
+   if(!plan)return reply(404,{error:'Строка плана не найдена'});
+   if(plan.flow_sign!=='-')return reply(409,{error:'Вручную связывать можно только расходные строки плана'});
+   const selectedFacts=factRows.map((row:number)=>facts.find(x=>Number(x.fact_row)===row));
+   if(selectedFacts.some((x:any)=>!x))return reply(409,{error:'Одна из операций не найдена. Обновите страницу и выберите снова.'});
+   if(selectedFacts.some((x:any)=>Number(x.amount_signed)>=0||String(x.plan_refs||'').trim()||String(x.suspected_duplicate||'').trim()))
+     return reply(409,{error:'Выбрана нерасходная, уже связанная или помеченная как повтор операция'});
+   const {data:queue,error:queueError}=await admin.from('reconciliation_unlinked_facts').select('fact_row')
+     .eq('period_id',period).in('fact_row',factRows);
+   if(queueError)return reply(502,{error:'Не удалось проверить операции без связи',details:queueError.message});
+   if((queue||[]).length!==factRows.length)return reply(409,{error:'Часть операций уже распределена или исключена из списка сверки. Обновите страницу.'});
+   const amountCents=selectedFacts.reduce((sum:number,x:any)=>sum+Math.round(Math.abs(Number(x.amount_signed))*100),0);
+   const remainingCents=Math.round((Number(plan.plan_amount)-Number(plan.confirmed_amount||0))*100);
+   if(amountCents>remainingCents+1)return reply(409,{error:'Выбранные операции превышают неподтверждённый остаток строки плана'});
+   const kind=factRows.length>1?'one_to_many':amountCents>=remainingCents-1?'one_to_one':'partial';
+   const explanation='Ручная связь: операции выбраны и подтверждены пользователем. Стороны, назначение и суммы следует проверить по документам.';
+   const entries=selectedFacts.map((fact:any)=>({plan_row:planRow,fact_row:Number(fact.fact_row),
+     amount:(Math.round(Math.abs(Number(fact.amount_signed))*100)/100).toFixed(2),kind,explanation}));
+   const sessionClient=createClient(URL,ANON,{auth:{persistSession:false,autoRefreshToken:false},
+     global:{headers:{Authorization:'Bearer '+bearer[1]}}});
+   const {data:applied,error:applyError}=await sessionClient.rpc('reconciliation_apply_suggestions',{
+     p_period_id:period,p_entries:entries,p_explanation:explanation
+   });
+   if(applyError)return reply(409,{error:'Связи не сохранены: '+applyError.message});
+   return reply(200,{ok:true,applied,refresh_required:true});
+ }
  const selected=body?.selected_ids;
  if(!Array.isArray(selected)||selected.length<1||selected.length>100||!selected.every(x=>typeof x==='string'&&x.length<=200))
    return reply(400,{error:'Выберите предложения для подтверждения'});
