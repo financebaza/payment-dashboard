@@ -10,6 +10,31 @@ const CORS={'Access-Control-Allow-Origin':ORIGIN,'Access-Control-Allow-Headers':
  'Access-Control-Allow-Methods':'POST, OPTIONS','Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','Vary':'Origin'};
 function reply(status:number,body:unknown){return new Response(JSON.stringify(body),{status,headers:CORS});}
 function keyOf(s:any){return [s.kind,s.plan_rows.join(','),s.fact_rows.join(',')].join('|');}
+function approvalKey(entity:any,counterparty:any,project:any,amount:any){
+ const normalize=(x:any)=>String(x||'').toLocaleLowerCase('ru-RU').replace(/ё/g,'е').replace(/[^а-яa-z0-9]+/g,' ').trim();
+ return [normalize(entity),normalize(counterparty),normalize(project),Math.round(Number(amount||0)*100)].join('|');
+}
+function excludeRejectedPlans(plans:any[],payments:any[],approvals:any[]){
+ const statusById=new Map((approvals||[]).map((x:any)=>[String(x.payment_id),String(x.status||'')]));
+ const byKey=new Map<string,string[]>();
+ for(const payment of payments||[]){
+  const status=statusById.get(String(payment.id));if(!status)continue;
+  const key=approvalKey(payment.entity,payment.counterparty,payment.project,payment.amount);
+  if(!key||key.startsWith('|||'))continue;
+  const list=byKey.get(key)||[];list.push(status);byKey.set(key,list);
+ }
+ const debits=(plans||[]).filter((x:any)=>x.flow_sign==='-');
+ if(!debits.length)return [];
+ let covered=0;const rejected:any[]=[];
+ for(const plan of debits){
+  const matches=byKey.get(approvalKey(plan.payer,plan.counterparty,plan.project,plan.plan_amount))||[];
+  if(!matches.length)continue;
+  covered++;
+  if(matches.every(status=>status==='rejected'))rejected.push(plan);
+ }
+ // Avoid applying the current registry to an unrelated historical reconciliation period.
+ return covered/debits.length>=0.8?rejected:[];
+}
 Deno.serve(async(req:Request)=>{
  if(req.method==='OPTIONS')return new Response(null,{status:204,headers:CORS});
  if(req.method!=='POST')return reply(405,{error:'Используйте POST'});
@@ -29,25 +54,32 @@ Deno.serve(async(req:Request)=>{
  if(!/^[\w-]{5,64}$/.test(period))return reply(400,{error:'Некорректный период'});
  if(!['preview','apply_auto','approve_review','manual_link','save_note'].includes(action))return reply(400,{error:'Неизвестное действие'});
  if(action!=='preview'&&!['admin','approver'].includes(profile.role))return reply(403,{error:'Подтверждение сверки доступно только согласователю и администратору'});
- async function readAll(table:string,fields:string,sort:string,limit:number){
+ async function readAll(table:string,fields:string,sort:string,limit:number,periodScoped=true){
    const all:any[]=[];
    for(let start=0;start<limit;start+=1000){
-     const {data,error}=await admin.from(table).select(fields).eq('period_id',period).order(sort).range(start,start+999);
+     const query=admin.from(table).select(fields);
+     const {data,error}=periodScoped
+       ?await query.eq('period_id',period).order(sort).range(start,start+999)
+       :await query.order(sort).range(start,start+999);
      if(error)throw Error(error.message);
      all.push(...(data||[]));
      if(!data||data.length<1000)return all;
    }
    throw Error('Слишком много строк для одного периода. Данные не должны сверяться частично.');
  }
- let periodData:any,plans:any[],facts:any[];
+ let periodData:any,plans:any[],facts:any[],payments:any[],approvals:any[];
  try{
    const {data,error}=await admin.from('reconciliation_periods').select('period_id,title,date_start,date_end,summary').eq('period_id',period).maybeSingle();
    if(error||!data)throw Error(error?.message||'Период не найден');
    periodData=data;
-   [plans,facts]=await Promise.all([
+   [plans,facts,payments,approvals]=await Promise.all([
      readAll('reconciliation_plan_rows','plan_row,payer,counterparty,flow_sign,flow_type,plan_amount,confirmed_amount,subcategory,project,notes,payment_purpose','plan_row',3000),
-     readAll('reconciliation_fact_operations','fact_row,operation_date,payer,counterparty,amount_signed,flow_type,reconciliation_status,plan_refs,payment_purpose,suspected_duplicate','fact_row',5000)
+     readAll('reconciliation_fact_operations','fact_row,operation_date,payer,counterparty,amount_signed,flow_type,reconciliation_status,plan_refs,payment_purpose,suspected_duplicate','fact_row',5000),
+     readAll('payments','id,entity,counterparty,project,amount','id',5000,false),
+     readAll('payment_approvals','payment_id,status','payment_id',5000,false)
    ]);
+   const excludedRows=new Set(excludeRejectedPlans(plans,payments,approvals).map((x:any)=>Number(x.plan_row)));
+   plans=plans.filter((plan:any)=>!excludedRows.has(Number(plan.plan_row)));
  }catch(e){return reply(502,{error:'Не удалось загрузить весь период сверки',details:e instanceof Error?e.message:String(e)});}
  const result=suggestMatches(plans,facts,{date_start:periodData.date_start,date_end:periodData.date_end});
  const suggestions={auto:result.auto.map((x:any)=>({...x,id:keyOf(x)})),review:result.review.map((x:any)=>({...x,id:keyOf(x)}))};
