@@ -252,6 +252,21 @@ dialog::backdrop{background:rgba(11,39,64,.45)}
 .pf-match-dialog #matcherApplyAuto,.pf-match-dialog #matcherApproveReview{margin-top:12px}
 .pf-match-footnote{margin:17px 0 0;color:#8197a7;font-size:10px;line-height:1.6}
 .pf-match-error{color:#b12235;font-weight:700}
+.pf-row-notes{margin-top:16px;border-top:1px solid var(--border);padding-top:14px}
+.pf-row-notes label,.pf-manual-match label{display:block;font-size:10px;font-weight:800;color:#56738a;margin:0 0 6px}
+.pf-row-notes textarea,.pf-manual-match input[type=search]{width:100%;border:1px solid var(--border);border-radius:8px;padding:9px;color:var(--ink);background:#fff}
+.pf-row-notes textarea{min-height:72px;resize:vertical}
+.pf-row-notes button,.pf-manual-match button{margin-top:8px;border:1px solid #cbdce9;background:#fff;color:var(--navy);border-radius:7px;padding:8px 11px;font-weight:800}
+.pf-row-notes button:hover,.pf-manual-match button:hover{background:#edf6fb}
+.pf-manual-match{margin-top:14px;padding:12px;border:1px solid #d8e6f0;border-radius:10px;background:#f8fbfd}
+.pf-manual-match summary{font-weight:800;cursor:pointer}
+.pf-manual-candidates{max-height:300px;overflow:auto;display:grid;gap:6px;margin-top:8px}
+.pf-manual-candidate{display:flex;align-items:start;gap:9px;padding:9px;border:1px solid #dce7ef;border-radius:8px;background:#fff}
+.pf-manual-candidate input{margin-top:3px}
+.pf-manual-candidate strong,.pf-manual-candidate small,.pf-manual-candidate em{display:block}
+.pf-manual-candidate strong{font-size:10px}.pf-manual-candidate small{font-size:9px;color:#70899d;margin-top:3px}.pf-manual-candidate em{font-size:9px;color:#56738a;font-style:normal;margin-top:3px}
+.pf-manual-summary{font-size:10px;color:#56738a;margin-top:9px}
+.pf-manual-match button:disabled,.pf-row-notes button:disabled{opacity:.55;cursor:not-allowed}
 @media(max-width:650px){.pf-match-controls{justify-content:flex-start}.pf-match-summary{gap:7px}.pf-match-dialog .dialog-body{padding:13px}}
 
 
@@ -476,6 +491,7 @@ dialog::backdrop{background:rgba(11,39,64,.45)}
  const session=window.BazaSession;
  session.configure({url:BASE,key:KEY});session.start();
  const MAX_ROWS=35;
+ let manualPlanRow=null,manualSelectedFacts=new Set();
  const STATUS={confirmed:['Оплачено','Оплачено с расхождением','Группа оплачена','Техпоток исполнен'],review:['Проверить совпадение','Проверить группу оплат','Возможна частичная оплата','Частично подтверждено по 1С']};
  const STATUS_TITLE={confirmed:'Подтверждено',review:'На проверку',missing:'Не найдено',unconfirmed:'Не подтверждено'};
  const LABELS={bucket:'Результат',direction:'Направление',project:'Проект',flow:'Тип потока'};
@@ -738,7 +754,10 @@ dialog::backdrop{background:rgba(11,39,64,.45)}
     labeled('Тип потока',r.flow_type)+labeled('Подстатья',r.subcategory)+
     labeled('Исторический факт в календаре',r.manual_fact_amount==null?'—':money2(r.manual_fact_amount))+
     labeled('Уверенность',r.confidence)+'</dl>'+
-    block('Основание сверки / что проверить',r.notes)+block('Назначение подтверждённых платежей',r.payment_purpose);
+    block('Основание сверки / что проверить',r.notes)+block('Назначение подтверждённых платежей',r.payment_purpose)+
+    '<div class="pf-row-notes"><label for="planUserComment">Пометка по расхождению</label><textarea id="planUserComment" maxlength="2000" '+(canConfirmMatches()?'':'readonly')+' placeholder="Например: ждём акт, платежи объединены, расход не относится к плану…">'+esc(r.user_comment||'')+'</textarea>'+
+    (canConfirmMatches()?'<button type="button" id="savePlanUserComment" data-plan-row="'+r.plan_row+'">Сохранить пометку</button>':'')+'</div>'+
+    (canConfirmMatches()&&Number(r.unverified_amount)>0?'<details class="pf-manual-match" id="manualMatchPanel"><summary>Связать с операцией 1С вручную</summary><p>Выберите одну или несколько нераспределённых расходных операций. Каждая операция будет распределена полностью.</p><label for="manualFactSearch">Поиск по юрлицу, контрагенту, назначению или номеру 1С</label><input type="search" id="manualFactSearch" placeholder="Введите часть названия или назначения"><div class="pf-manual-candidates" id="manualFactCandidates"></div><div class="pf-manual-summary" id="manualLinkSummary"></div><button type="button" id="manualLinkSubmit" data-plan-row="'+r.plan_row+'" disabled>Подтвердить выбранные связи</button></details>':'');
   }else if(type==='unlinked'){
    const r=st.unlinked.find(x=>String(x.fact_row)===String(id));if(!r)return;
    title='Операция 1С · строка '+r.fact_row;
@@ -754,6 +773,10 @@ dialog::backdrop{background:rgba(11,39,64,.45)}
   }
   el('detailTitle').textContent=title;el('detailBody').innerHTML=content;
   el('detailModal').showModal();
+  if(type==='plan'){
+   manualPlanRow=Number(id);manualSelectedFacts.clear();
+   if(el('manualFactCandidates'))renderManualFactCandidates(manualPlanRow);
+  }
  }
  async function init(){
   try{
@@ -776,10 +799,39 @@ dialog::backdrop{background:rgba(11,39,64,.45)}
 
  let matcherPreview=null;
  const canConfirmMatches=()=>['admin','approver'].includes(st.user?.role);
- async function matcherRequest(action,selectedIds=[]){
+ function manualFactScore(plan,fact){
+  const normalize=x=>String(x||'').toLocaleLowerCase('ru-RU').replace(/ё/g,'е').replace(/[^а-яa-z0-9]+/g,' ').trim();
+  const p=normalize(plan.payer),c=normalize(plan.counterparty),fp=normalize(fact.payer),fc=normalize(fact.counterparty+' '+fact.payment_purpose);
+  let score=0;if(p&&fp&&(p===fp||p.includes(fp)||fp.includes(p)))score+=5;
+  if(c&&fc&&(fc.includes(c)||c.split(' ').some(w=>w.length>3&&fc.includes(w))))score+=4;
+  const left=Math.max(0,Number(plan.unverified_amount)||0),amount=Math.abs(Number(fact.amount)||0);
+  score+=Math.max(0,2-Math.abs(left-amount)/Math.max(left,1));
+  return score;
+ }
+ function renderManualFactCandidates(planRow,query=''){
+  const plan=st.plans.find(x=>Number(x.plan_row)===Number(planRow));if(!plan)return;
+  const limit=Math.max(0,Number(plan.unverified_amount)||0),q=String(query||'').toLocaleLowerCase('ru-RU').trim();
+  const rows=st.unlinked.filter(x=>{
+   const text=[x.payer,x.counterparty,x.fact_row,x.project,x.payment_purpose].join(' ').toLocaleLowerCase('ru-RU');
+   return Number(x.amount)>0&&Number(x.amount)<=limit+0.01&&(!q||text.includes(q));
+  }).slice().sort((a,b)=>manualFactScore(plan,b)-manualFactScore(plan,a)||Number(a.fact_row)-Number(b.fact_row));
+  el('manualFactCandidates').innerHTML=rows.length?rows.map(x=>
+   '<label class="pf-manual-candidate"><input type="checkbox" data-manual-fact="'+x.fact_row+'" '+(manualSelectedFacts.has(Number(x.fact_row))?'checked':'')+'><span><strong>1С №'+x.fact_row+' · '+money2(x.amount)+' · '+esc(x.operation_date||'дата не указана')+'</strong><small>'+esc(x.payer)+' → '+esc(x.counterparty||'контрагент не указан')+(x.project?' · '+esc(x.project):'')+'</small><em>'+esc(x.payment_purpose||'Назначение не указано')+'</em></span></label>'
+  ).join(''):'<div class="empty">Подходящих нераспределённых расходов не найдено</div>';
+  updateManualLinkSummary(planRow);
+ }
+ function updateManualLinkSummary(planRow){
+  const plan=st.plans.find(x=>Number(x.plan_row)===Number(planRow));if(!plan||!el('manualLinkSummary'))return;
+  const facts=[...manualSelectedFacts].map(id=>st.unlinked.find(x=>Number(x.fact_row)===id)).filter(Boolean);
+  const total=facts.reduce((sum,x)=>sum+Math.round(Number(x.amount)*100),0)/100;
+  const remaining=Math.max(0,Number(plan.unverified_amount)||0);
+  el('manualLinkSummary').textContent='Выбрано '+facts.length+' операций на '+money2(total)+' · остаток плана '+money2(remaining)+(total>remaining+0.01?' · сумма превышает остаток!':'');
+  const button=el('manualLinkSubmit');if(button)button.disabled=!facts.length||total>remaining+0.01;
+ }
+ async function matcherRequest(action,selectedIds=[],extra={}){
   const response=await session.fetch(BASE+'/functions/v1/baza-reconcile',{method:'POST',
     headers:{...authHeaders(session.token()),'Content-Type':'application/json'},
-    body:JSON.stringify({period_id:st.period.period_id,action,selected_ids:selectedIds})});
+    body:JSON.stringify({period_id:st.period.period_id,action,selected_ids:selectedIds,...extra})});
   const data=await response.json().catch(()=>({}));
   st.token=session.token();
   if(!response.ok||!data.ok)throw Error(data.error||'Ошибка сервиса сверки: HTTP '+response.status);
@@ -1062,6 +1114,31 @@ dialog::backdrop{background:rgba(11,39,64,.45)}
  el('unlinkedSearch').oninput=e=>{st.unlinkedQuery=e.target.value;st.unlinkedShown=MAX_ROWS;renderUnlinkedTable()};
  el('unlinkedMore').onclick=()=>{st.unlinkedShown+=MAX_ROWS;renderUnlinkedTable()};
  el('periodSelect').onchange=async e=>{const p=st.periods.find(x=>x.period_id===e.target.value);if(!p)return;st.period=p;el('app').hidden=true;el('loadState').hidden=false;try{await loadPeriod()}catch(err){note(err.message,true)}};
+ el('detailBody').addEventListener('input',event=>{
+  if(event.target.id==='manualFactSearch')renderManualFactCandidates(manualPlanRow,event.target.value);
+ });
+ el('detailBody').addEventListener('change',event=>{
+  const box=event.target.closest('[data-manual-fact]');if(!box)return;
+  const id=Number(box.dataset.manualFact);if(box.checked)manualSelectedFacts.add(id);else manualSelectedFacts.delete(id);
+  updateManualLinkSummary(manualPlanRow);
+ });
+ el('detailBody').addEventListener('click',async event=>{
+  const save=event.target.closest('#savePlanUserComment');
+  if(save){
+   const row=Number(save.dataset.planRow),comment=el('planUserComment').value.trim();
+   save.disabled=true;save.textContent='Сохраняем…';
+   try{await matcherRequest('save_note',[],{plan_row:row,user_comment:comment});await loadPeriod();openDetail(row,'plan');note('Пометка сохранена.')}
+   catch(error){note(error.message||'Не удалось сохранить пометку',true);save.disabled=false;save.textContent='Сохранить пометку'}
+   return;
+  }
+  const link=event.target.closest('#manualLinkSubmit');
+  if(link){
+   const row=Number(link.dataset.planRow),factRows=[...manualSelectedFacts];
+   link.disabled=true;link.textContent='Сохраняем связи…';
+   try{await matcherRequest('manual_link',[],{plan_row:row,fact_rows:factRows});await loadPeriod();openDetail(row,'plan');note('Связи сохранены, показатели обновлены.')}
+   catch(error){note(error.message||'Не удалось сохранить связи',true);link.disabled=false;link.textContent='Подтвердить выбранные связи'}
+  }
+ });
  el('closeDetail').onclick=()=>el('detailModal').close();
  el('detailModal').addEventListener('click',e=>{if(e.target===el('detailModal'))el('detailModal').close()});
  init();
