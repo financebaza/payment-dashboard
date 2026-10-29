@@ -250,6 +250,14 @@ body.calendar-review-mode:not(.calendar-locked) .kpi-board{grid-template-columns
 #registry .registry-select-help button{background:white;border:1px solid #ccdaea;border-radius:7px;color:#365c79;padding:8px 12px;font-size:10px;font-weight:800;cursor:pointer}
 #registry .registry-select-help button:disabled{opacity:.5;cursor:default}
 #registry .registry-select-help button:not(:disabled):hover{background:#eaf1f7}
+#registry .registry-bulk-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
+#registry .registry-bulk-actions button{font-weight:800}
+#registry .registry-bulk-actions .bulk-approve{color:#28784d;border-color:#bddbc8}
+#registry .registry-bulk-actions .bulk-reject{color:#b53d45;border-color:#efc4c7}
+#registry .registry-head-actions{display:flex;align-items:center;gap:12px}
+#registry #exportRegistryExcel{background:#fff;border:1px solid #ccdaea;border-radius:7px;padding:8px 12px;color:#365c79;font-weight:800}
+#registry #exportRegistryExcel:hover{background:#eaf1f7}
+.role-viewer .bulk-action{display:none!important}
 #registry .registry-checkbox-head,#registry .registry-checkbox-cell{width:38px!important;min-width:38px!important;max-width:38px!important;text-align:center!important;padding:8px 4px!important}
 #registry .registry-checkbox-head input,#registry .registry-checkbox-cell input{width:16px;height:16px;accent-color:#e51d2a;cursor:pointer;vertical-align:middle}
 #registry #paymentTable tr.registry-row-selected{background:#fff0f1}
@@ -309,10 +317,10 @@ body.calendar-review-mode:not(.calendar-locked) .kpi-board{grid-template-columns
 </div>
 <div class="board entity-board"><div class="board-title"><h3>Платежи вне ГК по юрлицам</h3><span>рейтинг · по сумме платежей</span></div><div id="entityRank" class="entity-list"></div></div></section>
 <section class="status-strip"><div><b>Согласование</b><small>нажмите на статус для фильтрации реестра</small></div><div class="counts"><span class="count approved" data-quick="approved"><i></i>Согласовано <b id="approvedCount">0</b></span><span class="count rejected" data-quick="rejected"><i></i>Не согласовано <b id="rejectedCount">0</b></span><span class="count pending" data-quick="pending"><i></i>Ожидает <b id="pendingCount">0</b></span></div></section>
-<section class="registry" id="registry"><div class="registry-head"><div><div class="eyebrow">РЕЕСТР · ТОЛЬКО РАСХОДНЫЕ ОПЕРАЦИИ</div><h2>Платежи к согласованию</h2></div><span id="rowsCount">—</span></div><div class="registry-sums" aria-live="polite">
+<section class="registry" id="registry"><div class="registry-head"><div><div class="eyebrow">РЕЕСТР · ТОЛЬКО РАСХОДНЫЕ ОПЕРАЦИИ</div><h2>Платежи к согласованию</h2></div><div class="registry-head-actions"><button type="button" id="exportRegistryExcel" title="Скачать текущий список с учётом фильтров, статусов и комментариев">Скачать Excel</button><span id="rowsCount">—</span></div></div><div class="registry-sums" aria-live="polite">
  <div class="registry-sum registry-sum-filter"><span>СУММА ПО ТЕКУЩИМ ФИЛЬТРАМ</span><strong id="registryFilteredSum">0,00 ₽</strong><small id="registryFilteredCount">0 платежей</small></div>
  <div class="registry-sum registry-sum-selected"><span>СУММА ВЫДЕЛЕННЫХ ПЛАТЕЖЕЙ</span><strong id="registrySelectedSum">0,00 ₽</strong><small id="registrySelectedCount">Выбрано: 0</small></div>
- <div class="registry-select-help"><span>Выбирай строки галочками. Shift + клик — диапазон.</span><button type="button" id="registryClearSelection" disabled>Снять выделение</button></div>
+ <div class="registry-select-help"><span>Выбирай строки галочками. Shift + клик — диапазон.</span><div class="registry-bulk-actions"><button type="button" id="registryBulkApprove" class="bulk-action bulk-approve" disabled>✓ Согласовать выбранные</button><button type="button" id="registryBulkReject" class="bulk-action bulk-reject" disabled>✕ Отклонить выбранные</button></div><button type="button" id="registryClearSelection" disabled>Снять выделение</button></div>
 </div><div class="table-card"><div class="table-wrap"><table><thead><tr><th class="registry-checkbox-head"><input type="checkbox" id="registrySelectAll" aria-label="Выделить все платежи текущего фильтра" title="Выбрать все показанные платежи"></th><th>Юрлицо<select class="column-filter" data-field="entity"><option value="">Все</option></select></th><th>Контрагент<select class="column-filter" data-field="counterparty"><option value="">Все</option></select></th><th>Направление<select class="column-filter" data-field="direction"><option value="">Все</option></select></th><th>Проект<select class="column-filter" data-field="project"><option value="">Все</option></select></th><th>Подстатья<select class="column-filter" data-field="subcategory"><option value="">Все</option></select></th><th>Источник<select class="column-filter" data-field="source"><option value="">Все</option></select></th><th>Сумма</th><th>Статус / действие<select class="column-filter" data-field="status"><option value="">Все</option><option value="pending">Ожидает</option><option value="approved">Согласован</option><option value="rejected">Не согласован</option></select></th><th>Комментарий</th></tr></thead><tbody id="paymentTable"></tbody></table></div></div></section>
 </div>
 <div id="modal" class="modal hidden"><div class="backdrop"></div><div class="modal-card"><button class="close" id="modalClose">×</button><div class="eyebrow">КАРТОЧКА ПЛАТЕЖА</div><h2 id="modalCounterparty">—</h2><div id="modalAmount" class="amount">—</div><div id="modalStatus"></div><div id="modalDetails" class="details"></div><div class="comment"><label>Комментарий</label><textarea id="modalComment" placeholder="Причина отказа или дополнительный комментарий…"></textarea></div><div class="modal-actions"><button id="modalApprove" class="approve">✓ Согласовать</button><button id="modalReject" class="reject">✕ Отклонить</button><button id="modalSaveComment">Сохранить комментарий</button></div></div></div>
@@ -514,6 +522,8 @@ function updateRegistrySums(){
  document.getElementById('registrySelectedSum').textContent=registryExactMoneyCents(registryCents(selectedRows));
  document.getElementById('registrySelectedCount').textContent='Выбрано: '+selectedRows.length;
  document.getElementById('registryClearSelection').disabled=selectedRows.length===0;
+ document.getElementById('registryBulkApprove').disabled=selectedRows.length===0;
+ document.getElementById('registryBulkReject').disabled=selectedRows.length===0;
  const master=document.getElementById('registrySelectAll');
  master.disabled=registryVisibleRows.length===0;
  master.checked=registryVisibleRows.length>0&&selectedRows.length===registryVisibleRows.length;
@@ -593,6 +603,66 @@ paymentTable.addEventListener('click',e=>{
 document.getElementById('registryClearSelection').addEventListener('click',()=>{
  registrySelectedIds.clear();registryLastAnchor=-1;updateRegistrySums();
 });
+async function saveBulkApproval(status){
+ const selectedRows=registryVisibleRows.filter(r=>registrySelectedIds.has(String(r.id)));
+ if(!selectedRows.length){alert('Сначала отметьте платежи галочками.');return}
+ if(selectedRows.some(r=>!isRegistryOutgoing(r))){alert('В выборке есть операции, которые нельзя согласовывать.');return}
+ if(window.__BAZA_CALENDAR_DRAFT){alert('Черновик нельзя согласовывать. Сначала сформируйте ПК.');return}
+ if(!['admin','approver'].includes(window.__BAZA_AUTH_ROLE||'')){alert('Для согласования платежей необходима роль согласующего или администратора.');return}
+ if(typeof window.approvalHeaders!=='function'){alert('Нет активной сессии. Войдите в систему повторно.');return}
+ const amount=registryExactMoneyCents(registryCents(selectedRows));
+ const label=status==='approved'?'согласовать':'отклонить';
+ if(!confirm('Пачкой '+label+' '+selectedRows.length+' платежей на сумму '+amount+'?'))return;
+ let sharedComment=null;
+ if(status==='rejected'){
+  sharedComment=prompt('Комментарий к отказу для всех выбранных платежей (необязательно):','');
+  if(sharedComment===null)return;
+  sharedComment=sharedComment.trim()||null;
+ }
+ const now=new Date().toISOString();
+ const payload=selectedRows.map(r=>({
+  payment_id:String(r.id),status,
+  comment:status==='rejected'?sharedComment:getComment(r.id)||null,
+  approved_by:window.__BAZA_AUTH_NAME||'',
+  approved_by_user_id:window.__BAZA_AUTH_USER_ID||null,
+  updated_at:now
+ }));
+ const buttons=[document.getElementById('registryBulkApprove'),document.getElementById('registryBulkReject')];
+ buttons.forEach(b=>b.disabled=true);
+ try{
+  const res=await window.BazaSession.fetch(SUPABASE_URL+'/rest/v1/payment_approvals?on_conflict=payment_id',{
+   method:'POST',headers:window.approvalHeaders({Prefer:'resolution=merge-duplicates,return=representation'}),
+   body:JSON.stringify(payload)
+  });
+  if(!res.ok){const err=await res.json().catch(()=>({}));throw new Error('Не удалось сохранить пачку согласований: '+(err.message||'HTTP '+res.status))}
+  const saved=await res.json();
+  const byId=new Map((saved||[]).map(x=>[String(x.payment_id),x]));
+  payload.forEach(p=>{approvals[p.payment_id]=byId.get(p.payment_id)||p});
+  registrySelectedIds.clear();registryLastAnchor=-1;render();
+ }catch(e){alert(e.message||'Ошибка сохранения пачки. Попробуйте ещё раз.')}
+ finally{buttons.forEach(b=>b.disabled=false);updateRegistrySums()}
+}
+document.getElementById('registryBulkApprove').addEventListener('click',()=>saveBulkApproval('approved'));
+document.getElementById('registryBulkReject').addEventListener('click',()=>saveBulkApproval('rejected'));
+function xmlCell(value,type='String'){
+ const clean=String(value??'').replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g,'');
+ return '<Cell><Data ss:Type="'+type+'">'+clean.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;')+'</Data></Cell>';
+}
+function exportRegistryExcel(){
+ const list=rows();
+ const headers=['Юрлицо','Контрагент','Направление','Проект','Подстатья','Источник','Сумма, ₽','Статус согласования','Комментарий'];
+ const data=list.map(r=>[
+  r.entity,r.counterparty,r.direction,r.project,r.subcategory,r.source,
+  String(Number(r.amount)||0),getStatus(r.id)==='approved'?'Согласован':getStatus(r.id)==='rejected'?'Не согласован':'Ожидает',getComment(r.id)
+ ]);
+ const rowsXml=[headers,...data].map((row,i)=>'<Row>'+row.map((v,j)=>xmlCell(v,i>0&&j===6?'Number':'String')).join('')+'</Row>').join('');
+ const xml='<?xml version="1.0" encoding="UTF-8"?><?mso-application progid="Excel.Sheet"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"><Worksheet ss:Name="Реестр платежей"><Table>'+rowsXml+'</Table></Worksheet></Workbook>';
+ const blob=new Blob(['\ufeff',xml],{type:'application/vnd.ms-excel;charset=utf-8'});
+ const url=URL.createObjectURL(blob),a=document.createElement('a');
+ a.href=url;a.download='Реестр_платежей_'+new Date().toISOString().slice(0,10)+'.xls';
+ document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+document.getElementById('exportRegistryExcel').addEventListener('click',exportRegistryExcel);
 const DASHBOARD_LABELS={counterparty:'Контрагент',entity:'Юрлицо',direction:'Направление',project:'Проект',subcategory:'Подстатья',source:'Источник',status:'Статус'};
 const STATUS_LABELS={pending:'Ожидает',approved:'Согласован',rejected:'Не согласован'};
 function syncDashboardSelectors(){
