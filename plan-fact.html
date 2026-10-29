@@ -310,7 +310,8 @@ dialog::backdrop{background:rgba(11,39,64,.45)}
 @media(max-width:940px){.pf-liq-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:530px){.pf-liq-kpi strong{font-size:17px}.pf-liq-actions input[type=text]{min-width:0;width:100%}}
 
-</style>
+  .rejected-plan-notice{margin:10px 0;padding:10px 13px;border:1px solid #ecd59c;border-radius:9px;background:#fffaf0;color:#795b1e;font-size:11px;line-height:1.5}
+ </style>
 </head>
 <body>
 <div class="page">
@@ -341,7 +342,7 @@ dialog::backdrop{background:rgba(11,39,64,.45)}
   <button class="tab" data-tab="liquidity" role="tab" aria-selected="false">Остатки ДС · План / факт</button>
   <span class="right-label" id="loadedAs"></span>
  </div>
- <div id="chips" class="chips"></div><div id="filterSummary" class="filter-summary" hidden></div>
+ <div id="chips" class="chips"></div><div id="filterSummary" class="filter-summary" hidden></div><div id="rejectedPlanNotice" class="rejected-plan-notice" hidden></div>
  <section id="overviewSection">
    <div class="pf-kpi-row pf-primary">
      <div class="kpi emphasis drill-kpi" data-kpi="plan" role="button" tabindex="0" aria-label="Открыть реестр плановых платежей">
@@ -512,7 +513,7 @@ dialog::backdrop{background:rgba(11,39,64,.45)}
    if(x.toLowerCase()==='инвест направления')return 'Инвест';
    return x;
  };
- const st={user:null,token:'',periods:[],period:null,plans:[],unlinked:[],outside:[],tab:'overview',bucket:'',direction:'',project:'',query:'',flow:'',planShown:MAX_ROWS,unlinkedShown:MAX_ROWS,unlinkedQuery:''};
+ const st={user:null,token:'',periods:[],period:null,plans:[],excludedPlans:[],unlinked:[],outside:[],tab:'overview',bucket:'',direction:'',project:'',query:'',flow:'',planShown:MAX_ROWS,unlinkedShown:MAX_ROWS,unlinkedQuery:''};
  const note=(message,error=false)=>{el('loadState').innerHTML='<div class="notice'+(error?' error':'')+'" style="display:inline-flex;margin:0"><span class="symbol">'+(error?'!':'i')+'</span><span>'+esc(message)+'</span></div>'};
  function authHeaders(token){return {apikey:KEY,Authorization:'Bearer '+token,Accept:'application/json'};}
  async function refresh(){return session.refresh({force:true,previousToken:st.token});}
@@ -535,20 +536,84 @@ dialog::backdrop{background:rgba(11,39,64,.45)}
   st.token=session.token();
   return response.json();
  }
+ function approvalKey(entity,counterparty,project,amount){
+  const normalize=x=>String(x||'').toLocaleLowerCase('ru-RU').replace(/ё/g,'е').replace(/[^а-яa-z0-9]+/g,' ').trim();
+  return [normalize(entity),normalize(counterparty),normalize(project),Math.round(Number(amount||0)*100)].join('|');
+ }
+ function rejectedPlanRowsFromApprovals(plans,payments,approvals){
+  const statusById=new Map((approvals||[]).map(x=>[String(x.payment_id),String(x.status||'')]));
+  const paymentsByKey=new Map();
+  for(const payment of payments||[]){
+   const status=statusById.get(String(payment.id));
+   if(!status)continue;
+   const key=approvalKey(payment.entity,payment.counterparty,payment.project,payment.amount);
+   if(!key||key.startsWith('|||'))continue;
+   const list=paymentsByKey.get(key)||[];list.push(status);paymentsByKey.set(key,list);
+  }
+  const debits=(plans||[]).filter(x=>x.flow_sign==='-');
+  if(!debits.length)return [];
+  let covered=0;
+  const rejected=[];
+  for(const plan of debits){
+   const candidates=paymentsByKey.get(approvalKey(plan.payer,plan.counterparty,plan.project,plan.plan_amount))||[];
+   if(!candidates.length)continue;
+   covered++;
+   if(candidates.every(status=>status==='rejected'))rejected.push(plan);
+  }
+  // The payment registry is week-specific. Only apply its statuses when it matches
+  // most of this reconciliation period; this prevents a later/older registry from
+  // incorrectly excluding unrelated historical plan rows.
+  return covered/debits.length>=0.8?rejected:[];
+ }
+ function subtractRejectedPlanFromSummary(source,rejected){
+  const summary={...(source||{})};
+  const amount=rejected.reduce((n,r)=>n+Number(r.plan_amount||0),0);
+  const confirmed=rejected.reduce((n,r)=>n+Number(r.confirmed_amount||0),0);
+  const otherConfirmed=rejected.filter(r=>r.flow_type==='Прочие платежи').reduce((n,r)=>n+Number(r.confirmed_amount||0),0);
+  summary.rows=Math.max(0,Number(summary.rows||0)-rejected.length);
+  summary.plan_debits=Math.max(0,Number(summary.plan_debits||0)-amount);
+  summary.confirmed_total=Math.max(0,Number(summary.confirmed_total||0)-confirmed);
+  summary.confirmed_other_plan=Math.max(0,Number(summary.confirmed_other_plan||0)-otherConfirmed);
+  summary.without_confirmed=Math.max(0,Number(summary.plan_debits||0)-Number(summary.confirmed_total||0));
+  const removed={confirmed:0,review:0,missing:0};
+  for(const row of rejected){
+   const bucket=statusBucket(row.match_status);
+   removed[bucket]=(removed[bucket]||0)+1;
+  }
+  summary.confirmed=Math.max(0,Number(summary.confirmed||0)-removed.confirmed);
+  summary.review=Math.max(0,Number(summary.review||0)-removed.review);
+  summary.unfound=Math.max(0,Number(summary.unfound||0)-removed.missing);
+  if(Array.isArray(summary.statuses))summary.statuses=summary.statuses.map(item=>{
+   const bucket=statusBucket(item.status);
+   return {...item,count:Math.max(0,Number(item.count||0)-(removed[bucket]||0))};
+  }).filter(item=>item.count>0);
+  return summary;
+ }
  async function loadPeriod(){
   const p=st.period;
   if(!p)return;
   note('Загружаем заявки и фактические платежи…');
   const key=encodeURIComponent(p.period_id);
-  const [plans,unlinked,outside]=await Promise.all([
+  const [sourcePlans,unlinked,outside,payments,approvals]=await Promise.all([
     rest('reconciliation_plan_rows','select=*&period_id=eq.'+key+'&order=plan_row.asc&limit=1000'),
     rest('reconciliation_unlinked_facts','select=*&period_id=eq.'+key+'&order=amount.desc&limit=1000'),
-    rest('reconciliation_offcalendar','select=*&period_id=eq.'+key+'&order=calendar_row.asc&limit=1000')
+    rest('reconciliation_offcalendar','select=*&period_id=eq.'+key+'&order=calendar_row.asc&limit=1000'),
+    rest('payments','select=id,entity,counterparty,project,amount&limit=5000&order=id.asc'),
+    rest('payment_approvals','select=payment_id,status&limit=5000&order=payment_id.asc')
   ]);
-  st.plans=plans;st.unlinked=unlinked;st.outside=outside;
   const expected=Number(p.summary&&p.summary.rows);
-  if(expected&&st.plans.length!==expected)throw Error('Выгрузка сверки неполная: получено '+st.plans.length+' из '+expected+' заявок.');
-  el('tabPlanCount').textContent='· '+int(plans.length);
+  if(expected&&sourcePlans.length!==expected)throw Error('Выгрузка сверки неполная: получено '+sourcePlans.length+' из '+expected+' заявок.');
+  st.excludedPlans=rejectedPlanRowsFromApprovals(sourcePlans,payments,approvals);
+  const excludedRows=new Set(st.excludedPlans.map(r=>Number(r.plan_row)));
+  st.plans=sourcePlans.filter(r=>!excludedRows.has(Number(r.plan_row)));
+  st.period={...p,summary:subtractRejectedPlanFromSummary(p.summary,st.excludedPlans)};
+  st.unlinked=unlinked;st.outside=outside;
+  const excludedTotal=st.excludedPlans.reduce((n,r)=>n+Number(r.plan_amount||0),0);
+  const rejectionNote=el('rejectedPlanNotice');
+  rejectionNote.hidden=!st.excludedPlans.length;
+  rejectionNote.textContent=st.excludedPlans.length
+   ?'Из сверки исключены '+int(st.excludedPlans.length)+' несогласованные заявки на '+money(excludedTotal)+'. Они не сопоставляются с фактами; если платёж прошёл, его можно проверить во вкладке «Факт без связи».':'';
+  el('tabPlanCount').textContent='· '+int(st.plans.length);
   el('tabUnlinkedCount').textContent='· '+int(unlinked.length);
   el('tabOffCount').textContent='· '+int(outside.length);
   st.bucket='';st.direction='';st.project='';st.query='';st.flow='';st.planShown=MAX_ROWS;st.unlinkedShown=MAX_ROWS;st.unlinkedQuery='';
