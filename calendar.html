@@ -343,7 +343,7 @@ fieldset{border:none;padding:0;margin:0}dialog{border:1px solid #cfdeea;border-r
   <p class="opening-info" id="openingFileInfo">Загружаем данные...</p>
   <div class="opening-date-row"><label for="openingReportDate">Дата остатков в отчёте 1С <input type="date" id="openingReportDate"></label>
    <span id="openingExpectedDate"></span></div>
-  <p class="opening-method">Для свободных остатков автоматически берём <b>счёт 51 · Расчётные счета · Собственные средства = Да</b> и суммируем по юридическому лицу. Депозиты, касса, 76.05, временные средства и пустые суммы не включаются. При необходимости остаток можно изменить вручную в таблице прогноза после импорта.</p>
+  <p class="opening-method">Для начальных остатков учитываем собственные средства по расчётным счетам, депозитам и счёту 76.05 и суммируем их по юрлицу. Кассу и наличные объединяем в отдельную строку «Наличные». Временные средства и пустые суммы исключаются. При необходимости остаток можно изменить вручную в таблице прогноза после импорта.</p>
   <div id="openingImportWarnings" class="opening-warnings" hidden></div>
   <div class="opening-table-wrap"><table><thead><tr><th>Включить</th><th>Юрлицо в 1С</th><th>Юрлицо в BAZA</th><th style="text-align:right">Начальный остаток 1С</th><th style="text-align:right">Сейчас в BAZA</th></tr></thead><tbody id="openingImportBody"></tbody></table></div>
   <label class="opening-mismatch" id="openingMismatchBlock" hidden><input type="checkbox" id="openingAllowDateMismatch"><span>Я подтверждаю загрузку остатков, хотя дата отчёта 1С отличается от даты перед началом выбранной недели ПК.</span></label>
@@ -386,7 +386,7 @@ fieldset{border:none;padding:0;margin:0}dialog{border:1px solid #cfdeea;border-r
  </div><div class="dialog-actions"><button type="button" class="btn" data-close="itemDialog">Отмена</button><button class="btn primary" type="submit" id="itemSave">Добавить в ПК</button></div></form></div>
 </dialog>
 <script src="auth-session.js?v=3"></script>
-<script src="opening-xlsx.js?v=2"></script>
+<script src="opening-xlsx.js?v=3"></script>
 <script>
 (()=>{'use strict';
 const BASE='https://duvdlpzwxtuwbwyggpla.supabase.co',KEY='sb_publishable_WBg9viktHBpz9lw1Nwqtyw_49Src_lU';
@@ -917,6 +917,7 @@ function cashImportTargets(){
  for(const r of cashTemplates)m.set(r.entity_key,{key:r.entity_key,name:r.entity_name});
  for(const r of cashPreview)m.set(r.entity_key,{key:r.entity_key,name:r.entity_name});
  for(const r of cashBalances)m.set(r.entity_key,{key:r.entity_key,name:r.entity_name});
+ m.set('entity:483ece52c72c1531b645',{key:'entity:483ece52c72c1531b645',name:'Наличные'});
  return [...m.values()].sort((a,b)=>a.name.localeCompare(b.name,'ru'));
 }
 function cashSuggestTarget(name,targets){
@@ -948,8 +949,8 @@ function cashImportDraw(){
  if(hasDuplicates)warnings.push('Один код юрлица BAZA выбран для нескольких строк. Устраните дублирование сопоставления.');
  $('openingImportWarnings').hidden=!warnings.length;$('openingImportWarnings').textContent=warnings.join('\n\n');
  const sum=valid.reduce((a,r)=>a+r.cents,0);
- $('openingFileInfo').textContent=b.filename+' · '+b.groups.length+' организаций по счёту 51 · выбрано '+valid.length+
-  ' на '+displayCashValue(sum/100)+'. Исключено: '+b.excluded.otherAccounts+' строк других счетов (депозиты, касса, 76.05 и др.), '+
+ $('openingFileInfo').textContent=b.filename+' · '+b.groups.length+' групп: расчётные счета, депозиты, 76.05 и наличные · выбрано '+valid.length+
+  ' на '+displayCashValue(sum/100)+'. Исключено: '+b.excluded.otherAccounts+' строк прочих видов средств, '+
   b.excluded.restricted+' строк временных средств, '+b.excluded.missing+' строк без суммы.';
  $('openingImportBody').innerHTML=b.groups.map((g,i)=>{
   const previous=old.get(g.targetKey);
@@ -959,12 +960,12 @@ function cashImportDraw(){
   return '<tr class="'+(!g.targetKey?'opening-unmatched':'')+'"><td>'+
    '<input type="checkbox" data-opening-check="'+i+'" '+(g.selected&&g.targetKey?'checked':'')+' '+(!g.targetKey?'disabled':'')+
    ' aria-label="Импортировать '+esc(g.name)+'"></td>'+
-   '<td><b>'+esc(g.name)+'</b><small class="opening-info-small">'+g.accounts+' расчётных счетов</small></td>'+
+   '<td><b>'+esc(g.name)+'</b><small class="opening-info-small">'+g.accounts+' строк источника</small></td>'+
    '<td><select data-opening-map="'+i+'" aria-label="Сопоставить '+esc(g.name)+'">'+
    '<option value="">Не импортировать</option>'+options+'</select></td>'+
    '<td class="opening-amount">'+displayCashValue(g.cents/100)+'</td>'+
    '<td class="opening-amount">'+before+'</td></tr>';
- }).join('')||'<tr><td colspan="5">В отчёте нет сумм по собственным расчётным счетам.</td></tr>';
+ }).join('')||'<tr><td colspan="5">В отчёте нет собственных сумм по учитываемым видам остатков.</td></tr>';
  $('openingImportSave').disabled=!editable()||!valid.length||!date||hasDuplicates||(mismatch&&!$('openingAllowDateMismatch').checked);
 }
 async function cashImportFile(e){

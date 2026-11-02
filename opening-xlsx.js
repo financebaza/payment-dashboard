@@ -103,13 +103,20 @@
   for(let i=rowStart+1;i<rows.length;i++){
    const row=rows[i]||[],company=String(row[org]||'').trim();
    if(!company||normalize(company)==='итого')continue;
-   const account=String(row[acc]??'').trim(),flow=normalize(row[kind]),ownFlag=normalize(row[own]);
-   if(account!=='51'||flow!=='расчетныесчета'){otherAccounts++;continue}
+   const account=String(row[acc]??'').trim(),accountKey=normalize(account);
+   const flow=normalize(row[kind]),companyKey=normalize(company),ownFlag=normalize(row[own]);
+   const isCash=accountKey==='50'||flow.includes('касса')||flow.includes('наличн')||
+    companyKey==='касса'||companyKey==='наличные';
+   const isSettlement=accountKey==='51'&&flow==='расчетныесчета';
+   const isDeposit=flow.includes('депозит')||flow.includes('вклад');
+   const is7605=accountKey==='7605';
+   if(!isSettlement&&!isDeposit&&!is7605&&!isCash){otherAccounts++;continue}
    if(ownFlag!=='да'){restricted++;continue}
    const raw=row[value]!==null&&row[value]!==undefined&&row[value]!==''?row[value]:row[gross];
    if(raw==null||raw===''||!Number.isFinite(Number(raw))){missing++;continue}
    const num=Number(raw);if(Math.abs(num)>1e14)throw Error('Недопустимо большая сумма в строке '+(i+1));
-   const key=normalize(company),item=groups.get(key)||{name:company,cents:0,accounts:0};
+   const name=isCash?'Наличные':company,key=normalize(name);
+   const item=groups.get(key)||{name,cents:0,accounts:0};
    item.cents+=Math.round(num*100);item.accounts++;groups.set(key,item);
   }
   return {groups:[...groups.values()],reportDate,excluded:{restricted,otherAccounts,missing}};
