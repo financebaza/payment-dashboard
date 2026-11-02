@@ -10,7 +10,7 @@
   return date.getUTCDate()===+m[1]&&date.getUTCMonth()===+m[2]-1&&date.getUTCFullYear()===+m[3]
    ?m[3]+'-'+m[2]+'-'+m[1]:'';
  };
- async function parse(file){
+ async function parse(file,generic=false){
   const bytes=await file.arrayBuffer();
   if(bytes.byteLength>5*1024*1024)throw Error('Файл XLSX больше 5 МБ.');
   const v=new DataView(bytes);
@@ -77,9 +77,10 @@
    }
    return out;
   }
-  let rows,head,rowStart;
+  let rows,head,rowStart,genericRows=[];
   for(const name of sheets){
    const sheet=await xml(name),candidate=readRows(sheet);
+   if(!genericRows.length&&candidate.some(r=>(r||[]).some(v=>String(v??'').trim())))genericRows=candidate;
    for(let i=0;i<Math.min(candidate.length,24);i++){
     const normalized=(candidate[i]||[]).map(normalize);
     if(['организация','счет','собственныесредства','суммасобственные'].every(v=>normalized.includes(v))){
@@ -88,6 +89,7 @@
    }
    if(rows)break;
   }
+  if(generic)return genericRows;
   if(!rows)throw Error('Отчёт не похож на «Плоский»: нет колонок «Организация», «Счет», «Собственные средства», «Сумма собственные».');
   const col=x=>head.indexOf(normalize(x));
   const org=col('Организация'),acc=col('Счет'),kind=col('Вид средств'),
@@ -112,5 +114,5 @@
   }
   return {groups:[...groups.values()],reportDate,excluded:{restricted,otherAccounts,missing}};
  }
- window.BazaOpeningXlsx={parse,normalize};
+ window.BazaOpeningXlsx={parse,parseTable:file=>parse(file,true),normalize};
 })();
