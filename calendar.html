@@ -194,6 +194,7 @@ fieldset{border:none;padding:0;margin:0}dialog{border:1px solid #cfdeea;border-r
   <div class="toolbar"><select id="originFilter"><option value="">Все источники</option><option value="bitrix">Битрикс24</option><option value="vgo">ВГО</option><option value="other">Прочие</option></select>
    <select id="fundingFilter" aria-label="Фильтр по источнику средств"><option value="">Все средства</option><option value="Кредит">Кредит</option><option value="Собственные">Собственные</option></select>
    <input id="search" type="search" placeholder="Поиск: юрлицо, контрагент, проект…">
+   <button id="importVgoButton" type="button" class="btn">Загрузить список ВГО</button><input id="vgoListFile" type="file" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden>
    <button id="addVgo" type="button" class="btn primary">+ ВГО</button><button id="addOther" type="button" class="btn">+ Прочий</button><button id="clearDraft" type="button" class="btn clear-draft">Очистить черновик</button>
   </div>
   <div id="paymentSelectionPanel" class="payment-selection-panel">
@@ -350,6 +351,26 @@ fieldset{border:none;padding:0;margin:0}dialog{border:1px solid #cfdeea;border-r
   <div id="openingImportResult" class="opening-warnings" role="status" hidden></div>
  </div>
 </dialog>
+<dialog id="vgoImportDialog" class="csv-dialog" aria-labelledby="vgoImportTitle">
+ <div class="dialog-head"><h2 id="vgoImportTitle">Загрузка списка ВГО</h2><button type="button" class="close" id="vgoImportClose" aria-label="Закрыть">×</button></div>
+ <div class="dialog-body">
+  <div class="csv-import-summary" id="vgoImportSummary">—</div>
+  <div class="csv-import-warnings" id="vgoImportWarnings" hidden></div>
+  <div class="csv-import-tools">
+   <div><b>Формат списка</b><p>Обязательные колонки: дата оплаты, плательщик, получатель, сумма. Поддерживаются .xlsx и .csv.</p></div>
+   <button type="button" class="btn" id="vgoTemplateDownload">Скачать шаблон CSV</button>
+  </div>
+  <div class="csv-preview-scroll"><table class="csv-preview-table" style="min-width:920px"><thead><tr>
+   <th>Добавить</th><th>Строка</th><th>Дата</th><th>Плательщик</th><th>Получатель</th><th>Проект / направление</th><th style="text-align:right">Сумма</th><th>Проверка</th>
+  </tr></thead><tbody id="vgoPreviewBody"></tbody></table></div>
+  <div id="vgoImportTotal" class="csv-import-total"></div>
+  <div class="dialog-actions">
+   <button type="button" class="btn" id="vgoImportCancel">Отмена</button>
+   <button type="button" class="btn primary" id="vgoImportConfirm" disabled>Добавить отмеченные ВГО</button>
+  </div>
+  <div id="vgoImportResult" class="csv-import-message" role="status" hidden></div>
+ </div>
+</dialog>
 <dialog id="itemDialog" aria-labelledby="itemTitle"><div class="dialog-head"><h2 id="itemTitle">Добавить платёж</h2><button class="close" type="button" data-close="itemDialog">×</button></div>
  <div class="dialog-body"><form id="itemForm"><div id="itemBitrixInfo" class="inset" hidden style="margin-bottom:12px"></div><div class="form-grid">
  <div class="field"><label for="itemDue">Крайняя дата оплаты</label><input id="itemDue" type="date" required></div>
@@ -365,7 +386,7 @@ fieldset{border:none;padding:0;margin:0}dialog{border:1px solid #cfdeea;border-r
  </div><div class="dialog-actions"><button type="button" class="btn" data-close="itemDialog">Отмена</button><button class="btn primary" type="submit" id="itemSave">Добавить в ПК</button></div></form></div>
 </dialog>
 <script src="auth-session.js?v=3"></script>
-<script src="opening-xlsx.js?v=1"></script>
+<script src="opening-xlsx.js?v=2"></script>
 <script>
 (()=>{'use strict';
 const BASE='https://duvdlpzwxtuwbwyggpla.supabase.co',KEY='sb_publishable_WBg9viktHBpz9lw1Nwqtyw_49Src_lU';
@@ -418,7 +439,7 @@ function draw(){
  else if(week.status==='locked')$('bitrixStatus').textContent='ПК утверждён · импорт закрыт';
  else if(week.status==='formed')$('bitrixStatus').textContent='ПК на рассмотрении · импорт закрыт';
  else $('bitrixStatus').textContent='Готово к загрузке CSV · неделя '+formatDate(currentWeek)+' — '+formatDate(shift(currentWeek,6));
- $('addVgo').disabled=!editable();$('addOther').disabled=!editable();$('clearDraft').disabled=!editable()||(!items.length&&!receiptRows.length);
+ $('addVgo').disabled=!editable();$('importVgoButton').disabled=!editable();$('addOther').disabled=!editable();$('clearDraft').disabled=!editable()||(!items.length&&!receiptRows.length);
  $('importOpeningButton').disabled=!editable();
  $('saveAllCashForecast').disabled=!editable();
  $('formWeek').disabled=!editable()||!items.length;
@@ -1284,11 +1305,153 @@ async function bitrixImportConfirm(){
   bitrixDrawPreview();btn.disabled=false;
  }
 }
+/* BAZA_VGO_BULK_IMPORT_V1 */
+let vgoBatch=null;
+const vgoNormalize=x=>String(x??'').toLocaleLowerCase('ru-RU').replace(/ё/g,'е').replace(/[^a-zа-я0-9]/g,'');
+function vgoExcelDate(value){
+ const n=Number(value);
+ if(value!==''&&value!==null&&value!==undefined&&Number.isFinite(n)&&n>=20000&&n<=80000){
+  const d=new Date(Date.UTC(1899,11,30)+Math.round(n)*86400000);
+  return d.toISOString().slice(0,10);
+ }
+ return bitrixParseDate(value);
+}
+function vgoDuplicateKey(r){
+ return [r.due_date,vgoNormalize(r.payer),vgoNormalize(r.counterparty),Math.round(Number(r.amount||0)*100),vgoNormalize(r.project)].join('|');
+}
+function vgoTransform(table,filename){
+ if(!Array.isArray(table)||!table.length)throw Error('Файл пустой.');
+ let headerIndex=-1,lookup=null;
+ const aliases={
+  date:['датаоплаты','крайняядатаоплаты','дата','duedate','date'],
+  payer:['плательщик','нашеюрлицо','юрлицоотправитель','организацияотправитель','payer','sender'],
+  recipient:['получатель','контрагент','юрлицополучатель','организацияполучатель','recipient'],
+  amount:['сумма','суммаплатежа','amount'],
+  project:['проект','project'],direction:['направление','direction'],
+  funding:['источникфинансирования','источниксредств','fundingsource','funding'],
+  subcategory:['подстатья','статья','subcategory'],memo:['комментарий','основание','назначение','memo','purpose']
+ };
+ for(let i=0;i<Math.min(25,table.length);i++){
+  const headers=(table[i]||[]).map(vgoNormalize),candidate={};
+  for(const [key,names] of Object.entries(aliases))candidate[key]=headers.findIndex(h=>names.includes(h));
+  if(['date','payer','recipient','amount'].every(k=>candidate[k]>=0)){headerIndex=i;lookup=candidate;break}
+ }
+ if(headerIndex<0)throw Error('Не найдены заголовки обязательных колонок: «Дата оплаты», «Плательщик», «Получатель», «Сумма». Скачайте шаблон CSV.');
+ const rows=[],errors=[];
+ const existing=new Set(items.filter(x=>x.origin==='vgo').map(vgoDuplicateKey));
+ const seen=new Map();
+ for(let i=headerIndex+1;i<table.length;i++){
+  const cells=table[i]||[];
+  if(!cells.some(v=>String(v??'').trim()))continue;
+  const get=k=>lookup[k]<0?'':cells[lookup[k]]??'';
+  const rowNo=i+1,issues=[];
+  const due_date=vgoExcelDate(get('date'));
+  const amount=bitrixParseAmount(get('amount'));
+  const payer=String(get('payer')??'').trim(),counterparty=String(get('recipient')??'').trim();
+  const fundingRaw=String(get('funding')??'').trim(),funding=bitrixFunding(fundingRaw);
+  if(!due_date)issues.push('некорректная дата оплаты');
+  else if(due_date<currentWeek||due_date>shift(currentWeek,6))issues.push('дата вне выбранной недели');
+  if(!amount)issues.push('некорректная сумма');
+  if(!payer)issues.push('не указан плательщик');else if(payer.length>240)issues.push('плательщик длиннее 240 символов');
+  if(!counterparty)issues.push('не указан получатель');else if(counterparty.length>240)issues.push('получатель длиннее 240 символов');
+  if(fundingRaw&&!funding)issues.push('источник финансирования должен быть «Собственные» или «Кредит»');
+  const project=String(get('project')??'').trim(),direction=String(get('direction')??'').trim();
+  const subcategory=String(get('subcategory')??'').trim(),memo=String(get('memo')??'').trim();
+  if(project.length>200)issues.push('проект длиннее 200 символов');
+  if(direction.length>200)issues.push('направление длиннее 200 символов');
+  if(subcategory.length>200)issues.push('подстатья длиннее 200 символов');
+  if(memo.length>1500)issues.push('комментарий длиннее 1500 символов');
+  const row={line:rowNo,due_date,amount,payer,counterparty,project,direction,
+   funding_source:funding||'Собственные',flow_type:'ВГО',subcategory,memo,issues,duplicate:false,include:issues.length===0};
+  if(!issues.length){
+   const key=vgoDuplicateKey(row);
+   if(existing.has(key)){row.duplicate=true;row.duplicateNote='Совпадает с ВГО в черновике';}
+   else if(seen.has(key)){row.duplicate=true;row.duplicateNote='Совпадает со строкой '+seen.get(key)+' в файле';}
+   if(!seen.has(key))seen.set(key,rowNo);
+  }
+  rows.push(row);
+ }
+ if(!rows.length)throw Error('В файле нет строк с операциями.');
+ if(rows.length>500)throw Error('В одном файле можно загрузить не более 500 строк ВГО.');
+ return {week:currentWeek,filename,rows};
+}
+function vgoSelectedRows(){return (vgoBatch?.rows||[]).filter(r=>r.include&&!r.issues.length)}
+function vgoDrawPreview(){
+ const b=vgoBatch;if(!b)return;
+ const valid=b.rows.filter(r=>!r.issues.length),invalid=b.rows.length-valid.length;
+ const duplicates=valid.filter(r=>r.duplicate).length,selected=vgoSelectedRows();
+ const total=selected.reduce((n,r)=>n+Math.round(r.amount*100),0);
+ $('vgoImportSummary').innerHTML='<b>'+esc(b.filename)+'</b> · '+b.rows.length+' строк · '+valid.length+' корректных · '+invalid+' с ошибками · '+duplicates+' возможных дублей.';
+ const warnings=[];
+ for(const r of b.rows.filter(x=>x.issues.length).slice(0,12))warnings.push('Строка '+r.line+': '+r.issues.join(', '));
+ if(invalid>12)warnings.push('И ещё '+(invalid-12)+' строк с ошибками.');
+ if(duplicates)warnings.push('Совпадения отмечены, но оставлены выбранными. Снимите галочки с повторов, которые не нужно добавлять.');
+ const box=$('vgoImportWarnings');box.hidden=!warnings.length;box.textContent=warnings.join('\n');
+ $('vgoPreviewBody').innerHTML=b.rows.map((r,i)=>'<tr>'+
+  '<td><input type="checkbox" data-vgo-include="'+i+'" '+(r.include?'checked':'')+' '+(r.issues.length?'disabled':'')+' aria-label="Добавить строку '+r.line+'"></td>'+
+  '<td>'+r.line+'</td><td>'+esc(formatDate(r.due_date))+'</td><td>'+esc(r.payer||'—')+'</td><td>'+esc(r.counterparty||'—')+'</td>'+
+  '<td>'+esc([r.project,r.direction].filter(Boolean).join(' · ')||'—')+'</td><td class="csv-money">'+(r.amount?money(r.amount):'—')+'</td>'+
+  '<td>'+esc(r.issues.length?r.issues.join(', '):r.duplicateNote||'Готово')+'</td></tr>').join('');
+ $('vgoImportTotal').innerHTML='<span>Отмечено: '+selected.length+' строк</span><b>'+money(total/100)+'</b>';
+ $('vgoImportConfirm').disabled=!editable()||b.week!==currentWeek||!selected.length||invalid>0;
+}
+async function vgoChooseFile(e){
+ const file=e.target.files?.[0];e.target.value='';if(!file)return;
+ if(!editable()){inform('Загрузка списка доступна только в черновике ПК','error');return}
+ if(file.size>5*1024*1024){inform('Файл больше 5 МБ','error');return}
+ try{
+  let table;
+  if(/\.csv$/i.test(file.name)){
+   const bytes=await file.arrayBuffer();let contents;
+   try{contents=new TextDecoder('utf-8',{fatal:true}).decode(bytes)}catch{contents=new TextDecoder('windows-1251').decode(bytes)}
+   table=csvFields(contents);
+  }else if(/\.xlsx$/i.test(file.name)){
+   table=await window.BazaOpeningXlsx.parseTable(file);
+  }else throw Error('Выберите файл .xlsx или .csv');
+  vgoBatch=vgoTransform(table,file.name);vgoDrawPreview();$('vgoImportResult').hidden=true;$('vgoImportDialog').showModal();
+ }catch(error){vgoBatch=null;inform('Не удалось прочитать список ВГО: '+error.message,'error')}
+}
+async function vgoImportConfirm(){
+ const rows=vgoSelectedRows(),btn=$('vgoImportConfirm'),b=vgoBatch;
+ if(!editable()||!b||b.week!==currentWeek||!rows.length||b.rows.some(r=>r.issues.length))return;
+ vgoDrawPreview();if(btn.disabled)return;
+ const duplicates=rows.filter(r=>r.duplicate).length;
+ const duplicateNote=duplicates?'\n\nОтмечено возможных дублей: '+duplicates+'. Выберите, добавлять ли их, сняв соответствующие галочки.':'';
+ if(!confirm('Добавить '+rows.length+' ВГО на сумму '+money(rows.reduce((n,r)=>n+r.amount,0))+' в черновик за '+formatDate(currentWeek)+' — '+formatDate(shift(currentWeek,6))+'?'+duplicateNote))return;
+ btn.disabled=true;
+ try{
+  const payload=rows.map(r=>({week_start:currentWeek,due_date:r.due_date,amount:r.amount,payer:r.payer,
+   counterparty:r.counterparty,project:r.project,direction:r.direction,funding_source:r.funding_source,
+   flow_type:'ВГО',subcategory:r.subcategory,memo:r.memo,origin:'vgo',created_by:user.id}));
+  const saved=await request('calendar_items',{method:'POST',body:payload});
+  if(!Array.isArray(saved)||saved.length!==payload.length)throw Error('Сервер сохранил не все строки; проверьте черновик перед повторной загрузкой.');
+  $('vgoImportDialog').close();vgoBatch=null;await loadWeek();
+  inform('Загружено '+saved.length+' ВГО на сумму '+money(rows.reduce((n,r)=>n+r.amount,0))+'. Другие строки черновика сохранены.','success');
+ }catch(error){
+  $('vgoImportResult').hidden=false;$('vgoImportResult').className='csv-import-message error';
+  $('vgoImportResult').textContent='Не удалось загрузить список: '+error.message+'. Проверьте черновик перед повторной попыткой.';
+  vgoDrawPreview();btn.disabled=false;
+ }
+}
+function vgoDownloadTemplate(){
+ const csv='\uFEFFДата оплаты;Плательщик;Получатель;Сумма;Проект;Направление;Источник финансирования;Подстатья;Комментарий\r\n';
+ const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+ const link=document.createElement('a');link.href=url;link.download='Шаблон_списка_ВГО.csv';link.click();URL.revokeObjectURL(url);
+}
+
 $('bitrixImportButton').addEventListener('click',()=>{
  if(!editable())return;
  $('bitrixCsvFile').click();
 });
 $('bitrixCsvFile').addEventListener('change',bitrixChooseFile);
+$('importVgoButton').addEventListener('click',()=>{if(editable())$('vgoListFile').click();else inform('Сначала создайте черновик недели','error')});
+$('vgoListFile').addEventListener('change',vgoChooseFile);
+$('vgoPreviewBody').addEventListener('change',e=>{const c=e.target.closest('input[data-vgo-include]');if(!c||!vgoBatch)return;const row=vgoBatch.rows[Number(c.dataset.vgoInclude)];if(row){row.include=c.checked;vgoDrawPreview()}});
+$('vgoImportConfirm').addEventListener('click',vgoImportConfirm);
+$('vgoTemplateDownload').addEventListener('click',vgoDownloadTemplate);
+$('vgoImportClose').addEventListener('click',()=>$('vgoImportDialog').close());
+$('vgoImportCancel').addEventListener('click',()=>$('vgoImportDialog').close());
+
 $('bitrixPreviewBody').addEventListener('change',e=>{
  const s=e.target.closest('select[data-bitrix-funding]');
  if(!s||!bitrixBatch)return;
@@ -1344,7 +1507,7 @@ $('clearDraft').addEventListener('click',clearDraft);
 $('formWeek').addEventListener('click',formWeek);
 $('historyReload').addEventListener('click',()=>loadWeek().catch(e=>inform(e.message,'error')));
 document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',()=>$(b.dataset.close).close()));
-for(const id of ['itemDialog','bitrixDialog','openingDialog','groupDetailDialog','groupReceiptDialog'])$(id).addEventListener('click',e=>{if(e.target===$(id))$(id).close()});
+for(const id of ['itemDialog','bitrixDialog','vgoImportDialog','openingDialog','groupDetailDialog','groupReceiptDialog'])$(id).addEventListener('click',e=>{if(e.target===$(id))$(id).close()});
 (async()=>{
  try{
   await authenticate();
