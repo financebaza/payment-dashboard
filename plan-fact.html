@@ -286,6 +286,7 @@ dialog::backdrop{background:rgba(11,39,64,.45)}
 .pf-liq-kpi:first-child small{color:#a9c6db}
 .pf-liq-kpi .neg{color:#c32837}.pf-liq-kpi .pos{color:#267a55}
 .pf-liq-table{min-width:1120px}
+.pf-liq-pair{display:flex;justify-content:flex-end;gap:13px;white-space:nowrap}.pf-liq-pair>span{display:inline-flex;align-items:baseline;gap:4px}.pf-liq-pair small{font-size:9px;color:#718ba0;font-weight:700}.pf-liq-click{border:0;background:transparent;padding:0;color:#155c8f;font:inherit;font-weight:800;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:3px;cursor:pointer}.pf-liq-click:hover{color:#0d3f67}.pf-liq-expense-dialog{width:min(1020px,calc(100vw - 28px));max-height:90vh}.pf-liq-expense-dialog .dialog-body{max-height:calc(90vh - 82px)}.pf-liq-expense-table{min-width:650px;width:100%;border-collapse:collapse}.pf-liq-expense-table th,.pf-liq-expense-table td{padding:9px;border-bottom:1px solid #e1e9f0;text-align:left;vertical-align:top}.pf-liq-expense-table th{background:#f4f8fb;color:#66829a;font-size:10px}.pf-liq-expense-table td{font-size:11px}.pf-liq-expense-table td.num,.pf-liq-expense-table th.num{text-align:right;white-space:nowrap;font-weight:800}.pf-liq-expense-summary{font-weight:800;color:#173e60;margin-bottom:10px}.pf-liq-expense-dialog .pf-liq-legend{margin-top:12px}
 .pf-liq-table th,.pf-liq-table td{padding:11px 9px}
 .pf-liq-table td{font-variant-numeric:tabular-nums}
 .pf-liq-table td.num,.pf-liq-table th.num{text-align:right;white-space:nowrap}
@@ -328,22 +329,22 @@ dialog::backdrop{background:rgba(11,39,64,.45)}
  </nav>
 </header>
 <section class="hero">
- <div><div class="eyebrow">КОНТРОЛЬ ИСПОЛНЕНИЯ</div><h1>План / факт платежей</h1><p>Проверка исполнения заявок по выгрузке 1С: что оплачено, что требует подтверждения и что пока не найдено.</p></div>
- <div class="period-control"><label for="periodSelect">Период</label><select id="periodSelect" disabled><option>Загрузка…</option></select></div>
+ <div><div class="eyebrow">КОНТРОЛЬ ИСПОЛНЕНИЯ</div><h1>План / факт остатков и платежей</h1><p>Сначала сравните остатки по юрлицам; детализация расходов и сверка заявок доступны по нажатию.</p></div>
+ <div class="period-control"><label for="periodSelect">Период сверки платежей</label><select id="periodSelect" disabled><option>Загрузка…</option></select></div>
 </section>
 <details id="notice" class="pf-method-note"><summary>Методика сверки и ограничения данных</summary><div>Данные 1С сверяются с плановыми заявками. Частичные и вероятные совпадения не признаются оплаченными без подтверждения. Депозиты, займы, ВГО и аккредитивное покрытие показываются отдельно от обычных расходов.</div></details>
 <div id="loadState" class="loading-area"><div class="spin"></div>Загружаем защищённые данные из Supabase…</div>
 <div id="app" hidden>
  <div class="tabs" role="tablist" aria-label="Разделы план-факт">
-  <button class="tab active" data-tab="overview" role="tab" aria-selected="true">Обзор</button>
+  <button class="tab active" data-tab="liquidity" role="tab" aria-selected="true">Остатки · План / факт</button>
+  <button class="tab" data-tab="overview" role="tab" aria-selected="false">Обзор платежей</button>
   <button class="tab" data-tab="plan" role="tab" aria-selected="false">Реестр план / факт <span id="tabPlanCount"></span></button>
   <button class="tab" data-tab="unlinked" role="tab" aria-selected="false">Факт без связи <span id="tabUnlinkedCount"></span></button>
   <button class="tab" data-tab="offcalendar" role="tab" aria-selected="false">Вне ПК <span id="tabOffCount"></span></button>
-  <button class="tab" data-tab="liquidity" role="tab" aria-selected="false">Остатки ДС · План / факт</button>
   <span class="right-label" id="loadedAs"></span>
  </div>
  <div id="chips" class="chips"></div><div id="filterSummary" class="filter-summary" hidden></div><div id="rejectedPlanNotice" class="rejected-plan-notice" hidden></div>
- <section id="overviewSection">
+ <section id="overviewSection" hidden>
    <div class="pf-kpi-row pf-primary">
      <div class="kpi emphasis drill-kpi" data-kpi="plan" role="button" tabindex="0" aria-label="Открыть реестр плановых платежей">
        <div class="heading">ПЛАН СПИСАНИЙ</div><div class="value" id="metricPlan">—</div><div class="sub">Заявки по текущему платёжному календарю</div>
@@ -428,9 +429,9 @@ dialog::backdrop{background:rgba(11,39,64,.45)}
   </div>
  </section>
 
- <section id="liquiditySection" hidden>
-  <div class="pf-section-head"><h2>План / факт остатков денежных средств по юрлицам</h2>
-   <span>Банковские счета не детализируем · на конец недели</span></div>
+ <section id="liquiditySection">
+  <div class="pf-section-head"><div><h2>Остатки денежных средств по юрлицам</h2><small>Отклонение конечного остатка показывает, сколько денег больше или меньше плана.</small></div>
+   <span>Нажмите на фактический расход или изменение, чтобы открыть списания</span></div>
   <div class="pf-liq-toolbar">
    <div><label for="liquidityWeekSelect">НЕДЕЛЯ КОНТРОЛЯ ОСТАТКОВ</label>
     <select id="liquidityWeekSelect" aria-label="Неделя остатков"><option value="">Загрузка периодов…</option></select></div>
@@ -445,9 +446,9 @@ dialog::backdrop{background:rgba(11,39,64,.45)}
   </div>
   <div class="surface">
    <div class="table-wrap"><table class="pf-liq-table"><thead>
-   <tr><th>Наше юрлицо</th><th class="num">Начальный остаток</th><th class="num">Приход · план</th><th class="num">Расход · план</th>
-    <th class="num">Конечный · план</th><th class="num">Конечный · факт</th><th class="num">Отклонение ₽</th><th class="num">Отклонение %</th></tr>
-   </thead><tbody id="liquidityBody"><tr><td colspan="8">Загрузка…</td></tr></tbody></table></div>
+   <tr><th>Наше юрлицо</th><th class="num">Начальный остаток</th><th class="num">Расходы · план / факт</th>
+    <th class="num">Изменение остатка · план / факт</th><th class="num">Остаток на конец · план / факт</th><th class="num">Отклонение остатка</th></tr>
+   </thead><tbody id="liquidityBody"><tr><td colspan="6">Загрузка…</td></tr></tbody></table></div>
    <div id="liquidityLegend" class="pf-liq-legend"></div>
   </div>
   <div id="liquidityImportForm" class="pf-liq-form" hidden>
@@ -483,6 +484,10 @@ dialog::backdrop{background:rgba(11,39,64,.45)}
  <div class="dialog-header"><h2 id="detailTitle">Карточка сверки</h2><button class="close" id="closeDetail" aria-label="Закрыть">×</button></div>
  <div class="dialog-body" id="detailBody"></div>
 </dialog>
+<dialog id="liquidityExpenseDialog" class="pf-liq-expense-dialog" aria-labelledby="liquidityExpenseTitle">
+ <div class="dialog-header"><div><h2 id="liquidityExpenseTitle">Фактические расходы</h2><small id="liquidityExpensePeriod"></small></div><button class="close" id="liquidityExpenseClose" aria-label="Закрыть">×</button></div>
+ <div class="dialog-body"><div class="pf-liq-expense-summary" id="liquidityExpenseSummary"></div><div class="table-wrap"><table class="pf-liq-expense-table"><thead><tr><th>Дата</th><th>Контрагент</th><th>Статья / назначение</th><th class="num">Сумма</th></tr></thead><tbody id="liquidityExpenseRows"></tbody></table></div><p id="liquidityExpenseNote" class="pf-liq-legend"></p></div>
+</dialog>
 <script src="auth-session.js?v=3"></script>
 <script>
 (function(){
@@ -513,7 +518,7 @@ dialog::backdrop{background:rgba(11,39,64,.45)}
    if(x.toLowerCase()==='инвест направления')return 'Инвест';
    return x;
  };
- const st={user:null,token:'',periods:[],period:null,plans:[],excludedPlans:[],unlinked:[],outside:[],tab:'overview',bucket:'',direction:'',project:'',query:'',flow:'',planShown:MAX_ROWS,unlinkedShown:MAX_ROWS,unlinkedQuery:''};
+ const st={user:null,token:'',periods:[],period:null,plans:[],excludedPlans:[],unlinked:[],outside:[],tab:'liquidity',bucket:'',direction:'',project:'',query:'',flow:'',planShown:MAX_ROWS,unlinkedShown:MAX_ROWS,unlinkedQuery:''};
  const note=(message,error=false)=>{el('loadState').innerHTML='<div class="notice'+(error?' error':'')+'" style="display:inline-flex;margin:0"><span class="symbol">'+(error?'!':'i')+'</span><span>'+esc(message)+'</span></div>'};
  function authHeaders(token){return {apikey:KEY,Authorization:'Bearer '+token,Accept:'application/json'};}
  async function refresh(){return session.refresh({force:true,previousToken:st.token});}
@@ -968,8 +973,9 @@ dialog::backdrop{background:rgba(11,39,64,.45)}
 
 
  /* BAZA_LIQUIDITY_BY_ENTITY_V1 */
- const liquidity={week:'',weeks:[],snapshot:[],preview:[],actual:[],loaded:false,loading:false};
- const normalizeEntity=x=>String(x||'').toLocaleLowerCase('ru-RU').replace(/[^a-zа-яё0-9]/g,'');
+ const liquidity={week:'',weeks:[],snapshot:[],preview:[],actual:[],operations:[],operationsLoaded:false,loaded:false,loading:false};
+ const legalEntityNoise=new Set(['ооо','ао','пао','зао','оао','ип']);
+ const normalizeEntity=x=>String(x||'').toLocaleLowerCase('ru-RU').replace(/ё/g,'е').replace(/специализированный\s+застройщик/g,' сз ').replace(/[«»\"'.,:()]/g,' ').split(/[^a-zа-я0-9]+/).filter(token=>token&&!legalEntityNoise.has(token)).sort().join(' ');
  const liqWeekEnd=x=>{const d=new Date(x+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+6);return d.toISOString().slice(0,10)};
  const liqDate=x=>new Intl.DateTimeFormat('ru-RU',{day:'2-digit',month:'2-digit',year:'numeric'}).format(new Date(x+'T12:00:00Z'));
  const liqCurrency=value=>new Intl.NumberFormat('ru-RU',{minimumFractionDigits:2,maximumFractionDigits:2}).format(Number(value))+' ₽';
@@ -999,15 +1005,19 @@ dialog::backdrop{background:rgba(11,39,64,.45)}
   liquidity.loading=true;
   try{
    const w=encodeURIComponent(liquidity.week);
-   const [snapshots,facts,preview]=await Promise.all([
+   const factPeriod=st.periods.find(p=>p.date_start===liquidity.week);
+   const [snapshots,facts,preview,operations]=await Promise.all([
     rest('liquidity_plan_snapshots','select=*&week_start=eq.'+w+'&order=entity_name.asc&limit=1000'),
     rest('liquidity_actual_balances','select=entity_key,actual_closing,source_note,updated_at&week_start=eq.'+w+'&limit=1000'),
-    rest('rpc/liquidity_preview_week','p_week_start='+w)
+    rest('rpc/liquidity_preview_week','p_week_start='+w),
+    factPeriod?rest('reconciliation_fact_operations','select=fact_row,operation_date,payer,counterparty,amount_signed,flow_type,accounting_category,accounting_subcategory,payment_purpose,invoice_no,reconciliation_status&period_id=eq.'+encodeURIComponent(factPeriod.period_id)+'&order=operation_date.asc&limit=1000'):Promise.resolve([])
    ]);
    if(w!==liquidity.week)return;
    liquidity.snapshot=snapshots;
    liquidity.actual=facts;
    liquidity.preview=preview;
+   liquidity.operations=operations;
+   liquidity.operationsLoaded=Boolean(factPeriod);
    liquidity.loaded=true;
    renderLiquidity();
   }catch(error){
@@ -1016,11 +1026,19 @@ dialog::backdrop{background:rgba(11,39,64,.45)}
    el('liquidityNote').className='pf-liq-note warn';
   }finally{liquidity.loading=false}
  }
- function renderLiquidity(){
+  function renderLiquidity(){
   if(!liquidity.week||!liquidity.loaded)return;
   const stored=liquidity.snapshot.length>0;
   const plan=stored?liquidity.snapshot:liquidity.preview;
   const actualByKey=new Map(liquidity.actual.map(x=>[x.entity_key,x]));
+  const expensesByEntity=new Map();
+  if(liquidity.operationsLoaded){
+   for(const operation of liquidity.operations){
+    const amount=Number(operation.amount_signed||0),key=normalizeEntity(operation.payer);
+    if(!key||amount>=0)continue;
+    expensesByEntity.set(key,(expensesByEntity.get(key)||0)+Math.round(Math.abs(amount)*100));
+   }
+  }
   const paired=plan.filter(p=>p.is_complete===true&&!liqMissing(p.planned_closing)&&actualByKey.has(p.entity_key));
   const incomplete=plan.filter(p=>p.is_complete!==true||liqMissing(p.planned_closing));
   const missing=plan.filter(p=>p.is_complete===true&&!actualByKey.has(p.entity_key));
@@ -1038,9 +1056,9 @@ dialog::backdrop{background:rgba(11,39,64,.45)}
   const selectedPeriod='Неделя '+liqDate(liquidity.week)+' — '+liqDate(liqWeekEnd(liquidity.week));
   const independent=st.period?.date_start!==liquidity.week;
   const base=stored?'Зафиксированный плановый остаток сохранён при утверждении ПК.':
-    'Предварительный прогноз остатков: недельный ПК для этой недели не зафиксирован в новой системе. План пересчитывается по текущим исходным данным и НЕ является утверждённым снимком.';
+    'Предварительный прогноз остатков: недельный ПК для этой недели не зафиксирован в новой системе. План пересчитывается по текущим исходным данным и не является утверждённым снимком.';
   el('liquidityNote').textContent=selectedPeriod+'. '+base+
-    (independent?' Это отдельная неделя остатков, не период выбранной выше сверки платежей.':'')+
+    (independent?' Платёжная сверка и остатки выбраны за разные недели.':'')+
     (incomplete.length?' Есть '+incomplete.length+' юрлиц с неполными плановыми данными.':'');
   el('liquidityNote').className='pf-liq-note'+(!stored||incomplete.length?' warn':'');
   const rows=plan.slice().sort((a,b)=>{
@@ -1049,29 +1067,45 @@ dialog::backdrop{background:rgba(11,39,64,.45)}
    const db=pb&&!liqMissing(b.planned_closing)?Math.abs(Number(pb.actual_closing)-Number(b.planned_closing)):-1;
    return db-da||a.entity_name.localeCompare(b.entity_name,'ru');
   });
+  const changeLabel=value=>{
+   const cents=Math.round(Number(value)*100);
+   return (cents>0?'+':cents<0?'−':'')+liqCurrency(Math.abs(cents)/100);
+  };
+  const pairCell=(planned,fact,kind,entityKey)=>{
+   const planHtml=liqMissing(planned)?'<span class="unknown">Нет данных</span>':liqCurrency(planned);
+   let factHtml='<span class="unloaded">Не загружен</span>';
+   if(!liqMissing(fact)){
+    const shown=kind==='change'?changeLabel(fact):liqCurrency(fact);
+    factHtml='<button type="button" class="pf-liq-click" data-liq-expenses="'+esc(entityKey)+'">'+shown+'</button>';
+   }
+   return '<div class="pf-liq-pair"><span><small>План</small> '+planHtml+'</span><span><small>Факт</small> '+factHtml+'</span></div>';
+  };
   el('liquidityBody').innerHTML=rows.map(p=>{
-   const fact=actualByKey.get(p.entity_key),pl=p.is_complete?Number(p.planned_closing):null;
-   const actual=fact?Number(fact.actual_closing):null;
-   const comparable=pl!==null&&actual!==null;
-   const difference=comparable?Math.round(actual*100-pl*100)/100:null;
-   const percent=comparable&&Math.abs(pl)>0.000001?100*difference/Math.abs(pl):null;
-   const pctValue=percent===null?'—':(percent>0?'+':'')+new Intl.NumberFormat('ru-RU',{maximumFractionDigits:1}).format(percent)+'%';
+   const fact=actualByKey.get(p.entity_key);
+   const opening=liqMissing(p.opening_balance)?null:Number(p.opening_balance);
+   const plannedClosing=p.is_complete&&!liqMissing(p.planned_closing)?Number(p.planned_closing):null;
+   const actualClosing=fact&&!liqMissing(fact.actual_closing)?Number(fact.actual_closing):null;
+   const plannedChange=opening!==null&&plannedClosing!==null?Math.round((plannedClosing-opening)*100)/100:null;
+   const actualChange=opening!==null&&actualClosing!==null?Math.round((actualClosing-opening)*100)/100:null;
+   const plannedExpense=p.is_complete&&!liqMissing(p.planned_payments)?Number(p.planned_payments):null;
+   const factExpense=liquidity.operationsLoaded?(expensesByEntity.get(normalizeEntity(p.entity_name))||0)/100:null;
+   const comparable=plannedClosing!==null&&actualClosing!==null;
+   const difference=comparable?Math.round(actualClosing*100-plannedClosing*100)/100:null;
    const varianceClass=!comparable?'':difference<0?'negative':difference>0?'positive':'';
-   return '<tr><td title="'+esc(p.entity_key)+'">'+esc(p.entity_name)+
-    (p.entity_key.startsWith('unmapped:')?'<div class="unknown">Не сопоставлено с юрлицом</div>':'')+'</td>'+
-    '<td class="num">'+liqMoney(p.opening_balance)+'</td>'+
-    '<td class="num">'+liqMoney(p.planned_receipts)+'</td>'+
-    '<td class="num">'+liqMoney(p.planned_payments)+'</td>'+
-    '<td class="num">'+liqMoney(pl)+'</td>'+
-    '<td class="num">'+(fact?liqMoney(actual):'<span class="unloaded">Не загружен</span>')+'</td>'+
-    '<td class="num '+varianceClass+'">'+(comparable?(difference>0?'+':'')+liqCurrency(difference):'—')+'</td>'+
-    '<td class="num '+varianceClass+'">'+pctValue+'</td></tr>';
-  }).join('')||'<tr><td colspan="8">По этой неделе плановых остатков нет</td></tr>';
-  el('liquidityLegend').textContent='Δ = Факт − План. Плюс означает денег больше плана, минус — меньше. Суммы вверху только по юридическим лицам, где есть полный план и фактический остаток. ВГО входят в расход отправителя, а поступления получателя берутся из плана приходов. Кредитные транши учитываются в плане поступлений, но не в расходных платежах. Эскроу и ограниченные средства необходимо исключать из исходной выгрузки свободных остатков; система пока не может проверить их состав автоматически. Для строк с нулевым планом процент не рассчитывается.';
+   const entityCell='<td title="'+esc(p.entity_key)+'">'+esc(p.entity_name)+
+    (p.entity_key.startsWith('unmapped:')?'<div class="unknown">Не сопоставлено с юрлицом</div>':'')+'</td>';
+   return '<tr>'+entityCell+
+    '<td class="num">'+liqMoney(opening)+'</td>'+
+    '<td class="num">'+pairCell(plannedExpense,factExpense,'expense',p.entity_key)+'</td>'+
+    '<td class="num">'+pairCell(plannedChange,actualChange,'change',p.entity_key)+'</td>'+
+    '<td class="num">'+pairCell(plannedClosing,actualClosing,'closing',p.entity_key)+'</td>'+
+    '<td class="num '+varianceClass+'">'+(comparable?(difference>0?'+':'')+liqCurrency(difference):'—')+'</td></tr>';
+  }).join('')||'<tr><td colspan="6">По этой неделе плановых остатков нет</td></tr>';
+  el('liquidityLegend').textContent='Плановое изменение = конечный плановый остаток − начальный остаток. Фактическое изменение = фактический остаток на конец − начальный остаток из 1С; оно учитывает не только расходы, но и поступления. Для проверки перерасхода сравните расходы план/факт. Нажмите на сумму фактических расходов или изменения, чтобы увидеть списания. В фактические расходы входят операции из загруженной сверки, в том числе ВГО; технические проводки из неё исключены.';
   const canImport=['admin','approver'].includes(st.user?.role);
   el('liquidityImportForm').hidden=!canImport;
  }
- function parseLiqAmount(text){
+  function parseLiqAmount(text){
   let value=String(text??'').trim().replace(/[\s\u00a0\u202f₽]/g,'');
   if(!value)return null;
   if(value.includes(',')&&value.includes('.')){
@@ -1128,10 +1162,41 @@ dialog::backdrop{background:rgba(11,39,64,.45)}
    setLiqStatus('Факт 1С сохранён: '+answer.submitted+' юрлиц; обновлено '+answer.changed+'. Сравнение пересчитано.','success');
   }catch(e){setLiqStatus(e.message,'error')}finally{btn.disabled=false}
  }
+ function showLiquidityExpenses(entityKey){
+  const plan=liquidity.snapshot.length?liquidity.snapshot:liquidity.preview;
+  const entity=plan.find(p=>p.entity_key===entityKey);
+  if(!entity)return;
+  const key=normalizeEntity(entity.entity_name);
+  const operations=liquidity.operations.filter(op=>normalizeEntity(op.payer)===key&&Number(op.amount_signed)<0)
+   .sort((a,b)=>String(a.operation_date||'').localeCompare(String(b.operation_date||'')));
+  const total=operations.reduce((sum,op)=>sum+Math.round(Math.abs(Number(op.amount_signed||0))*100),0);
+  el('liquidityExpenseTitle').textContent='Фактические расходы · '+entity.entity_name;
+  el('liquidityExpensePeriod').textContent='Неделя '+liqDate(liquidity.week)+' — '+liqDate(liqWeekEnd(liquidity.week));
+  el('liquidityExpenseSummary').textContent=operations.length
+   ?operations.length+' операций · всего '+liqCurrency(total/100)
+   :'В загруженной сверке расходов по этому юрлицу нет.';
+  el('liquidityExpenseRows').innerHTML=operations.map(op=>{
+   const purpose=[op.accounting_category,op.accounting_subcategory,op.payment_purpose].filter(Boolean).join(' · ');
+   return '<tr><td>'+liqDate(op.operation_date)+'</td><td>'+esc(op.counterparty||'Не указан')+'</td>'+
+    '<td>'+esc(purpose||'Назначение не указано')+(op.invoice_no?'<div class="unknown">Документ '+esc(op.invoice_no)+'</div>':'')+'</td>'+
+    '<td class="num">'+liqCurrency(Math.abs(Number(op.amount_signed||0)))+'</td></tr>';
+  }).join('')||'<tr><td colspan="4">Нет фактических списаний по загруженному факту.</td></tr>';
+  el('liquidityExpenseNote').textContent='Список взят из фактических операций сверки за выбранную неделю. ВГО показаны как расход юрлица-отправителя; технические проводки исключены из сверки.';
+  el('liquidityExpenseDialog').showModal();
+ }
+ el('liquidityBody').addEventListener('click',event=>{
+  const button=event.target.closest('[data-liq-expenses]');
+  if(button)showLiquidityExpenses(button.dataset.liqExpenses);
+ });
+ el('liquidityExpenseClose').addEventListener('click',()=>el('liquidityExpenseDialog').close());
+ el('liquidityExpenseDialog').addEventListener('click',event=>{
+  if(event.target===el('liquidityExpenseDialog'))el('liquidityExpenseDialog').close();
+ });
  el('liquidityWeekSelect').addEventListener('change',e=>{
   liquidity.week=e.target.value;
   liquidity.loaded=false;
-  el('liquidityBody').innerHTML='<tr><td colspan="8">Загружаем неделю…</td></tr>';
+  liquidity.operationsLoaded=false;
+  el('liquidityBody').innerHTML='<tr><td colspan="6">Загружаем неделю…</td></tr>';
   loadLiquidity();
  });
  el('liquidityReload').addEventListener('click',loadLiquidity);
