@@ -456,7 +456,7 @@ dialog::backdrop{background:rgba(11,39,64,.45)}
    <p>Загрузите отчёт 1С «Плоский» в XLSX напрямую: суммируются собственные средства по расчётным счетам, депозитам/РЕПО, 76.05 и кассе. Кассовые строки попадут в юрлицо «Наличные». Также можно вставить две колонки: <b>Юрлицо</b> и <b>Остаток на конец недели</b>, или загрузить CSV/TSV. Перед сохранением проверяются все строки; неизвестные организации и ошибки в суммах блокируют загрузку целиком.</p>
    <textarea id="liquidityPaste" placeholder="ООО «БАЗА»&#9;12 345 678,90&#10;ООО СК «БАЗА»&#9;1 234 567,00" aria-label="Две колонки из 1С: юридическое лицо и конечный остаток"></textarea>
    <div class="pf-liq-actions">
-    <label>Или файл CSV / TSV <input type="file" id="liquidityFile" accept=".xlsx,.csv,.tsv,.txt,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv,text/plain"></label>
+    <label>Или файл XLSX / CSV / TSV <input type="file" id="liquidityFile" accept=".xlsx,.csv,.tsv,.txt,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv,text/plain"></label>
     <label>Источник и дата выгрузки<input type="text" id="liquiditySource" maxlength="250" placeholder="1С · остатки на 25.10.2026" value="1С · остатки на конец недели"></label>
     <button type="button" id="liquidityImport">Проверить и сохранить факт</button>
    </div>
