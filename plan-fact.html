@@ -453,10 +453,10 @@ dialog::backdrop{background:rgba(11,39,64,.45)}
   </div>
   <div id="liquidityImportForm" class="pf-liq-form" hidden>
    <h3>Загрузить фактические остатки из 1С</h3>
-   <p>Скопируйте из Excel две колонки: <b>Юрлицо</b> и <b>Остаток на конец недели</b>, либо вставьте коды юрлиц из таблицы. Можно загрузить файл CSV/TSV. Проверяем все строки перед сохранением: неизвестные организации или ошибки в суммах блокируют загрузку целиком. Уже сохранённые факты не исчезают при частичной загрузке.</p>
+   <p>Загрузите отчёт 1С «Плоский» в XLSX напрямую: суммируются собственные средства по расчётным счетам, депозитам/РЕПО, 76.05 и кассе. Кассовые строки попадут в юрлицо «Наличные». Также можно вставить две колонки: <b>Юрлицо</b> и <b>Остаток на конец недели</b>, или загрузить CSV/TSV. Перед сохранением проверяются все строки; неизвестные организации и ошибки в суммах блокируют загрузку целиком.</p>
    <textarea id="liquidityPaste" placeholder="ООО «БАЗА»&#9;12 345 678,90&#10;ООО СК «БАЗА»&#9;1 234 567,00" aria-label="Две колонки из 1С: юридическое лицо и конечный остаток"></textarea>
    <div class="pf-liq-actions">
-    <label>Или файл CSV / TSV <input type="file" id="liquidityFile" accept=".csv,.tsv,.txt,text/csv,text/plain"></label>
+    <label>Или файл CSV / TSV <input type="file" id="liquidityFile" accept=".xlsx,.csv,.tsv,.txt,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv,text/plain"></label>
     <label>Источник и дата выгрузки<input type="text" id="liquiditySource" maxlength="250" placeholder="1С · остатки на 25.10.2026" value="1С · остатки на конец недели"></label>
     <button type="button" id="liquidityImport">Проверить и сохранить факт</button>
    </div>
@@ -489,6 +489,7 @@ dialog::backdrop{background:rgba(11,39,64,.45)}
  <div class="dialog-body"><div class="pf-liq-expense-summary" id="liquidityExpenseSummary"></div><div class="table-wrap"><table class="pf-liq-expense-table"><thead><tr><th>Дата</th><th>Контрагент</th><th>Статья / назначение</th><th class="num">Сумма</th></tr></thead><tbody id="liquidityExpenseRows"></tbody></table></div><p id="liquidityExpenseNote" class="pf-liq-legend"></p></div>
 </dialog>
 <script src="auth-session.js?v=3"></script>
+<script src="opening-xlsx.js?v=3"></script>
 <script>
 (function(){
  'use strict';
@@ -975,7 +976,7 @@ dialog::backdrop{background:rgba(11,39,64,.45)}
  /* BAZA_LIQUIDITY_BY_ENTITY_V1 */
  const liquidity={week:'',weeks:[],snapshot:[],preview:[],actual:[],operations:[],operationsLoaded:false,loaded:false,loading:false};
  const legalEntityNoise=new Set(['ооо','ао','пао','зао','оао','ип']);
- const normalizeEntity=x=>String(x||'').toLocaleLowerCase('ru-RU').replace(/ё/g,'е').replace(/специализированный\s+застройщик/g,' сз ').replace(/[«»\"'.,:()]/g,' ').split(/[^a-zа-я0-9]+/).filter(token=>token&&!legalEntityNoise.has(token)).sort().join(' ');
+ const normalizeEntity=x=>String(x||'').toLocaleLowerCase('ru-RU').replace(/ё/g,'е').replace(/специализированный\s+застройщик/g,' сз ').replace(/[«»\"'.,:()]/g,' ').split(/[^a-zа-я0-9]+/).filter(token=>token&&token.length>1&&!legalEntityNoise.has(token)).sort().join(' ');
  const liqWeekEnd=x=>{const d=new Date(x+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+6);return d.toISOString().slice(0,10)};
  const liqDate=x=>new Intl.DateTimeFormat('ru-RU',{day:'2-digit',month:'2-digit',year:'numeric'}).format(new Date(x+'T12:00:00Z'));
  const liqCurrency=value=>new Intl.NumberFormat('ru-RU',{minimumFractionDigits:2,maximumFractionDigits:2}).format(Number(value))+' ₽';
@@ -1115,6 +1116,44 @@ dialog::backdrop{background:rgba(11,39,64,.45)}
   if(!/^-?\d{1,15}(\.\d{1,2})?$/.test(value))return null;
   return Number(value);
  }
+ function mapLiqXlsxGroups(groups,plans){
+  const exact=new Map(),withoutDeveloperForm=new Map(),normalizedAliases=new Map();
+  const add=(map,key,value)=>{
+   if(!key)return;
+   const current=map.get(key)||[];
+   if(!current.some(x=>x===value))current.push(value);
+   map.set(key,current);
+  };
+  const collapsePerovo=key=>key.replace(/\bперов(?:о|ское)\b/g,'перов');
+  for(const plan of plans){
+   const name=normalizeEntity(plan.entity_name),key=plan.entity_key;
+   add(exact,name,key);
+   add(exact,normalizeEntity(plan.entity_key),key);
+   add(withoutDeveloperForm,name.split(' ').filter(token=>token!=='сз').join(' '),key);
+   add(normalizedAliases,collapsePerovo(name),key);
+  }
+  const resolve=(label)=>{
+   const name=normalizeEntity(label),candidates=exact.get(name)||[];
+   if(candidates.length===1)return candidates[0];
+   if(candidates.length>1)return null;
+   const developer=withoutDeveloperForm.get(name.split(' ').filter(token=>token!=='сз').join(' '))||[];
+   if(developer.length===1)return developer[0];
+   const regional=normalizedAliases.get(collapsePerovo(name))||[];
+   return regional.length===1?regional[0]:null;
+  };
+  const rows=[],errors=[],seen=new Set();
+  for(const group of groups||[]){
+   const key=resolve(group.name);
+   if(!key){errors.push('Не удалось однозначно сопоставить юрлицо «'+group.name+'»');continue}
+   if(seen.has(key)){errors.push('Несколько строк отчёта сопоставились с одним юрлицом «'+group.name+'»');continue}
+   const plan=plans.find(item=>item.entity_key===key);
+   if(!plan){errors.push('Юрлицо «'+group.name+'» отсутствует в плане выбранной недели');continue}
+   seen.add(key);
+   rows.push({entity_key:key,label:plan.entity_name,cents:Number(group.cents)});
+  }
+  if(!rows.length&&!errors.length)errors.push('В отчёте не найдены строки с подходящими счетами и собственными средствами.');
+  return {rows,errors};
+ }
  function parseLiqRows(input,plans){
   const lookup=new Map();
   for(const p of plans){
@@ -1203,14 +1242,25 @@ dialog::backdrop{background:rgba(11,39,64,.45)}
  el('liquidityImport').addEventListener('click',importLiquidity);
  el('liquidityFile').addEventListener('change',async e=>{
   const file=e.target.files?.[0];if(!file)return;
-  if(file.size>2*1024*1024){setLiqStatus('Файл больше 2 МБ. Используйте CSV или скопируйте две колонки из Excel.','error');return}
+  if(file.size>5*1024*1024){setLiqStatus('Файл больше 5 МБ.','error');e.target.value='';return}
   try{
-   const data=await file.arrayBuffer();
-   let value;
-   try{value=new TextDecoder('utf-8',{fatal:true}).decode(data)}
-   catch{value=new TextDecoder('windows-1251').decode(data)}
-   el('liquidityPaste').value=value.replace(/^\uFEFF/,'');
-   setLiqStatus('Файл '+file.name+' прочитан. Проверьте две колонки и нажмите «Проверить и сохранить факт».');
+   if(/\.xlsx$/i.test(file.name)){
+    if(!window.BazaOpeningXlsx)throw Error('Не загрузился разбор XLSX. Обновите страницу.');
+    const current=liquidity.snapshot.length?liquidity.snapshot:liquidity.preview;
+    const report=await window.BazaOpeningXlsx.parse(file);
+    const mapped=mapLiqXlsxGroups(report.groups,current);
+    if(mapped.errors.length)throw Error(mapped.errors.slice(0,10).join('\n')+(mapped.errors.length>10?'\nЕсть и другие ошибки':''));
+    el('liquidityPaste').value=mapped.rows.map(row=>row.label+'\t'+(row.cents/100).toFixed(2).replace('.',',')).join('\n');
+    if(report.reportDate)el('liquiditySource').value='1С · '+file.name+' · '+report.reportDate;
+    const skipped=report.excluded.restricted+report.excluded.otherAccounts+report.excluded.missing;
+    setLiqStatus('Отчёт 1С прочитан: '+mapped.rows.length+' юрлиц, суммы по поддерживаемым счетам сложены. Пропущено строк: '+skipped+'. Проверьте данные и нажмите «Проверить и сохранить факт».');
+   }else{
+    const data=await file.arrayBuffer();let value;
+    try{value=new TextDecoder('utf-8',{fatal:true}).decode(data)}
+    catch{value=new TextDecoder('windows-1251').decode(data)}
+    el('liquidityPaste').value=value.replace(/^\uFEFF/,'');
+    setLiqStatus('Файл '+file.name+' прочитан. Проверьте две колонки и нажмите «Проверить и сохранить факт».');
+   }
   }
   catch(error){setLiqStatus('Не удалось прочитать файл: '+error.message,'error')}
   finally{e.target.value=''}
