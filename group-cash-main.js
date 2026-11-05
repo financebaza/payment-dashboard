@@ -73,7 +73,13 @@ const initLegacy=async()=>{
 };
 function legacyClassify(payments){
  const known=new Set(original.map(r=>normalize(r.entity_name)));
- const nameKey=x=>normalize(x).replace(/^ооо(?:сз|ск)?/,'');
+ const nameKey=x=>{
+  const key=normalize(x).replace(/^ооо(?:сз|ск)?/,'');
+  if(key.startsWith('ипсамойлинамв'))return 'ипсамойлина';
+  if(key.startsWith('ипбассаа'))return 'ипбасс';
+  if(key.startsWith('ипзаводовский'))return 'ипзаводовский';
+  return key;
+ };
  const knownAlt=new Set(original.map(r=>nameKey(r.entity_name)));
  const inGroup=x=>!isOutside(x)&&(known.has(normalize(x))||knownAlt.has(nameKey(x)));
  const out=payments.filter(p=>!p.isNonExpense&&!isOutside(p.entity)).map(p=>({
