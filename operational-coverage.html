@@ -27,7 +27,7 @@ S.configure({url:BASE,key:KEY});S.start();
 const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
 const money=n=>new Intl.NumberFormat('ru-RU',{minimumFractionDigits:2,maximumFractionDigits:2}).format(Number(n)||0)+' ₽';
 const normalize=s=>String(s||'').toLocaleLowerCase('ru-RU').replace(/ё/g,'е').replace(/[^a-zа-я0-9]/g,'');
-let user=null,profile=null,entries=[],services=[],monthStart='2026-11-01',canEdit=false;
+let user=null,profile=null,entries=[],services=[],externalPayments=[],monthStart='2026-11-01',canEdit=false;
 function headers(extra){return Object.assign({apikey:KEY,Authorization:'Bearer '+S.token(),Accept:'application/json'},extra||{})}
 async function request(path,options){const r=await S.fetch(BASE+'/rest/v1/'+path,Object.assign({headers:headers()},options||{}));if(!r.ok){const x=await r.json().catch(()=>({}));throw Error(x.message||x.details||('HTTP '+r.status))}return r.status===204?[]:r.json()}
 async function getUser(){if(!S.token()&&!S.refreshToken())return null;const r=await S.fetch(BASE+'/auth/v1/user',{headers:headers()});if(r.status===401)return null;if(!r.ok)throw Error('Не удалось проверить сессию');return r.json()}
@@ -38,20 +38,21 @@ function serviceCategory(row){const target=normalize(row.counterparty),sub=norma
 async function loadMonth(){
  const selected=$('monthSelect').value||'2026-11',b=bounds(selected),period=b[0],next=b[1];monthStart=period;
  const ep='operational_coverage_inputs?select=month_start,entry_key,category,label,amount,planned_date,is_estimate,note,updated_by&month_start=eq.'+period+'&order=category.asc,entry_key.asc';
- const cp='calendar_items?select=week_start,payer,counterparty,amount,subcategory,due_date&and=(week_start.gte.'+period+',week_start.lt.'+next+')&funding_source=eq.%D0%9A%D1%80%D0%B5%D0%B4%D0%B8%D1%82&origin=eq.vgo&order=week_start.asc,due_date.asc';
- const data=await Promise.all([request(ep),request(cp)]);entries=data[0];services=data[1].map(r=>({...r,kind:serviceCategory(r)})).filter(r=>r.kind);
+ const cp='calendar_items?select=week_start,payer,counterparty,amount,subcategory,due_date,origin&and=(week_start.gte.'+period+',week_start.lt.'+next+')&funding_source=eq.%D0%9A%D1%80%D0%B5%D0%B4%D0%B8%D1%82&order=week_start.asc,due_date.asc';
+ const gp='payments?select=entity&entity=not.is.null&order=entity.asc&limit=1000';
+ const data=await Promise.all([request(ep),request(cp),request(gp)]);entries=data[0];const groupEntities=new Set(data[2].map(x=>normalize(x.entity)));const creditItems=data[1];services=creditItems.filter(r=>r.origin==='vgo').map(r=>({...r,kind:serviceCategory(r)})).filter(r=>r.kind);externalPayments=creditItems.filter(r=>r.counterparty&&!groupEntities.has(normalize(r.counterparty)));
  draw();
 }
 function draw(){
  const sums={'ЕИО → БУП':0,'ГП% → СК База':0,'Техзаказ → ТЗ База':0};
  services.forEach(x=>sums[x.kind]+=Number(x.amount)||0);
- const income=Object.values(sums).reduce((a,b)=>a+b,0);
+ const income=Object.values(sums).reduce((a,b)=>a+b,0),externalTotal=externalPayments.reduce((a,x)=>a+(Number(x.amount)||0),0);
  const expense=entries.reduce((a,x)=>a+Number(x.amount||0),0),payroll=entries.filter(x=>x.category==='payroll'||x.category==='salary_advance').reduce((a,x)=>a+Number(x.amount||0),0),rent=entries.filter(x=>x.category==='rent').reduce((a,x)=>a+Number(x.amount||0),0),balance=income-expense,ratio=expense?income/expense*100:0;
  $('novemberNote').hidden=monthStart!=='2026-11-01';$('incomeTotal').textContent=money(income);$('payrollTotal').textContent=money(payroll);$('rentTotal').textContent=money(rent);$('coverage').textContent=ratio.toLocaleString('ru-RU',{maximumFractionDigits:1})+'%';$('balanceHint').textContent=(balance>=0?'Остаток ':'Дефицит ')+money(Math.abs(balance));$('coverageBar').style.width=Math.max(0,Math.min(ratio,100))+'%';
- $('serviceRows').innerHTML=Object.keys(sums).map(k=>'<tr><td>'+esc(k.split(' → ')[0])+'</td><td>'+esc(k.split(' → ')[1])+'</td><td>'+money(sums[k])+'</td></tr>').join('')+'<tr><td colspan="2"><b>Итого</b></td><td>'+money(income)+'</td></tr>';
+ $('serviceRows').innerHTML=Object.keys(sums).map(k=>'<tr><td>'+esc(k.split(' → ')[0])+'</td><td>'+esc(k.split(' → ')[1])+'</td><td>'+money(sums[k])+'</td></tr>').join('')+'<tr><td colspan="2"><b>Итого по услугам ГК</b></td><td>'+money(income)+'</td></tr><tr style="background:#fff7ee;color:#8a4b0f"><td><b>Уйдёт из группы</b></td><td>Субподрядчикам и другим внешним контрагентам</td><td>'+money(externalTotal)+'</td></tr>';
  $('expenseSummary').innerHTML=entries.slice().sort((a,b)=>(a.planned_date||'9999').localeCompare(b.planned_date||'9999')).map(x=>'<tr><td>'+esc(x.label)+(x.is_estimate?' <span class="pill">оценка</span>':'')+'</td><td>'+esc(x.planned_date||'—')+'</td><td>'+money(x.amount)+'</td></tr>').join('')+'<tr><td colspan="2"><b>Всего известные расходы</b></td><td>'+money(expense)+'</td></tr>';
  $('coverageNote').textContent=(balance>=0?'После известных расходов остаётся ':'Дефицит по известным расходам — ')+money(Math.abs(balance))+'. Прочая операционка в сумме не учтена.';
- $('flowNote').textContent='В расчёт включены '+services.length+' кредитных ВГО по ЕИО, ГП% и техзаказу. Это распределение кредитных средств между компаниями группы, не дополнительная выручка.';
+ $('flowNote').textContent='Кредитные ВГО по ЕИО, ГП% и техзаказу ('+services.length+' операций) показаны как внутренние потоки. Строка «Уйдёт из группы» — '+externalPayments.length+' кредитных платежей получателям, которых нет среди юрлиц ГК; внутренние переводы исключены.';
  $('inputRows').innerHTML=entries.map(x=>'<tr data-key="'+esc(x.entry_key)+'"><td><input class="edit" data-field="label" value="'+esc(x.label)+'" '+(canEdit?'':'disabled')+'></td><td><select class="edit" data-field="category" '+(canEdit?'':'disabled')+'><option value="payroll" '+(x.category==='payroll'?'selected':'')+'>Зарплата</option><option value="salary_advance" '+(x.category==='salary_advance'?'selected':'')+'>Аванс</option><option value="rent" '+(x.category==='rent'?'selected':'')+'>Аренда</option><option value="other" '+(x.category==='other'?'selected':'')+'>Прочее</option></select></td><td><input class="edit date" data-field="planned_date" type="date" value="'+esc(x.planned_date||'')+'" '+(canEdit?'':'disabled')+'></td><td><input class="edit amount" data-field="amount" type="number" min="0" step="0.01" value="'+Number(x.amount||0)+'" '+(canEdit?'':'disabled')+'></td><td><input class="edit-check" data-field="is_estimate" type="checkbox" '+(x.is_estimate?'checked':'')+' '+(canEdit?'':'disabled')+'></td><td><div class="actions">'+(canEdit?'<button class="btn primary-btn" data-action="save">Сохранить</button><button class="btn danger" data-action="delete">Удалить</button>':'<span class="minor">просмотр</span>')+'</div></td></tr>').join('')||'<tr><td colspan="6">Расходы на месяц ещё не добавлены.</td></tr>';
  $('addForm').hidden=!canEdit;
 }
