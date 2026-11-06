@@ -14,7 +14,7 @@
  const match=r=>fields.every(f=>!state.filters[f]||r[f]===state.filters[f])&&(!state.q||[r.entity,r.counterparty,r.project,r.direction,r.subcategory].join(' ').toLowerCase().includes(state.q));
  const rows=()=>base().filter(match);
  let board=document.getElementById('vgoClearBoard');
- if(!board){board=document.createElement('div');board.id='vgoClearBoard';board.className='vgo-clear-board';const old=section.querySelector('.vgo-flow-board');if(old)old.after(board);else section.insertBefore(board,section.querySelector('.table-card'));}
+ if(!board){board=document.createElement('div');board.id='vgoClearBoard';board.className='vgo-clear-board';const old=section.querySelector('.vgo-flow-board'),table=section.querySelector('.table-card'),list=table?.closest('.vgo-payment-list');if(old)old.after(board);else if(list)list.before(board);else if(table)table.before(board);else section.appendChild(board);}
  function render(rs){
    document.getElementById('vgoTotal').textContent=fmt(rs.reduce((s,r)=>s+Number(r.amount||0),0));
    document.getElementById('vgoCount').textContent=rs.length;
