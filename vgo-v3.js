@@ -24,7 +24,7 @@
    const bySource={};Object.entries(pairs).forEach(([k,v])=>{const [a,b]=k.split('|||');(bySource[a]??=[]).push([b,v])});
    const groups=Object.entries(bySource).sort((a,b)=>b[1].reduce((s,x)=>s+x[1],0)-a[1].reduce((s,x)=>s+x[1],0));
    let html='<div class="vgo-clear-title"><h3>Куда уходят деньги внутри группы</h3><span>стрелка = направление · сумма = оборот</span></div><div class="vgo-excluded-note">М73 и Плэйэстейт исключены из ВГО.</div><div class="vgo-flow-groups">';
-   groups.slice(0,12).forEach(([src,dests])=>{const total=dests.reduce((s,x)=>s+x[1],0);html+=`<div class="vgo-flow-group"><div class="vgo-flow-source"><span>${esc(src)}</span><b>${fmt(total)}</b></div>`+dests.sort((a,b)=>b[1]-a[1]).slice(0,6).map(([dst,v])=>`<div class="vgo-flow-link"><span>${esc(dst)}</span><span class="vgo-flow-arrow">→</span><span class="vgo-flow-amount">${fmt(v)}</span></div>`).join('')+'</div>'});
+   groups.slice(0,12).forEach(([src,dests])=>{const total=dests.reduce((s,x)=>s+x[1],0);html+=`<div class="vgo-flow-group"><details class="vgo-source-details"><summary class="vgo-flow-source"><span>${esc(src)}</span><b>${fmt(total)}</b></summary>`+dests.sort((a,b)=>b[1]-a[1]).slice(0,6).map(([dst,v])=>`<div class="vgo-flow-link"><span>${esc(dst)}</span><span class="vgo-flow-arrow">→</span><span class="vgo-flow-amount">${fmt(v)}</span></div>`).join('')+'</details></div>'});
    if(!groups.length)html+='<div style="color:#7890a7;font-size:10px;padding:10px">Нет операций по текущим фильтрам</div>';
    html+='</div>';board.innerHTML=html;
  }
